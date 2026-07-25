@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-test/
+*.log
+.yarn/cache
+.yarn/install-state.gz
+# npm/yarn install artifacts
+.pnp.cjs
+.pnp.loader.mjs
+package-lock.json
+
+# Lock files (Backstage monorepo owns the lockfile)
+yarn.lock

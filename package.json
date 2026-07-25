@@ -1,0 +1,16 @@
+{
+  "name": "@acarmisc/backstage-plugin-ai-agents-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Agents management plugin for Backstage — agents as catalog Components with a dedicated card view.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn workspace @acarmisc/backstage-plugin-ai-agents build && yarn workspace @acarmisc/backstage-plugin-ai-agents-backend build",
+    "test": "yarn workspace @acarmisc/backstage-plugin-ai-agents test && yarn workspace @acarmisc/backstage-plugin-ai-agents-backend test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

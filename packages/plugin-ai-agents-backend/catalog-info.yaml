@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Plugin
+metadata:
+  name: ai-agents-backend
+  description: AI Agents backend plugin (live status probing) for Backstage
+  tags:
+    - ai
+    - agents
+spec:
+  lifecycle: experimental
+  owner: platform-team
