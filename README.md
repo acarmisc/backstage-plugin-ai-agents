@@ -294,6 +294,30 @@ ai-agents:
 Without the backend (or with `enabled: false`), the plugin still works —
 cards just show an `unknown` status badge.
 
+### 5. Entity-page card (optional, included automatically)
+
+The plugin also registers an **Agent Overview** card via
+`EntityCardBlueprint`, filtered to entities with `spec.type: ai-agent`. When
+the plugin is registered in the app, every `ai-agent` Component's catalog
+entity page automatically gets a card showing the runtime, billing,
+capabilities, tags, endpoint, runtime handle, and a "View on the AI Agents
+page" link — no extra wiring needed.
+
+The card renders inside the catalog entity Overview page alongside the
+other entity cards (About, Tech Insights, etc.). It's hidden on non-agent
+entities, so regular services/APIs/resources are unaffected.
+
+If you need to restrict or reorder it, use the standard
+`app-config.yaml` entity-card config:
+
+```yaml
+app:
+  extensions:
+    - entity-card:ai-agents/overview:
+        config:
+          type: info   # render as a compact info card (default)
+```
+
 ## API endpoints
 
 All under `/api/ai-agents`, all Backstage-auth-authenticated:
@@ -345,6 +369,65 @@ or backend required.
   catalog workflow (`catalog-info.yaml`, providers, scaffolder templates).
 - **Drawer + catalog deep link** — quick view in the drawer, full entity
   page via "Open in catalog", avoiding duplication of the catalog UI.
+- **Entity-page card** — an `EntityCardBlueprint` (filtered to
+  `spec.type: ai-agent`) shows the same agent overview on the catalog entity
+  page, so the agent's context is visible wherever it's referenced.
+
+## Releasing
+
+Both packages are published to npm via GitHub Actions on tag push. The
+workflow lives in `.github/workflows/publish.yaml`.
+
+### Cut a release
+
+```bash
+# 1. Bump the version in the package you're releasing
+$EDITOR packages/plugin-ai-agents/package.json          # or plugin-ai-agents-backend
+# e.g. "version": "0.2.0"
+
+# 2. Commit and push to main
+git commit -am "release: ai-agents vX.Y.Z"
+git push origin main
+
+# 3. Tag and push — the tag name determines which package is published
+git tag ai-agents@X.Y.Z          # frontend → @acarmisc/backstage-plugin-ai-agents
+git push origin ai-agents@X.Y.Z
+# or, for the backend:
+git tag ai-agents-backend@X.Y.Z
+git push origin ai-agents-backend@X.Y.Z
+```
+
+### What the workflow does
+
+1. Verifies the tag version matches the package's `package.json` version
+   (prevents publishing the wrong version).
+2. Installs with `--legacy-peer-deps`, builds, runs `npm publish --access
+   public` using the `NPM_TOKEN` repo secret.
+3. Auto-creates a GitHub Release with generated release notes (tag pushes
+   only; manual `workflow_dispatch` runs publish without creating a
+   release).
+
+### Tag conventions
+
+| Tag pattern | Package published |
+|---|---|
+| `ai-agents@<version>` | `@acarmisc/backstage-plugin-ai-agents` |
+| `ai-agents-backend@<version>` | `@acarmisc/backstage-plugin-ai-agents-backend` |
+
+The version in the tag **must** match the `version` field in the
+corresponding `package.json`, or the workflow fails fast.
+
+### Manual dispatch
+
+To republish the current `package.json` version without cutting a tag (e.g.
+after a failed publish), use the GitHub Actions "Run workflow" button on the
+Publish workflow page, or:
+
+```bash
+gh workflow run publish.yaml \
+  -f package=ai-agents \
+  -f ref=<branch-or-sha>
+```
 
 ## License
 
