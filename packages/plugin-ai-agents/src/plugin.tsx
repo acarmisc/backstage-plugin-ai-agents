@@ -7,6 +7,7 @@ import {
   fetchApiRef,
 } from '@backstage/frontend-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
+import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
 import { aiAgentsApiRef, AiAgentsApi } from './api';
 
 const aiAgentsApi = ApiBlueprint.make({
@@ -31,7 +32,24 @@ const aiAgentsPage = PageBlueprint.make({
   },
 });
 
+// Entity-page card shown on Component entities with spec.type: ai-agent.
+// Renders an agent overview (runtime, billing, capabilities, status) inside
+// the catalog entity Overview page. The filter restricts it to ai-agent
+// entities so it stays hidden on regular services/APIs/resources.
+const aiAgentOverviewCard = EntityCardBlueprint.make({
+  name: 'overview',
+  params: {
+    filter: {
+      'spec.type': 'ai-agent',
+    },
+    loader: async () => {
+      const { AgentOverviewCard } = await import('./components/AgentOverviewCard');
+      return <AgentOverviewCard />;
+    },
+  },
+});
+
 export const aiAgentsPlugin = createFrontendPlugin({
   pluginId: 'ai-agents',
-  extensions: [aiAgentsApi, aiAgentsPage],
+  extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard],
 });

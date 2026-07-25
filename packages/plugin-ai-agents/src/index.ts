@@ -1,6 +1,7 @@
 export { aiAgentsPlugin } from './plugin';
 export { AgentsPage } from './components/AgentsPage';
 export { AgentCard } from './components/AgentCard';
+export { AgentOverviewCard } from './components/AgentOverviewCard';
 export { aiAgentsApiRef, AiAgentsApi } from './api';
 export type { AiAgentsApiInterface } from './api';
 export {
