@@ -1,0 +1,74 @@
+{
+  "name": "@acarmisc/backstage-plugin-ai-agents",
+  "version": "0.1.0",
+  "description": "Backstage frontend plugin for managing AI Agents stored as catalog Components.",
+  "backstage": {
+    "role": "frontend-plugin",
+    "pluginId": "ai-agents",
+    "pluginPackages": [
+      "@acarmisc/backstage-plugin-ai-agents"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node build.js && tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/**/*.test.js dist-test/*.test.js",
+    "prepack": "npm run build",
+    "postpack": ""
+  },
+  "dependencies": {
+    "@backstage/catalog-client": "^1.9.0",
+    "@backstage/catalog-model": "^1.7.0",
+    "@backstage/core-components": "^0.18.10",
+    "@backstage/core-plugin-api": "^1.12.6",
+    "@backstage/frontend-plugin-api": "^0.17.0",
+    "@backstage/plugin-catalog-react": "^1.15.0",
+    "@backstage/theme": "^0.6.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.18.0",
+    "@mui/material": "^5.16.0",
+    "react": "^18.0.0",
+    "react-router-dom": "^6.20.0",
+    "react-use": "^17.2.4"
+  },
+  "peerDependencies": {
+    "@types/react": "^18.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.20.0"
+  },
+  "devDependencies": {
+    "@backstage/cli": "^0.36.2",
+    "@backstage/core-app-api": "^1.16.0",
+    "@backstage/dev-utils": "^1.1.23",
+    "@backstage/frontend-test-utils": "^0.6.0",
+    "@backstage/test-utils": "^1.7.0",
+    "@testing-library/dom": "^10.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.2.0",
+    "esbuild": "^0.28.0",
+    "react-dom": "^18.0.0",
+    "typescript": "^5.9.3"
+  }
+}

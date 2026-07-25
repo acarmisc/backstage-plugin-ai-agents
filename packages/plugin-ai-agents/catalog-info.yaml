@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Plugin
+metadata:
+  name: ai-agents
+  description: AI Agents management plugin for Backstage
+  tags:
+    - ai
+    - agents
+    - catalog
+spec:
+  lifecycle: experimental
+  owner: platform-team
