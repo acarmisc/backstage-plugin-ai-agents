@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Card, CardActionArea, Chip, Typography } from '@mui/material';
+import { chipClasses } from '@mui/material/Chip';
 import type { AiAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
@@ -113,7 +114,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
                 color={lifecycleColor}
                 label={agent.lifecycle}
                 variant="outlined"
-                sx={{ height: 20, '& .MuiChip-label': { px: 0.75, fontSize: '0.7rem' } }}
+                sx={{ height: 20, [`& .${chipClasses.label}`]: { px: 0.75, fontSize: '0.7rem' } }}
               />
             )}
             <Typography variant="caption" color="text.secondary">
@@ -150,8 +151,12 @@ export const AgentCard: React.FC<AgentCardProps> = ({
               label={l.title}
               sx={{
                 maxWidth: 160,
-                '& .MuiChip-icon': { fontSize: 14 },
-                '& .MuiChip-label': { fontSize: '0.7rem' },
+                [`& .${chipClasses.icon}`]: { fontSize: 14 },
+                [`& .${chipClasses.label}`]: {
+                  fontSize: '0.7rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                },
               }}
             />
           ))}

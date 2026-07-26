@@ -61,7 +61,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
       anchor="right"
       open={open}
       onClose={onClose}
-      sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 480 } } }}
+      PaperProps={{ sx: { width: { xs: '100%', sm: 480 } } }}
     >
       <Box sx={{ p: 2, display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
         <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} size={56} />
