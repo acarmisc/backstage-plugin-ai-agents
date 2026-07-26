@@ -1,27 +1,17 @@
 import React from 'react';
-import { Box, Card, CardActionArea, Chip, Link, Tooltip, Typography } from '@mui/material';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import DescriptionIcon from '@mui/icons-material/Description';
-import ArticleIcon from '@mui/icons-material/Article';
-import BugReportIcon from '@mui/icons-material/BugReport';
+import { Box, Card, CardActionArea, Chip, Typography } from '@mui/material';
 import type { AiAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
+import { getLinkIcon } from './linkIcon';
 
 const LIFECYCLE_COLOR: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
   production: 'success',
   experimental: 'warning',
   deprecated: 'error',
-};
-
-const LINK_ICON: Record<string, React.ReactNode> = {
-  dashboard: <DashboardIcon fontSize="small" />,
-  docs: <DescriptionIcon fontSize="small" />,
-  playbook: <ArticleIcon fontSize="small" />,
-  issues: <BugReportIcon fontSize="small" />,
 };
 
 export interface AgentCardProps {
@@ -86,12 +76,13 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             {agent.purpose || 'No description provided.'}
           </Typography>
 
-          {/* Runtime */}
-          <Box sx={{ mb: 1 }}>
+          {/* Runtime + billing */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1 }}>
             <RuntimeBadge
               runtime={agent.runtime.runtime}
               onClick={onRuntimeClick}
             />
+            <BillingBadge billing={agent.billing} compact />
           </Box>
 
           {/* Capabilities */}
@@ -100,11 +91,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({
               <AgentCapabilities capabilities={agent.capabilities} />
             </Box>
           )}
-
-          {/* Billing */}
-          <Box sx={{ mb: 1.5 }}>
-            <BillingBadge billing={agent.billing} />
-          </Box>
 
           {/* Footer: owner + lifecycle + version */}
           <Box
@@ -130,33 +116,47 @@ export const AgentCard: React.FC<AgentCardProps> = ({
                 sx={{ height: 20, '& .MuiChip-label': { px: 0.75, fontSize: '0.7rem' } }}
               />
             )}
-            {agent.version && (
-              <Typography variant="caption" color="text.secondary">
-                v{agent.version}
-              </Typography>
-            )}
+            <Typography variant="caption" color="text.secondary">
+              {agent.version ? `v${agent.version}` : 'N/A'}
+            </Typography>
           </Box>
-
-          {/* Links */}
-          {agent.links.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 1.5, mt: 1.5, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-              {agent.links.slice(0, 4).map((l, i) => (
-                <Tooltip key={i} title={l.title}>
-                  <Link
-                    href={l.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
-                    sx={{ display: 'inline-flex', color: 'text.secondary' }}
-                  >
-                    {LINK_ICON[l.icon ?? ''] ?? <DescriptionIcon fontSize="small" />}
-                  </Link>
-                </Tooltip>
-              ))}
-            </Box>
-          )}
         </Box>
       </CardActionArea>
+
+      {/* Links: outside the click area so they never fight the card click */}
+      {agent.links.length > 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 0.75,
+            flexWrap: 'wrap',
+            px: 2,
+            py: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          {agent.links.slice(0, 4).map((l, i) => (
+            <Chip
+              key={i}
+              size="small"
+              variant="outlined"
+              clickable
+              component="a"
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              icon={getLinkIcon(l.icon)}
+              label={l.title}
+              sx={{
+                maxWidth: 160,
+                '& .MuiChip-icon': { fontSize: 14 },
+                '& .MuiChip-label': { fontSize: '0.7rem' },
+              }}
+            />
+          ))}
+        </Box>
+      )}
     </Card>
   );
 };

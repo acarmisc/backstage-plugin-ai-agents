@@ -67,7 +67,7 @@ export const AgentOverviewCard: React.FC = () => {
         <Field label="Billing" value={<BillingBadge billing={agent.billing} />} />
         <Field label="Owner" value={agent.owner} />
         <Field label="Lifecycle" value={agent.lifecycle} />
-        <Field label="Version" value={agent.version} />
+        <Field label="Version" value={agent.version ?? 'N/A'} />
         <Field label="System" value={agent.system} />
       </Grid>
 
