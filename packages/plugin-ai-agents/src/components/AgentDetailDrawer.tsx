@@ -15,10 +15,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import DescriptionIcon from '@mui/icons-material/Description';
-import ArticleIcon from '@mui/icons-material/Article';
-import BugReportIcon from '@mui/icons-material/BugReport';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import type { AiAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
@@ -26,13 +22,7 @@ import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
-
-const LINK_ICON: Record<string, React.ReactNode> = {
-  dashboard: <DashboardIcon fontSize="small" />,
-  docs: <DescriptionIcon fontSize="small" />,
-  playbook: <ArticleIcon fontSize="small" />,
-  issues: <BugReportIcon fontSize="small" />,
-};
+import { getLinkIcon } from './linkIcon';
 
 export interface AgentDetailDrawerProps {
   agent: AiAgent | null;
@@ -151,7 +141,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
         <Row label="Owner">{agent.owner ?? '—'}</Row>
         <Row label="System">{agent.system ?? '—'}</Row>
         <Row label="Lifecycle">{agent.lifecycle ?? '—'}</Row>
-        <Row label="Version">{agent.version ?? '—'}</Row>
+        <Row label="Version">{agent.version ?? 'N/A'}</Row>
         <Row label="Tags">
           {agent.tags.length ? (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -177,7 +167,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
                   sx={{ color: 'text.primary', borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}
                 >
                   <ListItemIcon sx={{ minWidth: 28 }}>
-                    {LINK_ICON[l.icon ?? ''] ?? <DescriptionIcon fontSize="small" />}
+                    {getLinkIcon(l.icon)}
                   </ListItemIcon>
                   <ListItemText primary={l.title} secondary={l.url}
                     secondaryTypographyProps={{ sx: { fontSize: '0.7rem' } as const, noWrap: true }} />
