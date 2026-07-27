@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Card, CardActionArea, Chip, Typography } from '@mui/material';
 import { chipClasses } from '@mui/material/Chip';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { AiAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
@@ -148,7 +149,12 @@ export const AgentCard: React.FC<AgentCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               icon={getLinkIcon(l.icon)}
-              label={l.title}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <span>{l.title}</span>
+                  <OpenInNewIcon sx={{ fontSize: 12 }} />
+                </Box>
+              }
               sx={{
                 maxWidth: 160,
                 [`& .${chipClasses.icon}`]: { fontSize: 14 },
