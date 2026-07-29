@@ -58,10 +58,65 @@ all other annotations are optional.
 | `ai-agent.acarmisc.org/endpoint` | no | Invocation endpoint; probed if no `health` annotation |
 | `ai-agent.acarmisc.org/runtime-handle` | no | ARN/handle shown in the detail drawer |
 | `ai-agent.acarmisc.org/purpose` | no | Overrides `description` as the card's purpose text |
+| `ai-agent.acarmisc.org/hire-schema` | no | JSON array declaring the "Hire Agent" form fields. See [Hiring an agent](#hiring-an-agent). |
+| `ai-agent.acarmisc.org/prompt-template` | no | Prompt template with `{field_name}` placeholders matching `hire-schema` fields, used to build the AgentCore invocation preview. See [Hiring an agent](#hiring-an-agent). |
+| `ai-agent.acarmisc.org/region` | no | AWS region for the AgentCore runtime, used in the Hire preview's CLI command (e.g. `eu-west-1`). |
 
 Capability categories (used for chip color): `reasoning`, `retrieval`,
 `tools`, `vision`, `voice`, `data`, `safety`. A capability without a
 category renders as a default-colored chip.
+
+---
+
+## Hiring an agent
+
+Agents that declare a `ai-agent.acarmisc.org/hire-schema` annotation show a
+**Hire Agent** button on their card, detail drawer, and entity-page card.
+Clicking it opens a form rendered from the schema; the form builds a **live
+AgentCore invocation preview** (prompt + HTTP payload + AWS CLI command) that
+updates as the user fills in the fields, and a **Copy CLI command** button to
+run the invocation.
+
+The `hire-schema` annotation value is a JSON array of field objects:
+
+```yaml
+ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"GitLab project","type":"text","required":true,"help":"e.g. innovation/ces-ai-agents"},{"name":"target","label":"MR IID","type":"text","required":true},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run"}]'
+```
+
+| Field key | Type | Description |
+|---|---|---|
+| `name` | string (required) | Machine key for the field; used as the form-state key and the `{name}` placeholder in the prompt template |
+| `label` | string (required) | Human-readable label shown above the input |
+| `type` | `text` \| `url` \| `textarea` \| `select` \| `number` | Input to render (default `text`) |
+| `required` | boolean | Whether the field must be filled before submit |
+| `default` | string | Default value when the form opens |
+| `options` | string[] | For `select` fields: the selectable options |
+| `help` | string | Optional helper text shown under the input |
+
+Malformed JSON, non-array JSON, or unknown `type` values are tolerated:
+the schema is dropped and the **Hire Agent** button stays hidden.
+
+### Prompt template
+
+The `ai-agent.acarmisc.org/prompt-template` annotation is a string with
+`{field_name}` placeholders matching the `hire-schema` fields. As the user
+fills the form, the preview substitutes the placeholders with the field
+values and builds:
+
+1. **Prompt** — the filled template (or, when no `prompt-template` is set,
+   a JSON object of all field values).
+2. **Payload** — the `{"prompt": "..."}` JSON body for the AgentCore
+   `/invocations` endpoint.
+3. **AWS CLI command** — `aws bedrock-agentcore invoke-agent-runtime`,
+   using `ai-agent.acarmisc.org/region` and
+   `ai-agent.acarmisc.org/runtime-handle`. If either is missing, a warning
+   chip is shown and the values are left as placeholders.
+
+```yaml
+ai-agent.acarmisc.org/prompt-template: "Revisiona la MR !{target} nel progetto '{project}'. Comportamento posting: {action}."
+ai-agent.acarmisc.org/region: eu-west-1
+ai-agent.acarmisc.org/runtime-handle: abs_ces_agents_dinesh
+```
 
 ---
 

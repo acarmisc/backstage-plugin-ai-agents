@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Box,
+  Button,
   Chip,
   Drawer,
   IconButton,
@@ -16,6 +17,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import WorkIcon from '@mui/icons-material/Work';
 import type { AiAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
@@ -29,6 +31,7 @@ export interface AgentDetailDrawerProps {
   open: boolean;
   onClose: () => void;
   onRefreshStatus?: (entityRef: string) => void;
+  onHire?: (agent: AiAgent) => void;
 }
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({
@@ -48,6 +51,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
   open,
   onClose,
   onRefreshStatus,
+  onHire,
 }) => {
   if (!agent) return null;
   const title = agent.title ?? agent.name;
@@ -182,6 +186,20 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
             Open in catalog <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
           </Link>
         </Row>
+
+        {onHire && agent.hireSchema && agent.hireSchema.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              startIcon={<WorkIcon />}
+              onClick={() => onHire(agent)}
+            >
+              Hire Agent
+            </Button>
+          </Box>
+        )}
       </Box>
     </Drawer>
   );

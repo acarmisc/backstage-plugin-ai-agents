@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Card, CardActionArea, Chip, Typography } from '@mui/material';
+import { Box, Button, Card, CardActionArea, Chip, Typography } from '@mui/material';
 import { chipClasses } from '@mui/material/Chip';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import WorkIcon from '@mui/icons-material/Work';
 import type { AiAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
@@ -20,12 +21,14 @@ export interface AgentCardProps {
   agent: AiAgent;
   onClick?: (agent: AiAgent) => void;
   onRuntimeClick?: (runtime: string) => void;
+  onHire?: (agent: AiAgent) => void;
 }
 
 export const AgentCard: React.FC<AgentCardProps> = ({
   agent,
   onClick,
   onRuntimeClick,
+  onHire,
 }) => {
   const title = agent.title ?? agent.name;
   const lifecycleColor = agent.lifecycle
@@ -166,6 +169,31 @@ export const AgentCard: React.FC<AgentCardProps> = ({
               }}
             />
           ))}
+        </Box>
+      )}
+
+      {/* Hire Agent: outside the click area so it never fights the card click */}
+      {onHire && agent.hireSchema && agent.hireSchema.length > 0 && (
+        <Box
+          sx={{
+            px: 2,
+            pb: 1.5,
+            pt: agent.links.length > 0 ? 0 : 1,
+          }}
+        >
+          <Button
+            size="small"
+            variant="contained"
+            color="primary"
+            fullWidth
+            startIcon={<WorkIcon />}
+            onClick={e => {
+              e.stopPropagation();
+              onHire(agent);
+            }}
+          >
+            Hire Agent
+          </Button>
         </Box>
       )}
     </Card>

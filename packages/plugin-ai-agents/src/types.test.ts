@@ -117,3 +117,96 @@ test('entityToAgent accepts a status override', () => {
 test('AI_AGENT_TYPE is ai-agent', () => {
   assert.equal(AI_AGENT_TYPE, 'ai-agent');
 });
+
+test('entityToAgent leaves hireSchema undefined when no annotation', () => {
+  const a = entityToAgent(baseEntity())!;
+  assert.equal(a.hireSchema, undefined);
+});
+
+test('entityToAgent parses a valid hire-schema annotation', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'x',
+      annotations: {
+        'ai-agent.acarmisc.org/hire-schema':
+          '[{"name":"project","label":"Project","type":"text","required":true},' +
+          '{"name":"action","label":"Action","type":"select","options":["dry-run","post"],"default":"dry-run"}]',
+      },
+    },
+  });
+  const a = entityToAgent(e)!;
+  assert.ok(Array.isArray(a.hireSchema));
+  assert.equal(a.hireSchema!.length, 2);
+  assert.deepEqual(a.hireSchema![0], {
+    name: 'project',
+    label: 'Project',
+    type: 'text',
+    required: true,
+    default: undefined,
+    options: undefined,
+    help: undefined,
+  });
+  assert.deepEqual(a.hireSchema![1].options, ['dry-run', 'post']);
+  assert.equal(a.hireSchema![1].default, 'dry-run');
+});
+
+test('entityToAgent coerces unknown hire field types to text', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'x',
+      annotations: {
+        'ai-agent.acarmisc.org/hire-schema':
+          '[{"name":"f","label":"F","type":"bogus"}]',
+      },
+    },
+  });
+  const a = entityToAgent(e)!;
+  assert.equal(a.hireSchema![0].type, 'text');
+});
+
+test('entityToAgent returns undefined hireSchema for malformed JSON', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'x',
+      annotations: { 'ai-agent.acarmisc.org/hire-schema': 'not-json{' },
+    },
+  });
+  const a = entityToAgent(e)!;
+  assert.equal(a.hireSchema, undefined);
+});
+
+test('entityToAgent returns undefined hireSchema for non-array JSON', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'x',
+      annotations: { 'ai-agent.acarmisc.org/hire-schema': '{"a":1}' },
+    },
+  });
+  const a = entityToAgent(e)!;
+  assert.equal(a.hireSchema, undefined);
+});
+
+test('entityToAgent parses region and prompt-template annotations', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'x',
+      annotations: {
+        'ai-agent.acarmisc.org/region': 'eu-west-1',
+        'ai-agent.acarmisc.org/prompt-template':
+          'Review MR !{target} in {project}. Action: {action}.',
+      },
+    },
+  });
+  const a = entityToAgent(e)!;
+  assert.equal(a.runtime.region, 'eu-west-1');
+  assert.equal(
+    a.promptTemplate,
+    'Review MR !{target} in {project}. Action: {action}.',
+  );
+});
+
+test('entityToAgent leaves region and promptTemplate undefined when absent', () => {
+  const a = entityToAgent(baseEntity())!;
+  assert.equal(a.runtime.region, undefined);
+  assert.equal(a.promptTemplate, undefined);
+});

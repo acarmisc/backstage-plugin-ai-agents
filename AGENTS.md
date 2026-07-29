@@ -52,6 +52,24 @@ individual workspaces with `npm run build --workspace <name>`.
   its placement via `app.extensions['entity-card:ai-agents/overview']` in
   `app-config.yaml`.
 
+- **The "Hire Agent" CTA is gated on `hireSchema`.** The
+  `ai-agent.acarmisc.org/hire-schema` annotation (a JSON array of
+  `HireField`) is parsed in `entityToAgent()` into `AiAgent.hireSchema`.
+  The CTA button is rendered on `AgentCard`, `AgentDetailDrawer`, and
+  `AgentOverviewCard` only when the schema is present and non-empty.
+  Submitting the form (`HireAgentDialog`) shows a fake "Request sent to
+  staff" message — there is no persistence or backend call. If a real
+  persistence path is needed later, note that Backstage's catalog REST
+  has no browser-side "create entity"; it needs a server-side helper
+  that writes YAML to a fetchable location and registers that URL.
+  The `HireAgentDialog` builds a **live AgentCore invocation preview**:
+  the `ai-agent.acarmisc.org/prompt-template` annotation (with `{field}`
+  placeholders matching the hire-schema) is substituted with the form
+  values to produce the prompt, the `{"prompt": "..."}` HTTP payload,
+  and the `aws bedrock-agentcore invoke-agent-runtime` CLI command (using
+  `ai-agent.acarmisc.org/region` + `runtime-handle`). A **Copy CLI
+  command** button is the primary action. No persistence or backend call.
+
 - **The `AgentDetailDrawer` uses `@mui/material` v5 `Drawer`** (the plugin's
   own dep). The host Backstage app pins `@material-ui/core` v4. Both coexist
   as separate packages. The v5 `Drawer` renders `.MuiDrawer-paper` but the
