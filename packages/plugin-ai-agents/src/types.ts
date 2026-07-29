@@ -22,6 +22,8 @@ export interface AgentRuntimeInfo {
   endpoint?: string;
   /** Health-check URL the backend can call. */
   healthUrl?: string;
+  /** AWS region for the AgentCore runtime (e.g. "eu-west-1"), used by the Hire preview. */
+  region?: string;
 }
 
 export type AgentBillingModel =
@@ -53,6 +55,31 @@ export interface AgentCapability {
   category?: AgentCapabilityCategory;
 }
 
+/**
+ * A single field in an agent's "Hire Agent" form, declared on the catalog
+ * entity via the `ai-agent.acarmisc.org/hire-schema` annotation (a JSON
+ * array of these objects). Drives the dynamic form rendered by
+ * `HireAgentDialog`.
+ */
+export type HireFieldType = 'text' | 'url' | 'textarea' | 'select' | 'number';
+
+export interface HireField {
+  /** Machine key for the field; used as the form-state key. */
+  name: string;
+  /** Human-readable label shown above the input. */
+  label: string;
+  /** Input type to render. */
+  type: HireFieldType;
+  /** Whether the field must be filled before the form can be submitted. */
+  required?: boolean;
+  /** Default value when the form opens. */
+  default?: string;
+  /** For `select` fields: the list of selectable options. */
+  options?: string[];
+  /** Optional helper text shown under the input. */
+  help?: string;
+}
+
 export type AgentStatusState = 'healthy' | 'degraded' | 'down' | 'unknown';
 
 export interface AgentStatus {
@@ -82,6 +109,20 @@ export interface AiAgent {
   links: { url: string; title: string; icon?: string }[];
   /** Populated by the backend status probe; undefined in the static view. */
   status?: AgentStatus;
+  /**
+   * Per-agent "Hire Agent" form schema parsed from the
+   * `ai-agent.acarmisc.org/hire-schema` annotation (JSON array). When
+   * missing/empty, the Hire Agent CTA is hidden.
+   */
+  hireSchema?: HireField[];
+  /**
+   * Prompt template parsed from the `ai-agent.acarmisc.org/prompt-template`
+   * annotation, with `{field_name}` placeholders matching `hireSchema`
+   * fields. Used by the Hire preview to build the AgentCore invocation
+   * payload. When missing, the form values are assembled as a default
+   * JSON object prompt.
+   */
+  promptTemplate?: string;
   rawEntity: Entity;
 }
 
@@ -120,6 +161,44 @@ function parseCapabilities(raw: string | undefined): AgentCapability[] {
           category && VALID_CATEGORIES.has(category) ? category : undefined,
       };
     });
+}
+
+const VALID_HIRE_TYPES = new Set<HireFieldType>([
+  'text',
+  'url',
+  'textarea',
+  'select',
+  'number',
+]);
+
+function parseHireSchema(raw: string | undefined): HireField[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return undefined;
+    return parsed
+      .filter(
+        (f: unknown): f is Record<string, unknown> =>
+          !!f && typeof f === 'object',
+      )
+      .map(f => ({
+        name: String(f.name ?? ''),
+        label: String(f.label ?? f.name ?? ''),
+        type: (VALID_HIRE_TYPES.has(f.type as HireFieldType)
+          ? f.type
+          : 'text') as HireFieldType,
+        required: f.required === true,
+        default: f.default !== undefined ? String(f.default) : undefined,
+        options: Array.isArray(f.options)
+          ? f.options.map((o: unknown) => String(o))
+          : undefined,
+        help:
+          typeof f.help === 'string' && f.help ? f.help : undefined,
+      }))
+      .filter(f => f.name.length > 0);
+  } catch {
+    return undefined;
+  }
 }
 
 function entityRef(entity: Entity): string {
@@ -167,6 +246,7 @@ export function entityToAgent(
       runtimeHandle: annotation(entity, 'runtime-handle'),
       endpoint: annotation(entity, 'endpoint'),
       healthUrl: annotation(entity, 'health'),
+      region: annotation(entity, 'region'),
     },
     billing: {
       model: annotation(entity, 'billing-model') ?? 'free',
@@ -174,6 +254,8 @@ export function entityToAgent(
       budget: parseFloatSafe(annotation(entity, 'budget')),
     },
     capabilities: parseCapabilities(annotation(entity, 'capabilities')),
+    hireSchema: parseHireSchema(annotation(entity, 'hire-schema')),
+    promptTemplate: annotation(entity, 'prompt-template'),
     tags: entity.metadata.tags ?? [],
     links,
     status,

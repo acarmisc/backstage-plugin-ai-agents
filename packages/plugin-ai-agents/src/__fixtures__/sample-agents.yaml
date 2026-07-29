@@ -12,12 +12,15 @@ metadata:
     ai-agent.acarmisc.org/avatar: https://api.dicebear.com/7.x/bottts/svg?seed=triage
     ai-agent.acarmisc.org/runtime: bedrock-agentcore
     ai-agent.acarmisc.org/runtime-handle: arn:aws:bedrock:us-east-1:123:agent/TXXX
+    ai-agent.acarmisc.org/region: us-east-1
     ai-agent.acarmisc.org/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
     ai-agent.acarmisc.org/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
     ai-agent.acarmisc.org/billing-model: per-invocation
     ai-agent.acarmisc.org/cost-per-1k: "0.012"
     ai-agent.acarmisc.org/capabilities: "tool-use:tools,rag:retrieval,reasoning:reasoning"
     ai-agent.acarmisc.org/version: "1.4.2"
+    ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true,"help":"GitLab project path, e.g. my-org/my-project"},{"name":"target","label":"MR IID","type":"text","required":true,"help":"Merge Request IID, e.g. 42"},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run","help":"dry-run = present only; post = post inline comments"}]'
+    ai-agent.acarmisc.org/prompt-template: "Revisiona la MR !{target} nel progetto '{project}'. Comportamento posting: {action}."
   links:
     - url: https://grafana.example.com/d/agents/support-triage
       title: Metrics
@@ -40,9 +43,13 @@ metadata:
   tags: [ai-agent, vision]
   annotations:
     ai-agent.acarmisc.org/runtime: litellm
+    ai-agent.acarmisc.org/runtime-handle: litellm/invoice-reader
+    ai-agent.acarmisc.org/region: eu-west-1
     ai-agent.acarmisc.org/billing-model: per-token
     ai-agent.acarmisc.org/cost-per-1k: "2.40"
     ai-agent.acarmisc.org/capabilities: "vision:vision,ocr:vision,tools:tools"
+    ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"documentBucket","label":"Document bucket URL","type":"url","required":true},{"name":"outputFormat","label":"Output format","type":"select","options":["json","csv","xlsx"],"default":"json"}]'
+    ai-agent.acarmisc.org/prompt-template: "Extract structured data from documents at {documentBucket} for project '{project}'. Output format: {outputFormat}."
 spec:
   type: ai-agent
   lifecycle: production
@@ -58,10 +65,14 @@ metadata:
   tags: [ai-agent, rag]
   annotations:
     ai-agent.acarmisc.org/runtime: lambda
+    ai-agent.acarmisc.org/runtime-handle: arn:aws:lambda:eu-west-1:123:function:kb-search
+    ai-agent.acarmisc.org/region: eu-west-1
     ai-agent.acarmisc.org/endpoint: https://api.example.com/kb-search
     ai-agent.acarmisc.org/health: https://api.example.com/kb-search/health
     ai-agent.acarmisc.org/billing-model: free
     ai-agent.acarmisc.org/capabilities: "rag:retrieval,reasoning:reasoning"
+    ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"kbIndex","label":"Knowledge base index","type":"text","required":true},{"name":"topK","label":"Top K results","type":"number","default":"5"}]'
+    ai-agent.acarmisc.org/prompt-template: "Answer questions about project '{project}' using knowledge base '{kbIndex}', returning the top {topK} results."
 spec:
   type: ai-agent
   lifecycle: experimental
@@ -77,9 +88,13 @@ metadata:
   tags: [ai-agent, codegen]
   annotations:
     ai-agent.acarmisc.org/runtime: custom
+    ai-agent.acarmisc.org/runtime-handle: relnote-svc
+    ai-agent.acarmisc.org/region: eu-west-1
     ai-agent.acarmisc.org/endpoint: https://relnote.example.com/invoke
     ai-agent.acarmisc.org/billing-model: subscription
     ai-agent.acarmisc.org/capabilities: "codegen:tools,reasoning:reasoning"
+    ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"repoUrl","label":"Repository URL","type":"url","required":true},{"name":"branch","label":"Branch","type":"text","default":"main"},{"name":"sinceTag","label":"Since tag","type":"text","help":"Optional: only include commits after this tag"}]'
+    ai-agent.acarmisc.org/prompt-template: "Draft release notes for project '{project}' from {repoUrl} (branch: {branch}, since tag: {sinceTag})."
 spec:
   type: ai-agent
   lifecycle: production
@@ -112,9 +127,13 @@ metadata:
   tags: [ai-agent, voice]
   annotations:
     ai-agent.acarmisc.org/runtime: bedrock-agentcore
+    ai-agent.acarmisc.org/runtime-handle: voice-ivr-agent-runtime
+    ai-agent.acarmisc.org/region: eu-west-1
     ai-agent.acarmisc.org/billing-model: per-invocation
     ai-agent.acarmisc.org/cost-per-1k: "0.040"
     ai-agent.acarmisc.org/capabilities: "voice:voice,reasoning:reasoning,tools:tools"
+    ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"phoneNumberSid","label":"Phone number SID","type":"text","required":true},{"name":"language","label":"Language","type":"select","options":["en","it","es"],"default":"en"}]'
+    ai-agent.acarmisc.org/prompt-template: "Handle inbound voice call for project '{project}' on phone number SID {phoneNumberSid} in language {language}."
 spec:
   type: ai-agent
   lifecycle: experimental

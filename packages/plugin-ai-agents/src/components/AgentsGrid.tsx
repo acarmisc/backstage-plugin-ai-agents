@@ -7,12 +7,14 @@ export interface AgentsGridProps {
   agents: AiAgent[];
   onAgentClick?: (agent: AiAgent) => void;
   onRuntimeClick?: (runtime: string) => void;
+  onHire?: (agent: AiAgent) => void;
 }
 
 export const AgentsGrid: React.FC<AgentsGridProps> = ({
   agents,
   onAgentClick,
   onRuntimeClick,
+  onHire,
 }) => {
   return (
     <Box
@@ -28,6 +30,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
           agent={a}
           onClick={onAgentClick}
           onRuntimeClick={onRuntimeClick}
+          onHire={onHire}
         />
       ))}
     </Box>

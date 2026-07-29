@@ -8,6 +8,7 @@ import { useAgents } from '../hooks/useAgents';
 import { AgentFiltersBar } from './AgentFilters';
 import { AgentsGrid } from './AgentsGrid';
 import { AgentDetailDrawer } from './AgentDetailDrawer';
+import { HireAgentDialog } from './HireAgentDialog';
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -18,6 +19,8 @@ export const AgentsPage: React.FC = () => {
 
   const [selected, setSelected] = useState<AiAgent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hireAgent, setHireAgent] = useState<AiAgent | null>(null);
+  const [hireOpen, setHireOpen] = useState(false);
   const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({});
 
   const refs = allAgents.map(a => a.entityRef);
@@ -54,6 +57,11 @@ export const AgentsPage: React.FC = () => {
   const handleCardClick = useCallback((agent: AiAgent) => {
     setSelected(agent);
     setDrawerOpen(true);
+  }, []);
+
+  const handleHire = useCallback((agent: AiAgent) => {
+    setHireAgent(agent);
+    setHireOpen(true);
   }, []);
 
   const handleRuntimeClick = useCallback(
@@ -125,6 +133,7 @@ export const AgentsPage: React.FC = () => {
           agents={agentsWithStatus}
           onAgentClick={handleCardClick}
           onRuntimeClick={handleRuntimeClick}
+          onHire={handleHire}
         />
       )}
 
@@ -133,6 +142,13 @@ export const AgentsPage: React.FC = () => {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onRefreshStatus={handleRefreshStatus}
+        onHire={handleHire}
+      />
+
+      <HireAgentDialog
+        agent={hireAgent}
+        open={hireOpen}
+        onClose={() => setHireOpen(false)}
       />
     </Box>
   );

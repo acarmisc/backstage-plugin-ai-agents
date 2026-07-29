@@ -1,15 +1,17 @@
-import React from 'react';
-import { Box, Chip, Grid, Link, Tooltip, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Button, Chip, Grid, Link, Tooltip, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MemoryIcon from '@mui/icons-material/Memory';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import ExtensionIcon from '@mui/icons-material/Extension';
+import WorkIcon from '@mui/icons-material/Work';
 import { entityToAgent } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
 import { BillingBadge } from './BillingBadge';
+import { HireAgentDialog } from './HireAgentDialog';
 import { useEntity } from '@backstage/plugin-catalog-react';
 
 const RUNTIME_ICON: Record<string, React.ReactNode> = {
@@ -36,9 +38,11 @@ const Field: React.FC<{ label: string; value?: React.ReactNode; mono?: boolean }
 
 export const AgentOverviewCard: React.FC = () => {
   const { entity } = useEntity();
+  const [hireOpen, setHireOpen] = useState(false);
   if (!entity || entity.spec?.type !== 'ai-agent') return null;
   const agent = entityToAgent(entity);
   if (!agent) return null;
+  const canHire = !!(agent.hireSchema && agent.hireSchema.length > 0);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -124,9 +128,27 @@ export const AgentOverviewCard: React.FC = () => {
         </Box>
       )}
 
-      <Box sx={{ mt: 2 }}>
+      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        {canHire && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<WorkIcon />}
+            onClick={() => setHireOpen(true)}
+          >
+            Hire Agent
+          </Button>
+        )}
         <Link href={`/ai-agents`}>View on the AI Agents page</Link>
       </Box>
+
+      {canHire && (
+        <HireAgentDialog
+          agent={agent}
+          open={hireOpen}
+          onClose={() => setHireOpen(false)}
+        />
+      )}
     </Box>
   );
 };
