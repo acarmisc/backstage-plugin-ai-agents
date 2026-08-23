@@ -138,11 +138,18 @@ export class AgentCoreInvoker {
     if (!runtimeHandle) {
       throw new Error('agent has no runtime-handle annotation');
     }
-    // The annotation conventionally carries the full runtime ARN; accept a
-    // bare runtime id too when the account id is configured.
+    // The annotation conventionally carries the full runtime ARN; a bare
+    // runtime id needs the configured account id to build one.
     const arn = runtimeHandle.startsWith('arn:')
       ? runtimeHandle
-      : `arn:aws:bedrock-agentcore:${region}:${this.config.accountId}:runtime/${runtimeHandle}`;
+      : this.config.accountId
+        ? `arn:aws:bedrock-agentcore:${region}:${this.config.accountId}:runtime/${runtimeHandle}`
+        : undefined;
+    if (!arn) {
+      throw new Error(
+        `invalid runtime-handle "${runtimeHandle}": set the full AgentCore runtime ARN (arn:aws:bedrock-agentcore:<region>:<account>:runtime/<id>) or configure ai-agents.invocations.agentCore.accountId`,
+      );
+    }
     // The endpoint expects the ARN URL-encoded in the path.
     const url = `https://bedrock-agentcore.${region}.amazonaws.com/runtimes/${encodeURIComponent(arn)}/invocations?qualifier=DEFAULT`;
 
