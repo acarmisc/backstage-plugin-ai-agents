@@ -65,7 +65,8 @@ jobs:
           fi
 
       - name: Install dependencies
-        working-directory: ${{ steps.pkg.outputs.dir }}
+        # Install from the repo root so intra-repo workspace deps
+        # (e.g. the agentcore module depending on the backend core) resolve.
         # Backstage's MUI4 theme has a react@^17 peer dep; --legacy-peer-deps
         # mirrors local install behaviour and avoids npm@7+ ERESOLVE failures.
         run: npm install --no-audit --no-fund --legacy-peer-deps
