@@ -11,9 +11,11 @@ import {
   AgentStatus,
   ProbeConfig,
   ProbeFn,
+  ReviewRecord,
+  ReviewsSummary,
 } from './types';
 import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './client';
-import { InvocationStore } from './store';
+import { InvocationStore, ReviewStore } from './store';
 import { buildPrompt, makeSessionId } from './invocation';
 
 export interface RouterOptions {
@@ -31,6 +33,11 @@ export interface RouterOptions {
   probe?: ProbeFn;
   /** Override the catalog client (tests). Defaults to one built from discovery. */
   catalogClient?: { getEntitiesByRefs: (r: { entityRefs: string[] }) => Promise<{ items: (Entity | undefined)[] }> };
+  /** Override the reviews store (tests). Defaults to one built from database. */
+  reviews?: {
+    insert(rec: ReviewRecord): Promise<number>;
+    summaryFor(ref: string, limit?: number): Promise<ReviewsSummary>;
+  };
 }
 
 interface CachedStatus {
@@ -56,6 +63,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   const store = options.database
     ? await InvocationStore.create(await options.database.getClient())
     : undefined;
+
+  const reviews = options.reviews
+    ? options.reviews
+    : options.database
+      ? await ReviewStore.create(await options.database.getClient())
+      : undefined;
 
   const cache = new Map<string, CachedStatus>();
 
@@ -253,6 +266,48 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const limit = Math.min(Number(req.query.limit) || 20, 100);
     try {
       res.json(await store.listForEntity(ref, limit));
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? 'unknown error' });
+    }
+  });
+
+  router.post('/reviews/:entityRef', async (req, res) => {
+    if (!reviews) {
+      res.status(501).json({ error: 'no database configured' });
+      return;
+    }
+    const ref = decodeURIComponent(req.params.entityRef);
+    const rating = Number(req.body?.rating);
+    const comment =
+      typeof req.body?.comment === 'string' ? req.body.comment.trim().slice(0, 2000) : null;
+    if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
+      res.status(400).json({ error: 'rating must be an integer between 0 and 5' });
+      return;
+    }
+    try {
+      const who = await userRef(req);
+      const id = await reviews.insert({
+        entityRef: ref,
+        userRef: who,
+        rating,
+        comment: comment || null,
+      });
+      res.status(201).json({ id });
+    } catch (err: any) {
+      logger.error('Failed to save agent review', err);
+      res.status(500).json({ error: err?.message ?? 'unknown error' });
+    }
+  });
+
+  router.get('/reviews/:entityRef', async (req, res) => {
+    if (!reviews) {
+      res.status(501).json({ error: 'no database configured' });
+      return;
+    }
+    const ref = decodeURIComponent(req.params.entityRef);
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    try {
+      res.json(await reviews.summaryFor(ref, limit));
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? 'unknown error' });
     }

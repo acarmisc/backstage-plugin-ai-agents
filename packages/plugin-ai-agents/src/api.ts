@@ -6,6 +6,7 @@ import {
   AgentStatus,
   entityToAgent,
   InvocationRecord,
+  ReviewsSummary,
 } from './types';
 
 export interface AiAgentsApiInterface {
@@ -20,6 +21,13 @@ export interface AiAgentsApiInterface {
   ): Promise<InvocationResult>;
   /** Recent invocations for an agent, latest first. */
   getInvocations(entityRef: string, limit?: number): Promise<InvocationRecord[]>;
+  /** Reviews (latest first) plus count and average rating for an agent. */
+  getReviews(entityRef: string, limit?: number): Promise<ReviewsSummary>;
+  /** Submit a 0-5 star review with an optional comment. */
+  addReview(
+    entityRef: string,
+    review: { rating: number; comment?: string },
+  ): Promise<{ id: number }>;
 }
 
 export interface InvocationResult {
@@ -97,5 +105,34 @@ export class AiAgentsApi implements AiAgentsApiInterface {
     } catch {
       return [];
     }
+  }
+
+  async getReviews(entityRef: string, limit = 50): Promise<ReviewsSummary> {
+    const res = await this.opts.fetchApi.fetch(
+      `${this.basePath}/reviews/${encodeURIComponent(entityRef)}?limit=${limit}`,
+    );
+    if (!res.ok) {
+      throw new Error(`failed to load reviews (${res.status})`);
+    }
+    return (await res.json()) as ReviewsSummary;
+  }
+
+  async addReview(
+    entityRef: string,
+    review: { rating: number; comment?: string },
+  ): Promise<{ id: number }> {
+    const res = await this.opts.fetchApi.fetch(
+      `${this.basePath}/reviews/${encodeURIComponent(entityRef)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(review),
+      },
+    );
+    const body = (await res.json()) as { id?: number; error?: string };
+    if (!res.ok) {
+      throw new Error(body.error ?? `review failed (${res.status})`);
+    }
+    return { id: body.id ?? 0 };
   }
 }

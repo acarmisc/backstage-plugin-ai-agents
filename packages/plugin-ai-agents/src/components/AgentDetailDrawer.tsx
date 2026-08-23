@@ -26,6 +26,7 @@ import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
 import { getLinkIcon } from './linkIcon';
 import { InvocationHistory } from './InvocationHistory';
+import { AgentReviews } from './AgentReviews';
 
 export interface AgentDetailDrawerProps {
   agent: AiAgent | null;
@@ -192,6 +193,8 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
         </Row>
 
         <InvocationHistory entityRef={agent.entityRef} limit={8} reloadKey={historyReloadKey} />
+
+        <AgentReviews entityRef={agent.entityRef} />
 
         {onHire && agent.hireSchema && agent.hireSchema.length > 0 && (
           <Box sx={{ mt: 2 }}>

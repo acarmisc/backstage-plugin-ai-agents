@@ -12,6 +12,7 @@ import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
 import { BillingBadge } from './BillingBadge';
 import { HireAgentDialog } from './HireAgentDialog';
+import { AgentReviews } from './AgentReviews';
 import { useEntity } from '@backstage/plugin-catalog-react';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
@@ -144,6 +145,8 @@ export const AgentOverviewCard: React.FC = () => {
         )}
         <Link href={`/ai-agents`}>View on the AI Agents page</Link>
       </Box>
+
+      <AgentReviews entityRef={agent.entityRef} />
 
       {canHire && (
         <HireAgentDialog

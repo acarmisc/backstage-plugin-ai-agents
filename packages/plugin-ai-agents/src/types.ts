@@ -103,6 +103,23 @@ export interface InvocationRecord {
   createdAt?: string;
 }
 
+/** A persisted agent review, as returned by the backend reviews API. */
+export interface AgentReview {
+  id?: number;
+  entityRef: string;
+  userRef?: string | null;
+  /** Star rating, integer 0-5. */
+  rating: number;
+  comment?: string | null;
+  createdAt?: string;
+}
+
+export interface ReviewsSummary {
+  reviews: AgentReview[];
+  count: number;
+  average: number | null;
+}
+
 export interface AiAgent {
   /** Backstage entity ref, e.g. "component:default/support-triage-agent". */
   entityRef: string;
