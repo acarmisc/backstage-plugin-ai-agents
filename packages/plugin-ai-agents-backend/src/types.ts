@@ -44,6 +44,24 @@ export interface InvocationRecord {
   createdAt?: string;
 }
 
+/** A persisted agent review (0-5 star rating + optional comment). */
+export interface ReviewRecord {
+  id?: number;
+  entityRef: string;
+  /** User entity ref that submitted the review, when identifiable. */
+  userRef?: string | null;
+  /** Star rating, integer 0-5. */
+  rating: number;
+  comment?: string | null;
+  createdAt?: string;
+}
+
+export interface ReviewsSummary {
+  reviews: ReviewRecord[];
+  count: number;
+  average: number | null;
+}
+
 /** Provider-agnostic invocation target resolved from entity annotations. */
 export interface AgentTarget {
   region?: string;

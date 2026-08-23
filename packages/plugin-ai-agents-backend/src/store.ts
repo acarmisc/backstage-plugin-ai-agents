@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { InvocationRecord } from './types';
+import { InvocationRecord, ReviewRecord, ReviewsSummary } from './types';
 
 type DbRow = {
   id: number;
@@ -80,5 +80,77 @@ export class InvocationStore {
   async get(id: number): Promise<InvocationRecord | undefined> {
     const rows: DbRow[] = await this.db('invocations').where({ id });
     return rows.length ? toRecord(rows[0]) : undefined;
+  }
+}
+
+type ReviewRow = {
+  id: number;
+  entity_ref: string;
+  user_ref: string | null;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
+function toReview(row: ReviewRow): ReviewRecord {
+  return {
+    id: row.id,
+    entityRef: row.entity_ref,
+    userRef: row.user_ref,
+    rating: row.rating,
+    comment: row.comment,
+    createdAt: row.created_at,
+  };
+}
+
+export class ReviewStore {
+  private constructor(private readonly db: Knex) {}
+
+  static async create(knex: Knex): Promise<ReviewStore> {
+    if (!knex) throw new Error('Knex instance is required to create ReviewStore');
+    const exists = await knex.schema.hasTable('agent_reviews');
+    if (!exists) {
+      await knex.schema.createTable('agent_reviews', table => {
+        table.increments('id').primary();
+        table.string('entity_ref').notNullable().index();
+        table.string('user_ref', 200).nullable();
+        table.integer('rating').notNullable();
+        table.text('comment').nullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable().index();
+      });
+    }
+    return new ReviewStore(knex);
+  }
+
+  async insert(rec: ReviewRecord): Promise<number> {
+    const [id] = await this.db('agent_reviews')
+      .insert({
+        entity_ref: rec.entityRef,
+        user_ref: rec.userRef ?? null,
+        rating: rec.rating,
+        comment: rec.comment ?? null,
+        created_at: new Date(),
+      })
+      .returning('id');
+    return typeof id === 'object' ? id.id : id;
+  }
+
+  async summaryFor(entityRef: string, limit = 50): Promise<ReviewsSummary> {
+    const [agg] = (await this.db('agent_reviews')
+      .where({ entity_ref: entityRef })
+      .count('rating as count')
+      .avg('rating as average')) as { count: number | string; average: number | string | null }[];
+    const rows: ReviewRow[] = await this.db('agent_reviews')
+      .where({ entity_ref: entityRef })
+      .orderBy('created_at', 'desc')
+      .limit(limit);
+    return {
+      reviews: rows.map(toReview),
+      count: Number(agg?.count ?? 0),
+      average:
+        agg?.average === null || agg?.average === undefined
+          ? null
+          : Math.round(Number(agg.average) * 10) / 10,
+    };
   }
 }

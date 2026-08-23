@@ -3,7 +3,7 @@ import { createDevApp } from '@backstage/dev-utils';
 import { TestApiProvider } from '@backstage/test-utils';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import type { CatalogApi } from '@backstage/catalog-client';
-import { aiAgentsPlugin, AgentsPage } from '../src';
+import { aiAgentsPlugin, AgentsPage, AiAgentsApi, aiAgentsApiRef } from '../src';
 
 // Sample agents covering all runtimes, billing models, lifecycles, and
 // capability categories. The dev page renders them through a stub CatalogApi
@@ -141,11 +141,47 @@ const stubCatalogApi = {
     sampleEntities.find(e => `component:default/${e.metadata.name}` === ref) ?? null,
 } as unknown as CatalogApi;
 
+// In-memory reviews so the review widgets are exercisable in the dev app.
+const devReviews: any[] = [
+  {
+    id: 1,
+    entityRef: 'component:default/support-triage-agent',
+    userRef: 'user:default/alice',
+    rating: 4,
+    comment: 'Great at routing, occasionally mislabels billing tickets.',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+class DevApi extends AiAgentsApi {
+  async getReviews(entityRef: string) {
+    const reviews = devReviews.filter(r => r.entityRef === entityRef);
+    const average = reviews.length
+      ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+      : null;
+    return { reviews, count: reviews.length, average };
+  }
+
+  async addReview(entityRef: string, review: { rating: number; comment?: string }) {
+    const id = devReviews.push({
+      id: devReviews.length + 1,
+      entityRef,
+      userRef: 'user:default/dev',
+      rating: review.rating,
+      comment: review.comment ?? null,
+      createdAt: new Date().toISOString(),
+    });
+    return { id };
+  }
+}
+
+const stubAiAgentsApi = new DevApi({ fetchApi: {} as any }, '/api/ai-agents');
+
 createDevApp()
   .registerPlugin(aiAgentsPlugin)
   .addPage({
     element: (
-      <TestApiProvider apis={[[catalogApiRef, stubCatalogApi]]}>
+      <TestApiProvider apis={[[catalogApiRef, stubCatalogApi], [aiAgentsApiRef, stubAiAgentsApi]]}>
         <AgentsPage />
       </TestApiProvider>
     ),

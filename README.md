@@ -387,6 +387,24 @@ All under `/api/ai-agents`, all Backstage-auth-authenticated:
 | `/status/:entityRef` | GET | Single agent status (used by the drawer's Refresh button) |
 | `/invocations/:entityRef` | POST | Run the agent (Hire Agent). Body: `{ values: { field: value, ... } }`. Requires an invoker module; responds 501 otherwise |
 | `/invocations/:entityRef` | GET | Invocation history for the agent (latest first, `?limit=` up to 100). Requires a database |
+| `/reviews/:entityRef` | POST | Submit a review. Body: `{ rating: 0-5, comment? }`. Requires a database |
+| `/reviews/:entityRef` | GET | Reviews + count + average rating (`?limit=` up to 100). Requires a database |
+
+## Agent reviews
+
+Users can rate an agent from 0 to 5 stars and leave an optional comment.
+Reviews appear in the agent detail drawer and on the entity-page overview
+card. The backend persists them in the plugin database (`agent_reviews`
+table) and attributes them to the authenticated user.
+
+Two star widgets ship in `StarRating`:
+
+- `simple` — compact read-mostly stars (review list, average display).
+- `fancy` — large interactive stars with hover animation and
+  Poor→Excellent labels (the "Rate this agent" form).
+
+The section hides itself when no database is configured (the endpoints
+respond 501).
 
 ## Agent invocations
 

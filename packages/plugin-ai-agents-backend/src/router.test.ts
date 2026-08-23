@@ -246,3 +246,85 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
     await close();
   }
 });
+
+function stubReviews() {
+  const inserted: any[] = [];
+  return {
+    inserted,
+    insert: async (rec: any) => {
+      inserted.push(rec);
+      return inserted.length;
+    },
+    summaryFor: async () => ({
+      reviews: [
+        {
+          id: 1,
+          entityRef: 'component:default/triage',
+          userRef: 'user:default/alice',
+          rating: 4,
+          comment: 'great agent',
+          createdAt: '2026-08-23T10:00:00.000Z',
+        },
+      ],
+      count: 1,
+      average: 4,
+    }),
+  };
+}
+
+test('POST /reviews validates rating and stores review', async () => {
+  const reviews = stubReviews();
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+    reviews,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const ok = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: 4, comment: ' great agent ' }),
+    });
+    assert.equal(ok.status, 201);
+    assert.equal(reviews.inserted[0].rating, 4);
+    assert.equal(reviews.inserted[0].comment, 'great agent');
+
+    for (const bad of [6, -1, 2.5, 'x']) {
+      const badRes = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: bad }),
+      });
+      assert.equal(badRes.status, 400, `rating ${bad} should be rejected`);
+    }
+
+    const list = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`);
+    const body = await list.json();
+    assert.equal(body.count, 1);
+    assert.equal(body.average, 4);
+    assert.equal(body.reviews[0].comment, 'great agent');
+  } finally {
+    await close();
+  }
+});
+
+test('GET /reviews returns 501 without database', async () => {
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/reviews/component%3Adefault%2Fx`);
+    assert.equal(res.status, 501);
+  } finally {
+    await close();
+  }
+});
