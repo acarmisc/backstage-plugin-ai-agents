@@ -2,6 +2,7 @@ name: Publish to npm
 
 # Release process:
 #   git tag ai-agents@X.Y.Z          # or ai-agents-backend@X.Y.Z
+#                                    # or ai-agents-backend-module-agentcore@X.Y.Z
 #   git push origin ai-agents@X.Y.Z
 #
 # The tag prefix selects which workspace package gets published, and its
@@ -13,6 +14,7 @@ on:
     tags:
       - "ai-agents@*"
       - "ai-agents-backend@*"
+      - "ai-agents-backend-module-agentcore@*"
 
 permissions:
   contents: write
@@ -38,6 +40,10 @@ jobs:
             ai-agents-backend@*)
               echo "dir=packages/plugin-ai-agents-backend" >> "$GITHUB_OUTPUT"
               echo "version=${TAG#ai-agents-backend@}" >> "$GITHUB_OUTPUT"
+              ;;
+            ai-agents-backend-module-agentcore@*)
+              echo "dir=packages/plugin-ai-agents-backend-module-agentcore" >> "$GITHUB_OUTPUT"
+              echo "version=${TAG#ai-agents-backend-module-agentcore@}" >> "$GITHUB_OUTPUT"
               ;;
             ai-agents@*)
               echo "dir=packages/plugin-ai-agents" >> "$GITHUB_OUTPUT"

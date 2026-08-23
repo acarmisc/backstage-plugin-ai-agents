@@ -28,3 +28,48 @@ export interface ProbeResult {
 export interface ProbeFn {
   (url: string, opts: { timeoutMs: number; authHeader?: string }): Promise<ProbeResult>;
 }
+
+/** A persisted agent invocation. */
+export interface InvocationRecord {
+  id?: number;
+  entityRef: string;
+  /** User entity ref that triggered the invocation, when identifiable. */
+  userRef?: string | null;
+  sessionId: string;
+  prompt: string;
+  status: 'ok' | 'error';
+  responseText?: string | null;
+  errorMessage?: string | null;
+  latencyMs?: number | null;
+  createdAt?: string;
+}
+
+/** Provider-agnostic invocation target resolved from entity annotations. */
+export interface AgentTarget {
+  region?: string;
+  runtimeHandle?: string;
+  endpoint?: string;
+}
+
+/**
+ * Pluggable invocation transport. Implemented by provider modules
+ * (e.g. `-backend-module-agentcore`) and registered through
+ * `aiAgentsExtensionPoint`.
+ */
+export interface AgentInvocationRequest {
+  entityRef: string;
+  sessionId: string;
+  prompt: string;
+  fields: Record<string, string>;
+  /** Resolved from the entity's ai-agent.acarmisc.org/* annotations. */
+  target: AgentTarget;
+}
+
+export interface AgentInvocationResponse {
+  responseText: string;
+  latencyMs: number;
+}
+
+export interface AgentInvoker {
+  invoke(req: AgentInvocationRequest): Promise<AgentInvocationResponse>;
+}

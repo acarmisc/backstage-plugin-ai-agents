@@ -24,6 +24,9 @@ separate from the standard catalog browse.
   (`@acarmisc/backstage-plugin-ai-agents`)
 - `packages/plugin-ai-agents-backend` — backend, optional but recommended
   (`@acarmisc/backstage-plugin-ai-agents-backend`)
+- `packages/plugin-ai-agents-backend-module-agentcore` — AWS Bedrock
+  AgentCore invocation module
+  (`@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`)
 
 Built with the Backstage **New Frontend System**
 (`@backstage/frontend-plugin-api`, `PageBlueprint`, `ApiBlueprint`) and the
@@ -72,10 +75,10 @@ category renders as a default-colored chip.
 
 Agents that declare a `ai-agent.acarmisc.org/hire-schema` annotation show a
 **Hire Agent** button on their card, detail drawer, and entity-page card.
-Clicking it opens a form rendered from the schema; the form builds a **live
-AgentCore invocation preview** (prompt + HTTP payload + AWS CLI command) that
-updates as the user fills in the fields, and a **Copy CLI command** button to
-run the invocation.
+Clicking it opens a form rendered from the schema. When the backend is wired
+with an invoker module, a **Run agent** button invokes the agent for real and
+shows the live response; the dialog also builds an invocation preview (prompt
++ HTTP payload + AWS CLI command) with a **Copy CLI** fallback for manual runs.
 
 The `hire-schema` annotation value is a JSON array of field objects:
 
@@ -382,6 +385,42 @@ All under `/api/ai-agents`, all Backstage-auth-authenticated:
 | `/health` | GET | `{ status: 'ok', enabled }` |
 | `/statuses?refs=ref1,ref2` | GET | Live status for the given agent entity refs |
 | `/status/:entityRef` | GET | Single agent status (used by the drawer's Refresh button) |
+| `/invocations/:entityRef` | POST | Run the agent (Hire Agent). Body: `{ values: { field: value, ... } }`. Requires an invoker module; responds 501 otherwise |
+| `/invocations/:entityRef` | GET | Invocation history for the agent (latest first, `?limit=` up to 100). Requires a database |
+
+## Agent invocations
+
+The backend core is transport-agnostic: it resolves the entity, fills the
+prompt template with the submitted form values, persists the invocation
+(`status`, `prompt`, `response`, `user`, `latency`) into the plugin database,
+and delegates the actual call to a pluggable **invoker** registered through
+the `ai-agents.invoker` extension point.
+
+The shipped provider module invokes AWS Bedrock AgentCore runtimes using a
+Keycloak client-credentials JWT:
+
+```yaml
+ai-agents:
+  invocations:
+    # enabled: true   # default
+    agentCore:
+      tokenUrl: https://auth.example.com/realms/my-realm/protocol/openid-connect/token
+      clientId: backstage
+      clientSecret: ${AI_AGENTS_AGENTCORE_CLIENT_SECRET}
+      region: eu-west-1        # default; the /region annotation overrides it
+      accountId: "123456789012" # only needed if runtime-handle has no full ARN
+```
+
+Then register the module next to the plugin in your backend:
+
+```ts
+backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
+backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore'));
+```
+
+Without a module the endpoint answers 501 and the frontend falls back to the
+CLI-copy flow — other organisations can plug their own invoker (Lambda,
+Azure ML, HTTP…) by implementing `AgentInvoker` from the backend package.
 
 ## Development
 

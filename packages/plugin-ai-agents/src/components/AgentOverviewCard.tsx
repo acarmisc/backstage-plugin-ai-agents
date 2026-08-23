@@ -13,6 +13,8 @@ import { AgentCapabilities } from './AgentCapabilities';
 import { BillingBadge } from './BillingBadge';
 import { HireAgentDialog } from './HireAgentDialog';
 import { useEntity } from '@backstage/plugin-catalog-react';
+import { useApi } from '@backstage/core-plugin-api';
+import { aiAgentsApiRef } from '../api';
 
 const RUNTIME_ICON: Record<string, React.ReactNode> = {
   'bedrock-agentcore': <CloudQueueIcon fontSize="small" />,
@@ -38,6 +40,7 @@ const Field: React.FC<{ label: string; value?: React.ReactNode; mono?: boolean }
 
 export const AgentOverviewCard: React.FC = () => {
   const { entity } = useEntity();
+  const api = useApi(aiAgentsApiRef);
   const [hireOpen, setHireOpen] = useState(false);
   if (!entity || entity.spec?.type !== 'ai-agent') return null;
   const agent = entityToAgent(entity);
@@ -147,6 +150,7 @@ export const AgentOverviewCard: React.FC = () => {
           agent={agent}
           open={hireOpen}
           onClose={() => setHireOpen(false)}
+          onInvoke={values => api.invokeAgent(agent.entityRef, values)}
         />
       )}
     </Box>
