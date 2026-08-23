@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -14,12 +15,16 @@ import {
   Typography,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import type { InvocationResult } from '../api';
 import type { AiAgent, HireField } from '../types';
 
 export interface HireAgentDialogProps {
   agent: AiAgent | null;
   open: boolean;
   onClose: () => void;
+  /** Runs the invocation server-side. When absent, only the preview works. */
+  onInvoke?: (values: Record<string, string>) => Promise<InvocationResult>;
 }
 
 const fieldDefault = (f: HireField): string => f.default ?? '';
@@ -59,24 +64,38 @@ function buildCliCommand(
   return [
     'aws bedrock-agentcore invoke-agent-runtime',
     `--region ${region}`,
-    `--agent-runtime-identifier "${handle}"`,
+    `--agent-runtime-id "${handle}"`,
     `--runtime-session-id "${sessionId}"`,
     `--payload '${body}'`,
   ].join(' \\\n  ');
+}
+
+/** AgentCore enforces session ids of at least 33 characters. */
+function makeSessionId(): string {
+  const raw = `hire-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  return raw.padEnd(33, '0').slice(0, 80);
 }
 
 export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
   agent,
   open,
   onClose,
+  onInvoke,
 }) => {
   const fields = agent?.hireSchema ?? [];
   const [values, setValues] = useState<Record<string, string>>({});
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<InvocationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && fields.length) {
       setValues(buildInitialState(fields));
+      setResult(null);
+      setError(null);
+      setRunning(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, agent?.entityRef]);
 
   const missing = useMemo(
@@ -92,10 +111,7 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
 
   const payload = useMemo(() => buildPayload(filledPrompt), [filledPrompt]);
 
-  const sessionId = useMemo(
-    () => `hire-${Date.now().toString(36)}`,
-    [agent?.entityRef, open],
-  );
+  const sessionId = useMemo(makeSessionId, [agent?.entityRef, open]);
 
   const cliCommand = useMemo(
     () => (agent ? buildCliCommand(agent, payload, sessionId) : ''),
@@ -106,6 +122,20 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
 
   const copy = (text: string) => {
     navigator.clipboard?.writeText(text).catch(() => {});
+  };
+
+  const run = async () => {
+    if (!onInvoke) return;
+    setRunning(true);
+    setError(null);
+    setResult(null);
+    try {
+      setResult(await onInvoke(values));
+    } catch (err: any) {
+      setError(err?.message ?? 'invocation failed');
+    } finally {
+      setRunning(false);
+    }
   };
 
   if (!agent || !fields.length) return null;
@@ -218,18 +248,72 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
               />
             </Stack>
           </Box>
+
+          {error && (
+            <Typography variant="body2" color="error" sx={{ whiteSpace: 'pre-wrap' }}>
+              {error}
+            </Typography>
+          )}
+
+          {result && (
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="subtitle2">Agent response</Typography>
+                {result.latencyMs != null && (
+                  <Chip
+                    size="small"
+                    label={`${(result.latencyMs / 1000).toFixed(1)}s`}
+                    sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
+                  />
+                )}
+                <IconButton
+                  size="small"
+                  onClick={() => copy(result.responseText)}
+                  sx={{ ml: 'auto' }}
+                  title="Copy"
+                >
+                  <ContentCopyIcon fontSize="inherit" />
+                </IconButton>
+              </Box>
+              <PreviewBlock
+                title={`session ${result.sessionId}`}
+                language="text"
+                content={result.responseText || '(empty response)'}
+                onCopy={() => copy(result.responseText)}
+              />
+            </Box>
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        <Button
-          variant="contained"
-          disabled={missing}
-          onClick={() => copy(cliCommand)}
-          startIcon={<ContentCopyIcon />}
-        >
-          Copy CLI command
-        </Button>
+        {!onInvoke && (
+          <Button
+            variant="contained"
+            disabled={missing}
+            onClick={() => copy(cliCommand)}
+            startIcon={<ContentCopyIcon />}
+          >
+            Copy CLI command
+          </Button>
+        )}
+        {onInvoke && (
+          <>
+            <Button onClick={() => copy(cliCommand)} startIcon={<ContentCopyIcon />}>
+              Copy CLI
+            </Button>
+            <Button
+              variant="contained"
+              disabled={missing || running}
+              onClick={run}
+              startIcon={
+                running ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />
+              }
+            >
+              Run agent
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );

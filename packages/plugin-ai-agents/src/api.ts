@@ -12,6 +12,17 @@ export interface AiAgentsApiInterface {
   getAgent(entityRef: string): Promise<AiAgent | undefined>;
   /** Probe live status for the given entity refs via the backend. */
   getStatuses(entityRefs: string[]): Promise<Record<string, AgentStatus>>;
+  /** Run the Hire Agent invocation for the given entity with form values. */
+  invokeAgent(
+    entityRef: string,
+    values: Record<string, string>,
+  ): Promise<InvocationResult>;
+}
+
+export interface InvocationResult {
+  sessionId: string;
+  responseText: string;
+  latencyMs?: number;
 }
 
 export const aiAgentsApiRef = createApiRef<AiAgentsApiInterface>({
@@ -52,5 +63,24 @@ export class AiAgentsApi implements AiAgentsApiInterface {
     } catch {
       return {};
     }
+  }
+
+  async invokeAgent(
+    entityRef: string,
+    values: Record<string, string>,
+  ): Promise<InvocationResult> {
+    const res = await this.opts.fetchApi.fetch(
+      `${this.basePath}/invocations/${encodeURIComponent(entityRef)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values }),
+      },
+    );
+    const body = (await res.json()) as InvocationResult & { error?: string };
+    if (!res.ok) {
+      throw new Error(body.error ?? `invocation failed (${res.status})`);
+    }
+    return body;
   }
 }

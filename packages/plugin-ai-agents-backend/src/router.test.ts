@@ -174,3 +174,75 @@ test('GET /status/:ref returns 404 for missing entity', async () => {
     await close();
   }
 });
+test('POST /invocations returns 501 without an invoker module', async () => {
+  const entity = makeEntity('triage', {
+    'ai-agent.acarmisc.org/runtime-handle': 'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/x',
+  });
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    assert.equal(res.status, 501);
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations fills prompt template and records ok/error', async () => {
+  const entity = makeEntity('triage', {
+    'ai-agent.acarmisc.org/prompt-template': 'Triage issue {issue}',
+    'ai-agent.acarmisc.org/region': 'eu-west-1',
+    'ai-agent.acarmisc.org/runtime-handle':
+      'arn:aws:bedrock-agentcore:eu-west-1:123456789012:runtime/support-triage-runtime-Xq7AsdA8od',
+  });
+  const requests: any[] = [];
+  const invoker = {
+    invoke: async (req: any) => {
+      requests.push(req);
+      if (req.fields.fail) throw new Error('agent exploded');
+      return { responseText: `done:${req.prompt}`, latencyMs: 42 };
+    },
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invoker,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: { issue: 'JIRA-1' } }),
+    });
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.responseText, 'done:Triage issue JIRA-1');
+    assert.ok(body.sessionId.length >= 33);
+    assert.equal(requests[0].target.region, 'eu-west-1');
+
+    const failRes = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: { fail: 'yes' } }),
+    });
+    assert.equal(failRes.status, 502);
+    const failBody = await failRes.json();
+    assert.match(failBody.error, /agent exploded/);
+  } finally {
+    await close();
+  }
+});

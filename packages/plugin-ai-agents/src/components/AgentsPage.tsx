@@ -149,6 +149,9 @@ export const AgentsPage: React.FC = () => {
         agent={hireAgent}
         open={hireOpen}
         onClose={() => setHireOpen(false)}
+        onInvoke={values =>
+          api.invokeAgent(hireAgent!.entityRef, values)
+        }
       />
     </Box>
   );
