@@ -71,9 +71,10 @@ jobs:
         # mirrors local install behaviour and avoids npm@7+ ERESOLVE failures.
         run: npm install --no-audit --no-fund --legacy-peer-deps
 
+      # Build every workspace in dependency order so intra-repo deps have
+      # their dist/ ready before tsc type-checks against them.
       - name: Build
-        working-directory: ${{ steps.pkg.outputs.dir }}
-        run: npm run build
+        run: npm run build --workspaces --if-present
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}
