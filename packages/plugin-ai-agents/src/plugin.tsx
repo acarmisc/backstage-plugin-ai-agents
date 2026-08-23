@@ -2,6 +2,7 @@ import React from 'react';
 import { SmartToy as AgentIcon } from '@mui/icons-material';
 import {
   ApiBlueprint,
+  FrontendPlugin,
   PageBlueprint,
   createFrontendPlugin,
   fetchApiRef,
@@ -49,7 +50,9 @@ const aiAgentOverviewCard = EntityCardBlueprint.make({
   },
 });
 
-export const aiAgentsPlugin = createFrontendPlugin({
+// Explicit type annotation: without it, tsc may fail with TS2742 when
+// node_modules layouts nest a second copy of frontend-plugin-api.
+export const aiAgentsPlugin: FrontendPlugin = createFrontendPlugin({
   pluginId: 'ai-agents',
   extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard],
 });
