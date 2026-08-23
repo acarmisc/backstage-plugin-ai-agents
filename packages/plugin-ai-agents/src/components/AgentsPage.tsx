@@ -21,6 +21,7 @@ export const AgentsPage: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hireAgent, setHireAgent] = useState<AiAgent | null>(null);
   const [hireOpen, setHireOpen] = useState(false);
+  const [invocationNonce, setInvocationNonce] = useState(0);
   const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({});
 
   const refs = allAgents.map(a => a.entityRef);
@@ -143,15 +144,18 @@ export const AgentsPage: React.FC = () => {
         onClose={() => setDrawerOpen(false)}
         onRefreshStatus={handleRefreshStatus}
         onHire={handleHire}
+        historyReloadKey={invocationNonce}
       />
 
       <HireAgentDialog
         agent={hireAgent}
         open={hireOpen}
         onClose={() => setHireOpen(false)}
-        onInvoke={values =>
-          api.invokeAgent(hireAgent!.entityRef, values)
-        }
+        onInvoke={async values => {
+          const result = await api.invokeAgent(hireAgent!.entityRef, values);
+          setInvocationNonce(n => n + 1);
+          return result;
+        }}
       />
     </Box>
   );

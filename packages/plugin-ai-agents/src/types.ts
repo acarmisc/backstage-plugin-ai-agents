@@ -89,6 +89,20 @@ export interface AgentStatus {
   message?: string;
 }
 
+/** A persisted agent invocation, as returned by the backend history API. */
+export interface InvocationRecord {
+  id?: number;
+  entityRef: string;
+  userRef?: string | null;
+  sessionId: string;
+  prompt: string;
+  status: 'ok' | 'error';
+  responseText?: string | null;
+  errorMessage?: string | null;
+  latencyMs?: number | null;
+  createdAt?: string;
+}
+
 export interface AiAgent {
   /** Backstage entity ref, e.g. "component:default/support-triage-agent". */
   entityRef: string;

@@ -50,9 +50,24 @@ const aiAgentOverviewCard = EntityCardBlueprint.make({
   },
 });
 
+// Entity-page card with the agent's recent invocation history (status, user,
+// latency). Same ai-agent filter as the overview card.
+const aiAgentInvocationsCard = EntityCardBlueprint.make({
+  name: 'invocations',
+  params: {
+    filter: {
+      'spec.type': 'ai-agent',
+    },
+    loader: async () => {
+      const { AgentInvocationsCard } = await import('./components/AgentInvocationsCard');
+      return <AgentInvocationsCard />;
+    },
+  },
+});
+
 // Explicit type annotation: without it, tsc may fail with TS2742 when
 // node_modules layouts nest a second copy of frontend-plugin-api.
 export const aiAgentsPlugin: FrontendPlugin = createFrontendPlugin({
   pluginId: 'ai-agents',
-  extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard],
+  extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard, aiAgentInvocationsCard],
 });
