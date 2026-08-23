@@ -5,6 +5,7 @@ import {
   AiAgent,
   AgentStatus,
   entityToAgent,
+  InvocationRecord,
 } from './types';
 
 export interface AiAgentsApiInterface {
@@ -17,6 +18,8 @@ export interface AiAgentsApiInterface {
     entityRef: string,
     values: Record<string, string>,
   ): Promise<InvocationResult>;
+  /** Recent invocations for an agent, latest first. */
+  getInvocations(entityRef: string, limit?: number): Promise<InvocationRecord[]>;
 }
 
 export interface InvocationResult {
@@ -82,5 +85,17 @@ export class AiAgentsApi implements AiAgentsApiInterface {
       throw new Error(body.error ?? `invocation failed (${res.status})`);
     }
     return body;
+  }
+
+  async getInvocations(entityRef: string, limit = 20): Promise<InvocationRecord[]> {
+    try {
+      const res = await this.opts.fetchApi.fetch(
+        `${this.basePath}/invocations/${encodeURIComponent(entityRef)}?limit=${limit}`,
+      );
+      if (!res.ok) return [];
+      return (await res.json()) as InvocationRecord[];
+    } catch {
+      return [];
+    }
   }
 }

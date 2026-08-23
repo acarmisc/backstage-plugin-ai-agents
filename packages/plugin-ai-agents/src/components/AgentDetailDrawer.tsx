@@ -25,6 +25,7 @@ import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
 import { getLinkIcon } from './linkIcon';
+import { InvocationHistory } from './InvocationHistory';
 
 export interface AgentDetailDrawerProps {
   agent: AiAgent | null;
@@ -32,6 +33,8 @@ export interface AgentDetailDrawerProps {
   onClose: () => void;
   onRefreshStatus?: (entityRef: string) => void;
   onHire?: (agent: AiAgent) => void;
+  /** Bump to refetch the invocation history (e.g. after a new run). */
+  historyReloadKey?: number;
 }
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({
@@ -52,6 +55,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
   onClose,
   onRefreshStatus,
   onHire,
+  historyReloadKey = 0,
 }) => {
   if (!agent) return null;
   const title = agent.title ?? agent.name;
@@ -186,6 +190,8 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
             Open in catalog <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
           </Link>
         </Row>
+
+        <InvocationHistory entityRef={agent.entityRef} limit={8} reloadKey={historyReloadKey} />
 
         {onHire && agent.hireSchema && agent.hireSchema.length > 0 && (
           <Box sx={{ mt: 2 }}>
