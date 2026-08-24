@@ -1,0 +1,61 @@
+name: Snyk Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund --legacy-peer-deps
+
+      - name: Check SNYK_TOKEN is configured
+        id: has_token
+        run: echo "set=${{ secrets.SNYK_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Warn if SNYK_TOKEN is missing
+        if: steps.has_token.outputs.set != 'true'
+        run: |
+          echo "::warning::SNYK_TOKEN repo secret is not set — skipping Snyk scan. Run 'snyk auth' locally, then 'gh secret set SNYK_TOKEN' to enable it."
+
+      - name: Install Snyk CLI
+        if: steps.has_token.outputs.set == 'true'
+        run: npm install -g snyk@1
+
+      # Findings are surfaced via SARIF upload to the Security tab rather
+      # than failing the build: several current issues are transitive
+      # vulnerabilities inside @backstage/* itself with no upstream fix yet
+      # (mirrors the local pre-push hook's snyk step).
+      - name: Snyk open source (dependency) scan
+        if: steps.has_token.outputs.set == 'true'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --sarif-file-output=snyk-oss.sarif
+        continue-on-error: true
+
+      - name: Snyk code (static analysis) scan
+        if: steps.has_token.outputs.set == 'true'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk code test --sarif-file-output=snyk-code.sarif
+        continue-on-error: true
+
+      - name: Upload Snyk results to code scanning
+        if: steps.has_token.outputs.set == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .

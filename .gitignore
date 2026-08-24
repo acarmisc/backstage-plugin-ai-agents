@@ -2,12 +2,9 @@ node_modules/
 dist/
 dist-test/
 *.log
-.yarn/cache
-.yarn/install-state.gz
-# npm/yarn install artifacts
+
+# Yarn is not used in this repo; ignore stray local artifacts
+.yarn/
 .pnp.cjs
 .pnp.loader.mjs
-package-lock.json
-
-# Lock files (Backstage monorepo owns the lockfile)
 yarn.lock

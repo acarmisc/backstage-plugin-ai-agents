@@ -1,5 +1,8 @@
 import React from 'react';
-import { Chip, Box, Tooltip, Typography } from '@mui/material';
+import Chip from '@mui/material/Chip';
+import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import type { AgentBilling } from '../types';
 
 const BILLING_COLOR: Record<string, 'primary' | 'secondary' | 'success' | 'default'> = {
@@ -10,20 +13,18 @@ const BILLING_COLOR: Record<string, 'primary' | 'secondary' | 'success' | 'defau
 };
 
 function unitLabel(billing: AgentBilling): string | null {
-  return billing.model === 'per-token'
-    ? 'per 1M tokens'
-    : billing.model === 'per-invocation'
-      ? 'per 1k calls'
-      : null;
+  if (billing.model === 'per-token') return 'per 1M tokens';
+  if (billing.model === 'per-invocation') return 'per 1k calls';
+  return null;
 }
 
 function costSummary(billing: AgentBilling): string[] {
   const lines: string[] = [];
   const unit = unitLabel(billing);
-  if (billing.unitCost != null && unit) {
+  if (billing.unitCost !== undefined && billing.unitCost !== null && unit) {
     lines.push(`~$${billing.unitCost} ${unit}`);
   }
-  if (billing.budget != null) {
+  if (billing.budget !== undefined && billing.budget !== null) {
     lines.push(`budget: $${billing.budget}`);
   }
   return lines;

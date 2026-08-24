@@ -1,0 +1,18 @@
+echo "── pre-push: lint ──────────────────────────"
+npm run lint || exit 1
+
+echo "── pre-push: typecheck ─────────────────────"
+npm run typecheck || exit 1
+
+echo "── pre-push: test ──────────────────────────"
+npm test || exit 1
+
+if command -v snyk >/dev/null 2>&1; then
+  echo "── pre-push: snyk test (report only, does not block push) ──"
+  # Several current findings are transitive vulnerabilities inside
+  # @backstage/* itself with no upstream fix yet, so this doesn't fail
+  # the push (matches the CI Snyk job — see .github/workflows/ci.yaml).
+  snyk test --all-projects || true
+else
+  echo "── pre-push: snyk CLI not found, skipping dependency scan ──"
+fi

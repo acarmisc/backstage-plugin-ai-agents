@@ -1,5 +1,8 @@
 import React from 'react';
-import { Box, Fade, Rating, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Fade from '@mui/material/Fade';
+import Rating from '@mui/material/Rating';
+import Typography from '@mui/material/Typography';
 import StarIcon from '@mui/icons-material/Star';
 
 export type StarVariant = 'simple' | 'fancy';

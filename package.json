@@ -7,10 +7,14 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspace @acarmisc/backstage-plugin-ai-agents build && yarn workspace @acarmisc/backstage-plugin-ai-agents-backend build",
-    "test": "yarn workspace @acarmisc/backstage-plugin-ai-agents test && yarn workspace @acarmisc/backstage-plugin-ai-agents-backend test"
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "typescript": "^5.9.3"
   }
 }

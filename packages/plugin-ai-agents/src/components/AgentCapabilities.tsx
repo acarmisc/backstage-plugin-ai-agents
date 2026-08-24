@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Chip, Box, Popover } from '@mui/material';
+import Chip from '@mui/material/Chip';
+import Box from '@mui/material/Box';
+import Popover from '@mui/material/Popover';
 import type { AgentCapability, AgentCapabilityCategory } from '../types';
 
 const CATEGORY_COLOR: Record<

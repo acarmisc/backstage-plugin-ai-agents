@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { EmptyState } from '@backstage/core-components';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
@@ -29,7 +31,7 @@ export const AgentsPage: React.FC = () => {
   // Initial + on-ref-change status fetch. Polling runs separately below.
   useEffect(() => {
     let cancelled = false;
-    if (!refs.length) return;
+    if (!refs.length) return undefined;
     api.getStatuses(refs).then(result => {
       if (!cancelled) setStatuses(result);
     });
@@ -41,7 +43,7 @@ export const AgentsPage: React.FC = () => {
 
   // Best-effort polling for live status while the page is mounted.
   useEffect(() => {
-    if (!refs.length) return;
+    if (!refs.length) return undefined;
     const id = setInterval(async () => {
       const result = await api.getStatuses(refs);
       setStatuses(prev => ({ ...prev, ...result }));

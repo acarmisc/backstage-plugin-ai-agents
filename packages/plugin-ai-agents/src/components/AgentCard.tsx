@@ -1,5 +1,10 @@
 import React from 'react';
-import { Box, Button, Card, CardActionArea, Chip, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
 import { chipClasses } from '@mui/material/Chip';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WorkIcon from '@mui/icons-material/Work';

@@ -1,5 +1,7 @@
 import React from 'react';
-import { Box, Tooltip, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import type { AgentStatus, AgentStatusState } from '../types';
 
 const STATE_COLOR: Record<AgentStatusState, string> = {
@@ -22,7 +24,7 @@ export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({ status }) =>
     ? [
         `Status: ${state}`,
         status.lastChecked ? `Last checked: ${new Date(status.lastChecked).toLocaleString()}` : null,
-        status.latencyMs != null ? `Latency: ${status.latencyMs}ms` : null,
+        status.latencyMs !== undefined && status.latencyMs !== null ? `Latency: ${status.latencyMs}ms` : null,
         status.message ? status.message : null,
       ]
         .filter(Boolean)
@@ -50,7 +52,7 @@ export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({ status }) =>
             flexShrink: 0,
           }}
         />
-        {status?.latencyMs != null && (
+        {status && status.latencyMs !== undefined && status.latencyMs !== null && (
           <Typography variant="caption" color="text.secondary">
             {status.latencyMs}ms
           </Typography>

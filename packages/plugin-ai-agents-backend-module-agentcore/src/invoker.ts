@@ -140,11 +140,12 @@ export class AgentCoreInvoker {
     }
     // The annotation conventionally carries the full runtime ARN; a bare
     // runtime id needs the configured account id to build one.
-    const arn = runtimeHandle.startsWith('arn:')
-      ? runtimeHandle
-      : this.config.accountId
-        ? `arn:aws:bedrock-agentcore:${region}:${this.config.accountId}:runtime/${runtimeHandle}`
-        : undefined;
+    let arn: string | undefined;
+    if (runtimeHandle.startsWith('arn:')) {
+      arn = runtimeHandle;
+    } else if (this.config.accountId) {
+      arn = `arn:aws:bedrock-agentcore:${region}:${this.config.accountId}:runtime/${runtimeHandle}`;
+    }
     if (!arn) {
       throw new Error(
         `invalid runtime-handle "${runtimeHandle}": set the full AgentCore runtime ARN (arn:aws:bedrock-agentcore:<region>:<account>:runtime/<id>) or configure ai-agents.invocations.agentCore.accountId`,
