@@ -361,12 +361,13 @@ function stubReviews() {
 
 test('POST /reviews validates rating and stores review', async () => {
   const reviews = stubReviews();
+  const entity = makeEntity('triage');
   const router = await createRouter({
     config: makeConfig(),
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
-    catalogClient: stubCatalog([]),
+    catalogClient: stubCatalog([entity]),
     reviews,
   });
   const { url, close } = await startServer(router);
@@ -394,6 +395,30 @@ test('POST /reviews validates rating and stores review', async () => {
     assert.equal(body.count, 1);
     assert.equal(body.average, 4);
     assert.equal(body.reviews[0].comment, 'great agent');
+  } finally {
+    await close();
+  }
+});
+
+test('POST /reviews rejects refs that are not an ai-agent entity', async () => {
+  const reviews = stubReviews();
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([undefined]),
+    reviews,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/reviews/component%3Adefault%2Fghost`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: 5 }),
+    });
+    assert.equal(res.status, 404);
+    assert.equal(reviews.inserted.length, 0);
   } finally {
     await close();
   }

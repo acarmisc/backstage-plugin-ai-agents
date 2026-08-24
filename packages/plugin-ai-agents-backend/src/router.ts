@@ -336,6 +336,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     try {
+      const { items } = await resolveEntities([ref]);
+      const entity = items[0];
+      if (!entity || entity.spec?.type !== AI_AGENT_TYPE) {
+        res.status(404).json({ error: 'not an ai-agent entity' });
+        return;
+      }
       const who = await userRef(req);
       const id = await reviews.insert({
         entityRef: ref,
