@@ -1,9 +1,14 @@
-import path from 'path';
 import { Knex } from 'knex';
+import { resolvePackagePath } from '@backstage/backend-plugin-api';
 import { InvocationRecord, ReviewRecord, ReviewsSummary } from './types';
 
+const migrationsDir = resolvePackagePath(
+  '@acarmisc/backstage-plugin-ai-agents-backend',
+  'migrations',
+);
+
 async function runMigrations(knex: Knex): Promise<void> {
-  await knex.migrate.latest({ directory: path.join(__dirname, '..', 'migrations') });
+  await knex.migrate.latest({ directory: migrationsDir });
 }
 
 type DbRow = {
