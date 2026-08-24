@@ -8,3 +8,7 @@ dist-test/
 .pnp.cjs
 .pnp.loader.mjs
 yarn.lock
+
+# Local tooling artifacts
+.playwright-mcp/
+.claude/
