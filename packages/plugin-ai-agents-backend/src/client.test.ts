@@ -29,8 +29,8 @@ test('mapProbeResult down on abort/error', () => {
   assert.equal(s.message, 'aborted');
 });
 
-test('isAllowed returns true when allowlist empty', () => {
-  assert.equal(isAllowed('https://evil.example.com', []), true);
+test('isAllowed returns false when allowlist empty', () => {
+  assert.equal(isAllowed('https://evil.example.com', []), false);
 });
 
 test('isAllowed matches wildcard origin', () => {
@@ -51,4 +51,34 @@ test('readProbeConfig applies defaults', () => {
   assert.equal(c.probeTimeoutMs, 3000);
   assert.equal(c.statusCacheTtlMs, 15000);
   assert.deepEqual(c.probeAllowlist, []);
+});
+
+test('isAllowed prevents subdomain-suffix matching attacks', () => {
+  // Pattern meant to match example.com and its paths should NOT match example.com.evil.com
+  assert.equal(isAllowed('https://example.com.evil.com/anything', ['https://example.com*']), false);
+  assert.equal(isAllowed('https://example.com.evil.com', ['https://example.com']), false);
+});
+
+test('isAllowed matches allowlisted origin with path globs', () => {
+  // Pattern should match the same origin with any path
+  assert.equal(isAllowed('https://example.com/health', ['https://example.com*']), true);
+  assert.equal(isAllowed('https://example.com/api/status', ['https://example.com*']), true);
+  assert.equal(isAllowed('https://example.com', ['https://example.com*']), true);
+});
+
+test('isAllowed matches exact origin without glob', () => {
+  assert.equal(isAllowed('https://api.example.com', ['https://api.example.com']), true);
+  assert.equal(isAllowed('https://api.example.com:8080', ['https://api.example.com:8080']), true);
+  // Different origins should not match
+  assert.equal(isAllowed('https://other.example.com', ['https://api.example.com']), false);
+});
+
+test('isAllowed matches the README-documented AWS API Gateway pattern', () => {
+  const allowlist = ['https://*.execute-api.*.amazonaws.com/*'];
+  assert.equal(
+    isAllowed('https://abc123.execute-api.us-east-1.amazonaws.com/prod/health', allowlist),
+    true,
+  );
+  assert.equal(isAllowed('https://abc123.execute-api.us-east-1.amazonaws.com', allowlist), true);
+  assert.equal(isAllowed('https://evil.com/execute-api.us-east-1.amazonaws.com', allowlist), false);
 });

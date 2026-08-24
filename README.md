@@ -347,7 +347,7 @@ ai-agents:
 | `ai-agents.probeTimeoutMs` | number | `3000` | Per-probe timeout |
 | `ai-agents.statusCacheTtlMs` | number | `15000` | In-memory status cache TTL |
 | `ai-agents.probeAuthHeader` | string | — | Static Authorization header for probes (`@visibility secret`) |
-| `ai-agents.probeAllowlist` | string[] | `[]` | Allowed probe URL origin globs (empty = allow all http(s)) |
+| `ai-agents.probeAllowlist` | string[] | `[]` | Allowed probe URL origin globs (empty = no probing) |
 
 Without the backend (or with `enabled: false`), the plugin still works —
 cards just show an `unknown` status badge.

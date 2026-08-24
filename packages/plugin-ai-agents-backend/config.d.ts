@@ -13,9 +13,9 @@ export interface Config {
      */
     probeAuthHeader?: string;
     /**
-     * Allowlist of allowed probe URL origin globs. Empty means allow all
-     * http(s) URLs. Use to restrict what the backend will fetch on behalf
-     * of users.
+     * Allowlist of allowed probe URL origin globs. Empty means no probing
+     * occurs (deny by default). Probing requires explicit allowlist entries.
+     * Use to restrict what the backend will fetch on behalf of users.
      */
     probeAllowlist?: string[];
   };

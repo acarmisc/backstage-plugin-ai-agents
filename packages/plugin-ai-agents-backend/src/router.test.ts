@@ -18,7 +18,12 @@ function makeEntity(name: string, annotations?: Record<string, string>): Entity 
 
 function makeConfig(over: Record<string, unknown> = {}) {
   return {
-    getOptionalConfig: () => undefined,
+    getOptionalConfig: () => ({
+      getOptionalBoolean: (k: string) => (k === 'enabled' ? over.enabled : undefined),
+      getOptionalNumber: (k: string) => over[k as string] as number | undefined,
+      getOptionalString: (k: string) => over[k as string] as string | undefined,
+      getOptionalStringArray: (k: string) => over[k as string] as string[] | undefined,
+    }),
     getOptionalBoolean: (k: string) => (k === 'enabled' ? over.enabled : undefined),
     getOptionalNumber: (k: string) => over[k as string] as number | undefined,
     getOptionalString: (k: string) => over[k as string] as string | undefined,
@@ -82,7 +87,7 @@ test('GET /statuses probes healthy agent and caches', async () => {
     return { ok: true, status: 200, latencyMs: 10 } as ProbeResult;
   };
   const router = await createRouter({
-    config: makeConfig(),
+    config: makeConfig({ probeAllowlist: ['https://api.example.com*'] }),
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,

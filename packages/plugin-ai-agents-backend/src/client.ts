@@ -11,16 +11,32 @@ export function readProbeConfig(config: import('@backstage/config').Config): Pro
   };
 }
 
+/**
+ * Strip any path segment from an allowlist pattern, since matching happens
+ * against the origin only. "https://*.foo.com/*" and "https://*.foo.com"
+ * are equivalent — a trailing "/*" is a common (and harmless) way to write
+ * "this origin, any path", not a path-scoped rule.
+ */
+function originPattern(pattern: string): string {
+  const schemeIdx = pattern.indexOf('://');
+  if (schemeIdx === -1) return pattern.replace(/\/.*$/, '');
+  const pathIdx = pattern.indexOf('/', schemeIdx + 3);
+  return pathIdx === -1 ? pattern : pattern.slice(0, pathIdx);
+}
+
 function matchesAllowlist(url: string, allowlist: string[]): boolean {
-  if (!allowlist.length) return true;
+  if (!allowlist.length) return false;
   try {
     const u = new URL(url);
     const origin = `${u.protocol}//${u.host}`;
     return allowlist.some(pattern => {
-      const re = new RegExp(
-        `^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`,
-      );
-      return re.test(origin) || re.test(url);
+      // Escape regex metachars, then turn `*` into a dot-free wildcard so a
+      // pattern like "https://example.com*" can't match
+      // "https://example.com.evil.com" (matching stays within one origin).
+      const regexStr = `^${originPattern(pattern)
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*/g, '[^.]*')}$`;
+      return new RegExp(regexStr).test(origin);
     });
   } catch {
     return false;
