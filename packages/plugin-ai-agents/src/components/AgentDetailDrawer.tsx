@@ -1,18 +1,16 @@
 import React from 'react';
-import {
-  Box,
-  Button,
-  Chip,
-  Drawer,
-  IconButton,
-  Link,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Stack,
-  Typography,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -187,9 +185,16 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
         )}
 
         <Row label="Catalog">
-          <Link href={`/catalog/${agent.entityRef.replace(':', '/')}`}>
-            Open in catalog <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
-          </Link>
+          {(() => {
+            const [kind, rest] = agent.entityRef.split(':');
+            const [ns, name] = (rest ?? 'default/').split('/');
+            return (
+              <Link href={`/catalog/${ns ?? 'default'}/${kind}/${name}`}>
+                Open in catalog{' '}
+                <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
+              </Link>
+            );
+          })()}
         </Row>
 
         <InvocationHistory entityRef={agent.entityRef} limit={8} reloadKey={historyReloadKey} />
