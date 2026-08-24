@@ -232,7 +232,7 @@ catalog:
   providers:
     gitlab:
       innovation:                         # ← provider name (arbitrary)
-        host: ${GITLAB_HOST}              # e.g. gitlab.az.abssrv.it
+        host: ${GITLAB_HOST}              # e.g. gitlab.example.com
         group: ${GITLAB_GROUP}            # e.g. "innovation"
         entityFilename: catalog-info.yaml # ← the file it looks for in every repo
         projectPattern: '[\s\S]*'         # matches every project in the group
