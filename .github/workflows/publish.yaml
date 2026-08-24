@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   publish:
@@ -69,7 +70,7 @@ jobs:
         # (e.g. the agentcore module depending on the backend core) resolve.
         # Backstage's MUI4 theme has a react@^17 peer dep; --legacy-peer-deps
         # mirrors local install behaviour and avoids npm@7+ ERESOLVE failures.
-        run: npm install --no-audit --no-fund --legacy-peer-deps
+        run: npm ci --no-audit --no-fund --legacy-peer-deps
 
       # Build every workspace in dependency order so intra-repo deps have
       # their dist/ ready before tsc type-checks against them.
@@ -78,7 +79,7 @@ jobs:
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}
-        run: npm publish --access public
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
