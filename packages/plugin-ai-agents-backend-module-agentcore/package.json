@@ -21,6 +21,9 @@
   },
   "homepage": "https://github.com/acarmisc/backstage-plugin-ai-agents#readme",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
