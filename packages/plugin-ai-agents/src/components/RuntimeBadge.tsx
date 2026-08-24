@@ -1,5 +1,6 @@
 import React from 'react';
-import { Chip, Box } from '@mui/material';
+import Chip from '@mui/material/Chip';
+import Box from '@mui/material/Box';
 import MemoryIcon from '@mui/icons-material/Memory';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import FunctionsIcon from '@mui/icons-material/Functions';

@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import SendIcon from '@mui/icons-material/Send';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
@@ -25,6 +23,29 @@ function formatWhen(iso?: string): string {
         minute: '2-digit',
       });
 }
+
+const ReviewRow: React.FC<{ review: AgentReview }> = ({ review }) => (
+  <Box
+    sx={{
+      py: 0.75,
+      borderBottom: '1px solid',
+      borderColor: 'divider',
+      '&:last-child': { borderBottom: 'none' },
+    }}
+  >
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <StarRating value={review.rating} />
+      <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }} whiteSpace="nowrap">
+        {review.userRef?.split('/').pop() ?? 'anonymous'} · {formatWhen(review.createdAt)}
+      </Typography>
+    </Box>
+    {review.comment && (
+      <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+        {review.comment}
+      </Typography>
+    )}
+  </Box>
+);
 
 /**
  * Agent reviews: average rating, review list and a "Rate this agent" form
@@ -138,26 +159,3 @@ export const AgentReviews: React.FC<{
     </Box>
   );
 };
-
-const ReviewRow: React.FC<{ review: AgentReview }> = ({ review }) => (
-  <Box
-    sx={{
-      py: 0.75,
-      borderBottom: '1px solid',
-      borderColor: 'divider',
-      '&:last-child': { borderBottom: 'none' },
-    }}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <StarRating value={review.rating} />
-      <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }} whiteSpace="nowrap">
-        {review.userRef?.split('/').pop() ?? 'anonymous'} · {formatWhen(review.createdAt)}
-      </Typography>
-    </Box>
-    {review.comment && (
-      <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-        {review.comment}
-      </Typography>
-    )}
-  </Box>
-);

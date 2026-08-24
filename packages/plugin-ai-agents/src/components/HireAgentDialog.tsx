@@ -1,19 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import MenuItem from '@mui/material/MenuItem';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import type { InvocationResult } from '../api';
@@ -76,13 +74,69 @@ function makeSessionId(): string {
   return raw.padEnd(33, '0').slice(0, 80);
 }
 
+const PreviewBlock: React.FC<{
+  title: string;
+  language: string;
+  content: string;
+  onCopy: () => void;
+  missingChip?: React.ReactNode;
+}> = ({ title, language, content, onCopy, missingChip }) => (
+  <Box>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        mb: 0.5,
+      }}
+    >
+      <Typography variant="caption" color="text.secondary">
+        {title}
+      </Typography>
+      <Chip
+        size="small"
+        label={language}
+        sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
+      />
+      {missingChip}
+      <IconButton
+        size="small"
+        onClick={onCopy}
+        sx={{ ml: 'auto' }}
+        title="Copy"
+      >
+        <ContentCopyIcon fontSize="inherit" />
+      </IconButton>
+    </Box>
+    <Box
+      component="pre"
+      sx={{
+        m: 0,
+        p: 1.25,
+        bgcolor: 'action.hover',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        fontFamily: 'monospace',
+        fontSize: '0.75rem',
+        lineHeight: 1.4,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        overflowX: 'auto',
+        maxHeight: 220,
+      }}
+    >
+      {content}
+    </Box>
+  </Box>
+);
+
 export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
   agent,
   open,
   onClose,
   onInvoke,
 }) => {
-  const fields = agent?.hireSchema ?? [];
+  const fields = useMemo(() => agent?.hireSchema ?? [], [agent]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<InvocationResult | null>(null);
@@ -155,14 +209,14 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                 const value = values[f.name] ?? '';
                 const onChange = (v: string) =>
                   setValues(prev => ({ ...prev, [f.name]: v }));
-                const error = f.required && !value.trim();
+                const fieldError = f.required && !value.trim();
                 const common = {
                   key: f.name,
                   label: f.label,
                   required: f.required,
-                  error,
+                  error: fieldError,
                   helperText:
-                    f.help ?? (error ? 'This field is required' : undefined),
+                    f.help ?? (fieldError ? 'This field is required' : undefined),
                   value,
                   size: 'small' as const,
                   fullWidth: true,
@@ -259,7 +313,7 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <Typography variant="subtitle2">Agent response</Typography>
-                {result.latencyMs != null && (
+                {result.latencyMs !== undefined && result.latencyMs !== null && (
                   <Chip
                     size="small"
                     label={`${(result.latencyMs / 1000).toFixed(1)}s`}
@@ -318,59 +372,3 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
     </Dialog>
   );
 };
-
-const PreviewBlock: React.FC<{
-  title: string;
-  language: string;
-  content: string;
-  onCopy: () => void;
-  missingChip?: React.ReactNode;
-}> = ({ title, language, content, onCopy, missingChip }) => (
-  <Box>
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        mb: 0.5,
-      }}
-    >
-      <Typography variant="caption" color="text.secondary">
-        {title}
-      </Typography>
-      <Chip
-        size="small"
-        label={language}
-        sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-      />
-      {missingChip}
-      <IconButton
-        size="small"
-        onClick={onCopy}
-        sx={{ ml: 'auto' }}
-        title="Copy"
-      >
-        <ContentCopyIcon fontSize="inherit" />
-      </IconButton>
-    </Box>
-    <Box
-      component="pre"
-      sx={{
-        m: 0,
-        p: 1.25,
-        bgcolor: 'action.hover',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1,
-        fontFamily: 'monospace',
-        fontSize: '0.75rem',
-        lineHeight: 1.4,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        overflowX: 'auto',
-        maxHeight: 220,
-      }}
-    >
-      {content}
-    </Box>
-  </Box>
-);

@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Chip,
-  CircularProgress,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -27,6 +25,12 @@ function formatWhen(iso?: string): string {
         minute: '2-digit',
       });
 }
+
+const SectionTitle: React.FC<{ entityRef?: string }> = () => (
+  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+    Recent invocations
+  </Typography>
+);
 
 /**
  * Recent agent invocations with status, user and latency. Renders nothing
@@ -53,7 +57,7 @@ export const InvocationHistory: React.FC<{
     return () => {
       alive = false;
     };
-  }, [entityRef, limit, nonce, reloadKey]);
+  }, [api, entityRef, limit, nonce, reloadKey]);
 
   if (records === null) {
     return (
@@ -111,7 +115,7 @@ export const InvocationHistory: React.FC<{
               <Typography variant="caption" noWrap sx={{ flexGrow: 1 }}>
                 {r.prompt.replace(/\s+/g, ' ').slice(0, 60)}
               </Typography>
-              {r.latencyMs != null && r.status === 'ok' && (
+              {r.latencyMs !== undefined && r.latencyMs !== null && r.status === 'ok' && (
                 <Chip
                   size="small"
                   label={`${(r.latencyMs / 1000).toFixed(1)}s`}
@@ -137,9 +141,3 @@ export const InvocationHistory: React.FC<{
     </Box>
   );
 };
-
-const SectionTitle: React.FC<{ entityRef?: string }> = () => (
-  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-    Recent invocations
-  </Typography>
-);

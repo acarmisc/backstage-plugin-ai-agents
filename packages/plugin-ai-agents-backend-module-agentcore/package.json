@@ -2,6 +2,11 @@
   "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore",
   "version": "0.1.1",
   "description": "AWS Bedrock AgentCore invocation module for the ai-agents Backstage backend plugin.",
+  "keywords": [
+    "backstage",
+    "backstage-plugin",
+    "backstage-backend-plugin-module"
+  ],
   "backstage": {
     "role": "backend-plugin-module",
     "pluginId": "ai-agents",
@@ -31,6 +36,8 @@
   "scripts": {
     "build": "node build.js && tsc -p tsconfig.json",
     "test": "tsc -p tsconfig.test.json && node --test dist-test/**/*.test.js dist-test/*.test.js",
+    "lint": "backstage-cli package lint",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build",
     "postpack": ""
   },

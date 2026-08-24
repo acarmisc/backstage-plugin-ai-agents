@@ -12,50 +12,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for package.json
-        id: check_package
-        run: |
-          if [ -f "package.json" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-          cat $GITHUB_OUTPUT
-
-      - if: steps.check_package.outputs.exists == 'true'
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
-      - if: steps.check_package.outputs.exists == 'true'
-        name: Install dependencies
+      - name: Install dependencies
         # Backstage's MUI4 theme has a react@^17 peer dep; --legacy-peer-deps
         # mirrors local install behaviour and avoids npm@7+ ERESOLVE failures.
-        run: npm install --no-audit --no-fund --legacy-peer-deps || echo "Skipping - not a complete monorepo"
+        run: npm ci --no-audit --no-fund --legacy-peer-deps
 
-      - if: steps.check_package.outputs.exists == 'true'
-        name: Build frontend
-        working-directory: packages/plugin-ai-agents
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
         run: npm run build
 
-      - if: steps.check_package.outputs.exists == 'true'
-        name: Build backend
-        working-directory: packages/plugin-ai-agents-backend
-        run: npm run build
-
-      - if: steps.check_package.outputs.exists == 'true'
-        name: Test frontend
-        working-directory: packages/plugin-ai-agents
+      - name: Test
         run: npm test
-
-      - if: steps.check_package.outputs.exists == 'true'
-        name: Test backend
-        working-directory: packages/plugin-ai-agents-backend
-        run: npm test
-
-      - if: steps.check_package.outputs.exists == 'false'
-        name: Info
-        run: |
-          echo "This is a plugin package collection designed for Backstage monorepo use."
-          echo "Workspace dependencies (workspace:^) require a Backstage monorepo context."
-          echo "See README for installation instructions."

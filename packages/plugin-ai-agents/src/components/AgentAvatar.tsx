@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box } from '@mui/material';
+import Box from '@mui/material/Box';
 
 const PALETTE = [
   '#1976d2', '#388e3c', '#f57c00', '#7b1fa2',

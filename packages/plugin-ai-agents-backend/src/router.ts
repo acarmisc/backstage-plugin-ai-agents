@@ -64,11 +64,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     ? await InvocationStore.create(await options.database.getClient())
     : undefined;
 
-  const reviews = options.reviews
-    ? options.reviews
-    : options.database
-      ? await ReviewStore.create(await options.database.getClient())
-      : undefined;
+  let reviews = options.reviews;
+  if (!reviews && options.database) {
+    reviews = await ReviewStore.create(await options.database.getClient());
+  }
 
   const cache = new Map<string, CachedStatus>();
 

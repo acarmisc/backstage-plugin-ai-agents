@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Button, Chip, Grid, Link, Tooltip, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Grid';
+import Link from '@mui/material/Link';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MemoryIcon from '@mui/icons-material/Memory';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
@@ -143,7 +149,7 @@ export const AgentOverviewCard: React.FC = () => {
             Hire Agent
           </Button>
         )}
-        <Link href={`/ai-agents`}>View on the AI Agents page</Link>
+        <Link href="/ai-agents">View on the AI Agents page</Link>
       </Box>
 
       <AgentReviews entityRef={agent.entityRef} />

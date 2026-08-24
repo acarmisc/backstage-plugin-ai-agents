@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import HistoryIcon from '@mui/icons-material/History';
 import { useEntity } from '@backstage/plugin-catalog-react';
 import { entityToAgent } from '../types';
