@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Box from '@mui/material/Box';
+import { isSafeUrl } from '../types';
 
 const PALETTE = [
   '#1976d2', '#388e3c', '#f57c00', '#7b1fa2',
@@ -30,7 +31,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   size = 44,
 }) => {
   const [broken, setBroken] = useState(false);
-  const showImage = avatarUrl && !broken;
+  const showImage = isSafeUrl(avatarUrl) && !broken;
 
   return (
     <Box

@@ -26,7 +26,7 @@ function formatWhen(iso?: string): string {
       });
 }
 
-const SectionTitle: React.FC<{ entityRef?: string }> = () => (
+const SectionTitle: React.FC = () => (
   <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
     Recent invocations
   </Typography>

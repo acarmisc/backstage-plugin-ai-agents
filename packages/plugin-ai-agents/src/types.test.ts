@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { entityToAgent, AI_AGENT_TYPE } from './types';
+import { entityToAgent, AI_AGENT_TYPE, isSafeUrl } from './types';
 import type { Entity } from '@backstage/catalog-model';
 
 const baseEntity = (overrides: Partial<Entity> = {}): Entity => ({
@@ -226,4 +226,21 @@ test('entityToAgent falls back to legacy ai-agent.acarmisc.org prefix when new p
   assert.equal(a.runtime.runtime, 'bedrock-agentcore');
   assert.equal(a.runtime.runtimeHandle, 'arn:aws:bedrock:us-east-1:1:agent/LEGACY');
   assert.equal(a.version, '1.0.0');
+});
+
+test('isSafeUrl accepts https:// URLs', () => {
+  assert.equal(isSafeUrl('https://example.com'), true);
+});
+
+test('isSafeUrl accepts http:// URLs', () => {
+  assert.equal(isSafeUrl('http://example.com'), true);
+});
+
+test('isSafeUrl rejects javascript: URLs', () => {
+  // eslint-disable-next-line no-script-url
+  assert.equal(isSafeUrl('javascript:alert(1)'), false);
+});
+
+test('isSafeUrl returns false for undefined', () => {
+  assert.equal(isSafeUrl(undefined), false);
 });

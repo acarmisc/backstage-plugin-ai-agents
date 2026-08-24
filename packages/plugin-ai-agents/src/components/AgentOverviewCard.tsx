@@ -12,7 +12,7 @@ import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import WorkIcon from '@mui/icons-material/Work';
-import { entityToAgent } from '../types';
+import { entityToAgent, isSafeUrl } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
@@ -85,7 +85,7 @@ export const AgentOverviewCard: React.FC = () => {
         <Field label="System" value={agent.system} />
       </Grid>
 
-      {agent.runtime.endpoint && (
+      {agent.runtime.endpoint && isSafeUrl(agent.runtime.endpoint) && (
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="caption" color="text.secondary">Endpoint</Typography>
           <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
@@ -123,11 +123,11 @@ export const AgentOverviewCard: React.FC = () => {
         </Box>
       )}
 
-      {agent.links.length > 0 && (
+      {agent.links.filter(l => isSafeUrl(l.url)).length > 0 && (
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="caption" color="text.secondary">Links</Typography>
           <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {agent.links.map((l, i) => (
+            {agent.links.filter(l => isSafeUrl(l.url)).map((l, i) => (
               <Tooltip key={i} title={l.title}>
                 <Link href={l.url} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                   {l.title} <OpenInNewIcon sx={{ fontSize: 12 }} />

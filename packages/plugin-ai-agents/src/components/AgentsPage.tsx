@@ -50,7 +50,7 @@ export const AgentsPage: React.FC = () => {
     }, POLL_INTERVAL_MS);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, refs.length]);
+  }, [api, refs.join(',')]);
 
   const agentsWithStatus = agents.map(a => ({
     ...a,

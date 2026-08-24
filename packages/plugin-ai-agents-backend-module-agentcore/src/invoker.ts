@@ -27,11 +27,6 @@ export function readAgentCoreConfig(config: Config): AgentCoreConfig | undefined
   };
 }
 
-/** Encode a runtime ARN the way the AgentCore HTTPS endpoint expects. */
-export function encodeRuntimeArnPath(arn: string): string {
-  return encodeURIComponent(arn).replace(/%2F/g, '%2F');
-}
-
 interface CachedToken {
   token: string;
   expiresAtMs: number;

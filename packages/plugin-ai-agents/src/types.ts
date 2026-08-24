@@ -238,6 +238,17 @@ function parseHireSchema(raw: string | undefined): HireField[] | undefined {
   }
 }
 
+/** Guards against non-http(s) URLs (e.g. javascript:) in annotation-sourced links. */
+export function isSafeUrl(url: string | undefined): url is string {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function entityRef(entity: Entity): string {
   const ns = entity.metadata.namespace ?? 'default';
   return `${entity.kind.toLowerCase()}:${ns}/${entity.metadata.name}`;

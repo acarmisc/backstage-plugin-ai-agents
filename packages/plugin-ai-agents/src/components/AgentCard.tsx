@@ -9,6 +9,7 @@ import { chipClasses } from '@mui/material/Chip';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WorkIcon from '@mui/icons-material/Work';
 import type { AiAgent } from '../types';
+import { isSafeUrl } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
@@ -127,7 +128,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       </CardActionArea>
 
       {/* Links: outside the click area so they never fight the card click */}
-      {agent.links.length > 0 && (
+      {agent.links.filter(l => isSafeUrl(l.url)).length > 0 && (
         <Box
           sx={{
             display: 'flex',
@@ -139,7 +140,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             borderColor: 'divider',
           }}
         >
-          {agent.links.slice(0, 4).map((l, i) => (
+          {agent.links.filter(l => isSafeUrl(l.url)).slice(0, 4).map((l, i) => (
             <Chip
               key={i}
               size="small"

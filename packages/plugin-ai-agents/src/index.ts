@@ -13,6 +13,7 @@ export {
   AI_AGENT_ANNOTATION_PREFIX,
   AI_AGENT_ANNOTATION_PREFIX_LEGACY,
   entityToAgent,
+  isSafeUrl,
 } from './types';
 export type {
   AiAgent,

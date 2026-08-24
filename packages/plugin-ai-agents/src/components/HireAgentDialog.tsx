@@ -35,7 +35,7 @@ const isRequiredMissing = (
   values: Record<string, string>,
 ) => fields.some(f => f.required && !values[f.name]?.trim());
 
-/** Replace {name} placeholders in `template` with `values[name]`. */
+/** Replace {name} placeholders in `template` with `values[name]`. Mirrors the backend's fillTemplate in invocation.ts; keep in sync if placeholder syntax changes. */
 function fillTemplate(
   template: string,
   values: Record<string, string>,
@@ -48,6 +48,11 @@ function fillTemplate(
 /** Build the AgentCore HTTP invocation payload (the JSON body of /invocations). */
 function buildPayload(prompt: string): { prompt: string } {
   return { prompt };
+}
+
+/** Escape single quotes in a string for POSIX shell single-quoting. */
+function shellEscapeSingleQuoted(value: string): string {
+  return value.replace(/'/g, `'\\''`);
 }
 
 /** Build the equivalent AWS CLI command for the AgentCore invocation. */
@@ -64,7 +69,7 @@ function buildCliCommand(
     `--region ${region}`,
     `--agent-runtime-id "${handle}"`,
     `--runtime-session-id "${sessionId}"`,
-    `--payload '${body}'`,
+    `--payload '${shellEscapeSingleQuoted(body)}'`,
   ].join(' \\\n  ');
 }
 
@@ -285,7 +290,7 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                 onCopy={() => copy(payloadJson)}
               />
               <PreviewBlock
-                title="AWS CLI command"
+                title="AWS CLI command (preview — actual session id assigned at run time)"
                 language="bash"
                 content={cliCommand}
                 onCopy={() => copy(cliCommand)}
