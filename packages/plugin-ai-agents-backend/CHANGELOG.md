@@ -3,7 +3,7 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.5.0] - 2026-08-24
 
 ### Security
 
@@ -70,7 +70,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Initial release: AI Agents Backstage plugin (frontend + backend).
 
-[Unreleased]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.4.0...HEAD
+[0.5.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.4.0...ai-agents-backend@0.5.0
 [0.4.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.3.0...ai-agents-backend@0.4.0
 [0.3.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.2.1...ai-agents-backend@0.3.0
 [0.2.1]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.2.0...ai-agents-backend@0.2.1
