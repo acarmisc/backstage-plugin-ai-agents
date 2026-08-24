@@ -104,6 +104,7 @@ export const InvocationHistory: React.FC<{
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
+                minWidth: 0,
                 '&:hover': { bgcolor: 'action.hover' },
               }}
             >
@@ -112,7 +113,7 @@ export const InvocationHistory: React.FC<{
               ) : (
                 <ErrorIcon color="error" sx={{ fontSize: 16 }} />
               )}
-              <Typography variant="caption" noWrap sx={{ flexGrow: 1 }}>
+              <Typography variant="caption" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
                 {r.prompt.replace(/\s+/g, ' ').slice(0, 60)}
               </Typography>
               {r.latencyMs !== undefined && r.latencyMs !== null && r.status === 'ok' && (

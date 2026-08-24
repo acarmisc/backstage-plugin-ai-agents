@@ -79,13 +79,19 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             {agent.purpose || 'No description provided.'}
           </Typography>
 
-          {/* Runtime */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
+          {/* Runtime + billing: quiet icon+text notes, styled like the footer */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
             <RuntimeBadge
               runtime={agent.runtime.runtime}
               onClick={onRuntimeClick}
+              variant="text"
             />
-            <BillingBadge billing={agent.billing} compact />
+            <BillingBadge billing={agent.billing} compact variant="text" />
+          </Box>
+
+          {/* Jobs summary (only when invocation history exists) */}
+          <Box sx={{ mb: 1.5 }}>
+            <AgentJobStats entityRef={agent.entityRef} />
           </Box>
 
           {/* Capabilities — secondary info, kept visually quiet */}
@@ -104,11 +110,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({
               <AgentCapabilities capabilities={agent.capabilities} />
             </Box>
           )}
-
-          {/* Jobs summary (only when invocation history exists) */}
-          <Box sx={{ mb: 1.5 }}>
-            <AgentJobStats entityRef={agent.entityRef} />
-          </Box>
 
           {/* Footer: owner · lifecycle · version in one uniform muted style */}
           {footer && (

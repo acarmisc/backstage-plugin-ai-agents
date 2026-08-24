@@ -41,10 +41,10 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({
   children,
 }) => (
   <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 110 }}>
+    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 110, flexShrink: 0 }}>
       {label}
     </Typography>
-    <Box sx={{ flexGrow: 1 }}>{children}</Box>
+    <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
   </Box>
 );
 
@@ -68,11 +68,11 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 480 } } }}
+      PaperProps={{ sx: { width: { xs: '100%', sm: 480 }, overflowX: 'hidden' } }}
     >
       <Box sx={{ p: 2, display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
         <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} size={56} />
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h6">{title}</Typography>
           <Typography
             variant="caption"
