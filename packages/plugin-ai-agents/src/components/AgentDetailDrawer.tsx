@@ -187,9 +187,16 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
         )}
 
         <Row label="Catalog">
-          <Link href={`/catalog/${agent.entityRef.replace(':', '/')}`}>
-            Open in catalog <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
-          </Link>
+          {(() => {
+            const [kind, rest] = agent.entityRef.split(':');
+            const [ns, name] = (rest ?? 'default/').split('/');
+            return (
+              <Link href={`/catalog/${ns ?? 'default'}/${kind}/${name}`}>
+                Open in catalog{' '}
+                <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
+              </Link>
+            );
+          })()}
         </Row>
 
         <InvocationHistory entityRef={agent.entityRef} limit={8} reloadKey={historyReloadKey} />
