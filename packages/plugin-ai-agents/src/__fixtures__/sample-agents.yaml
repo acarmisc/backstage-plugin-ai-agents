@@ -20,7 +20,7 @@ metadata:
     ai-agent.acarmisc.org/capabilities: "tool-use:tools,rag:retrieval,reasoning:reasoning"
     ai-agent.acarmisc.org/version: "1.4.2"
     ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true,"help":"GitLab project path, e.g. my-org/my-project"},{"name":"target","label":"MR IID","type":"text","required":true,"help":"Merge Request IID, e.g. 42"},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run","help":"dry-run = present only; post = post inline comments"}]'
-    ai-agent.acarmisc.org/prompt-template: "Revisiona la MR !{target} nel progetto '{project}'. Comportamento posting: {action}."
+    ai-agent.acarmisc.org/prompt-template: "Review merge request !{target} in project '{project}'. Action: {action}."
   links:
     - url: https://grafana.example.com/d/agents/support-triage
       title: Metrics
