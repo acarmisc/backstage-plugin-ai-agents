@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Entity } from '@backstage/catalog-model';
+import { AuthorizeResult } from '@backstage/plugin-permission-common';
 import { createRouter } from './router';
 import type { ProbeFn, ProbeResult } from './types';
 
@@ -41,6 +42,20 @@ function stubAuth() {
   return {
     getPluginRequestToken: async () => ({ token: 'tok' }),
     getOwnServiceCredentials: async () => ({}),
+  } as any;
+}
+
+function stubHttpAuth() {
+  return {
+    credentials: async () => ({
+      principal: { type: 'user', userEntityRef: 'user:default/test-user' },
+    }),
+  } as any;
+}
+
+function stubPermissions(result: AuthorizeResult) {
+  return {
+    authorize: async () => [{ result }],
   } as any;
 }
 
@@ -247,6 +262,73 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
     assert.equal(failRes.status, 502);
     const failBody = await failRes.json();
     assert.match(failBody.error, /agent exploded/);
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations returns 403 when permissions deny', async () => {
+  const entity = makeEntity('triage', {
+    'ai-agent.acarmisc.org/runtime-handle':
+      'arn:aws:bedrock-agentcore:eu-west-1:123456789012:runtime/support-triage-runtime-Xq7AsdA8od',
+  });
+  const invoker = {
+    invoke: async () => ({ responseText: 'ok', latencyMs: 10 }),
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invoker,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.DENY),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.match(body.error, /not authorized/);
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations returns 200 when permissions allow', async () => {
+  const entity = makeEntity('triage', {
+    'ai-agent.acarmisc.org/prompt-template': 'Triage issue {issue}',
+    'ai-agent.acarmisc.org/runtime-handle':
+      'arn:aws:bedrock-agentcore:eu-west-1:123456789012:runtime/support-triage-runtime-Xq7AsdA8od',
+  });
+  const invoker = {
+    invoke: async (req: any) => ({ responseText: `ok:${req.prompt}`, latencyMs: 42 }),
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invoker,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: { issue: 'JIRA-1' } }),
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.responseText, 'ok:Triage issue JIRA-1');
   } finally {
     await close();
   }

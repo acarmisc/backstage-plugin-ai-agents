@@ -1,8 +1,11 @@
 import express, { Router, Request, Response } from 'express';
 import { Config } from '@backstage/config';
-import { AuthService, DiscoveryService, HttpAuthService, LoggerService, DatabaseService } from '@backstage/backend-plugin-api';
+import { AuthService, DiscoveryService, HttpAuthService, LoggerService, DatabaseService, PermissionsService } from '@backstage/backend-plugin-api';
 import { CatalogClient } from '@backstage/catalog-client';
 import { Entity } from '@backstage/catalog-model';
+import { AuthorizeResult } from '@backstage/plugin-permission-common';
+import type { Permission, ResourcePermission } from '@backstage/plugin-permission-common';
+import { aiAgentInvokePermission, aiAgentHistoryReadPermission } from './permissions';
 import {
   AI_AGENT_ANNOTATION_PREFIX,
   AI_AGENT_TYPE,
@@ -27,6 +30,8 @@ export interface RouterOptions {
   database?: DatabaseService;
   /** Authenticated user resolution for invocation audit records. */
   httpAuth?: HttpAuthService;
+  /** Optional permissions service for authorization checks. */
+  permissions?: PermissionsService;
   /** The invoker registered by a provider module (e.g. agentcore). */
   invoker?: AgentInvoker;
   /** Override the probe function (tests). Defaults to fetch-based. */
@@ -54,7 +59,7 @@ function probeUrlFor(entity: Entity): string | undefined {
 }
 
 export async function createRouter(options: RouterOptions): Promise<Router> {
-  const { config, logger, auth, discovery, probe: probeOverride, invoker, httpAuth } = options;
+  const { config, logger, auth, discovery, probe: probeOverride, invoker, httpAuth, permissions } = options;
   const cfg: ProbeConfig = readProbeConfig(config);
   const probe = probeOverride ?? buildProbeFn(fetch);
   const invocationsEnabled =
@@ -177,8 +182,23 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       const credentials = await httpAuth.credentials(req, { allowLimitedAccess: true });
       const principal = credentials.principal as { type: string; userEntityRef?: string };
       return principal.type === 'user' ? principal.userEntityRef : undefined;
-    } catch {
+    } catch (err) {
+      logger.warn(`Failed to resolve user for invocation audit: ${(err as any)?.message ?? err}`);
       return undefined;
+    }
+  }
+
+  async function checkPermission(
+    req: Request,
+    permission: Exclude<Permission, ResourcePermission>,
+  ): Promise<boolean> {
+    if (!permissions || !httpAuth) return true;
+    try {
+      const credentials = await httpAuth.credentials(req);
+      const [decision] = await permissions.authorize([{ permission }], { credentials });
+      return decision.result === AuthorizeResult.ALLOW;
+    } catch {
+      return false;
     }
   }
 
@@ -192,6 +212,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         error:
           'no invoker registered — install a provider module such as @acarmisc/backstage-plugin-ai-agents-backend-module-agentcore',
       });
+      return;
+    }
+    if (!(await checkPermission(req, aiAgentInvokePermission))) {
+      res.status(403).json({ error: 'not authorized to invoke this agent' });
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
@@ -259,6 +283,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   router.get('/invocations/:entityRef', async (req, res) => {
     if (!store) {
       res.status(501).json({ error: 'no database configured' });
+      return;
+    }
+    if (!(await checkPermission(req, aiAgentHistoryReadPermission))) {
+      res.status(403).json({ error: 'not authorized to read this agent history' });
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);

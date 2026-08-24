@@ -26,8 +26,9 @@ export const aiAgentsPlugin = createBackendPlugin({
         discovery: coreServices.discovery,
         database: coreServices.database,
         httpAuth: coreServices.httpAuth,
+        permissions: coreServices.permissions,
       },
-      async init({ httpRouter, config, logger, auth, discovery, database, httpAuth }) {
+      async init({ httpRouter, config, logger, auth, discovery, database, httpAuth, permissions }) {
         const router = await createRouter({
           config,
           logger,
@@ -35,6 +36,7 @@ export const aiAgentsPlugin = createBackendPlugin({
           discovery,
           database,
           httpAuth,
+          permissions,
           invoker,
         });
         httpRouter.use(router);
