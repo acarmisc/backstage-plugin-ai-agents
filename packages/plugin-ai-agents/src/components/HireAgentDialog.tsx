@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -66,9 +66,9 @@ function buildCliCommand(
   const body = JSON.stringify(payload);
   return [
     'aws bedrock-agentcore invoke-agent-runtime',
-    `--region ${region}`,
-    `--agent-runtime-id "${handle}"`,
-    `--runtime-session-id "${sessionId}"`,
+    `--region '${shellEscapeSingleQuoted(region)}'`,
+    `--agent-runtime-id '${shellEscapeSingleQuoted(handle)}'`,
+    `--runtime-session-id '${shellEscapeSingleQuoted(sessionId)}'`,
     `--payload '${shellEscapeSingleQuoted(body)}'`,
   ].join(' \\\n  ');
 }
@@ -146,8 +146,13 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<InvocationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped whenever the dialog opens/closes or switches agent, so a
+  // still-in-flight run() from a previous agent/open can't clobber state
+  // that now belongs to a different one.
+  const requestTokenRef = useRef(0);
 
   useEffect(() => {
+    requestTokenRef.current += 1;
     if (open && fields.length) {
       setValues(buildInitialState(fields));
       setResult(null);
@@ -185,15 +190,17 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
 
   const run = async () => {
     if (!onInvoke) return;
+    const token = requestTokenRef.current;
     setRunning(true);
     setError(null);
     setResult(null);
     try {
-      setResult(await onInvoke(values));
+      const res = await onInvoke(values);
+      if (requestTokenRef.current === token) setResult(res);
     } catch (err: any) {
-      setError(err?.message ?? 'invocation failed');
+      if (requestTokenRef.current === token) setError(err?.message ?? 'invocation failed');
     } finally {
-      setRunning(false);
+      if (requestTokenRef.current === token) setRunning(false);
     }
   };
 

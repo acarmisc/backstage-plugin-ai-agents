@@ -17,6 +17,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import WorkIcon from '@mui/icons-material/Work';
 import type { AiAgent } from '../types';
+import { isSafeUrl } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
@@ -115,7 +116,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
         <Row label="Runtime">
           <Stack direction="row" spacing={1} alignItems="center">
             <RuntimeBadge runtime={agent.runtime.runtime} />
-            {agent.runtime.endpoint && (
+            {agent.runtime.endpoint && isSafeUrl(agent.runtime.endpoint) && (
               <Link
                 href={agent.runtime.endpoint}
                 target="_blank"
@@ -161,10 +162,10 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
           )}
         </Row>
 
-        {agent.links.length > 0 && (
+        {agent.links.filter(l => isSafeUrl(l.url)).length > 0 && (
           <Row label="Links">
             <List dense disablePadding>
-              {agent.links.map((l, i) => (
+              {agent.links.filter(l => isSafeUrl(l.url)).map((l, i) => (
                 <ListItem
                   key={i}
                   component="a"

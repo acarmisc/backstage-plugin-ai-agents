@@ -18,8 +18,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `isSafeUrl()` guard, applied before rendering any annotation-sourced URL
-  (card links, entity-overview links/endpoint, avatar image) as `href`/`src`,
-  so a `javascript:` URL in a catalog annotation can't reach the DOM.
+  (card links, entity-overview links/endpoint, avatar image, and — as of a
+  follow-up pass — the detail drawer's endpoint link and links list, which
+  the first pass missed) as `href`/`src`, so a `javascript:` URL in a
+  catalog annotation can't reach the DOM.
 - `start` script (`backstage-cli package start`) so the documented
   `npm start` standalone dev server actually runs.
 - `engines.node: ">=20"`.
@@ -36,7 +38,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   implying it's authoritative.
 - `buildCliCommand()` interpolated the JSON payload into a single-quoted
   shell argument with no escaping; a prompt containing a quote broke the
-  command. Added proper POSIX single-quote escaping.
+  command. Added proper POSIX single-quote escaping — initially only to the
+  `--payload` argument, then extended to `--region` and
+  `--agent-runtime-id` too, which were still interpolated raw/under-quoted
+  and vulnerable to the same class of copy-paste command injection via a
+  malicious `region`/`runtime-handle` annotation.
+- `HireAgentDialog`: closing the dialog mid-invocation and reopening it for
+  a *different* agent could let the first agent's still-in-flight response
+  land in the second agent's dialog once it resolved (no cancellation/
+  staleness guard on the async `run()` call). Added a request-token check
+  so a stale response is dropped instead of applied.
 - `@types/react-dom` was pinned to `^19.2.4` while every other React
   dependency targets 18 — downgraded to `^18.0.0`.
 
