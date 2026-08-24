@@ -116,8 +116,8 @@ values and builds:
    chip is shown and the values are left as placeholders.
 
 ```yaml
-ai-agent.acarmisc.org/prompt-template: "Revisiona la MR !{target} nel progetto '{project}'. Comportamento posting: {action}."
-ai-agent.acarmisc.org/region: eu-west-1
+ai-agent.acarmisc.org/prompt-template: "Review merge request !{target} in project '{project}'. Action: {action}."
+ai-agent.acarmisc.org/region: us-east-1
 ai-agent.acarmisc.org/runtime-handle: support-triage-runtime
 ```
 
@@ -174,7 +174,7 @@ spec:
   system: customer-support               # optional, must match a System entity
   dependsOn:
     - component:default/ticketing-api
-    - resource:default/bedrock-claude-sonnet
+    - resource:default/bedrock-agent
 ```
 
 ### 2. Commit and push

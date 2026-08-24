@@ -1,8 +1,8 @@
 # Contributing
 
-Contributions are welcome. This plugin follows the same monorepo layout and
-conventions as the sibling `@acarmisc/backstage-plugin-litellm-govai` and
-`@acarmisc/plugin-litellm-chat` plugins.
+Contributions are welcome. This plugin follows a standard Backstage plugin monorepo
+layout and build conventions: esbuild for dual ESM/CJS output, `tsc` for declaration
+files only, npm workspaces for dependency management, and Node's built-in test runner.
 
 ## Repo layout
 
@@ -12,9 +12,8 @@ packages/
   plugin-ai-agents-backend/  # backend  (@acarmisc/backstage-plugin-ai-agents-backend)
 ```
 
-Both packages are built with esbuild (dual ESM/CJS) + `tsc` (declaration
-files only), matching the Backstage plugin build convention used by the
-sibling repos.
+Both packages are built with esbuild (dual ESM/CJS) + `tsc` (declaration files only),
+matching standard Backstage plugin conventions.
 
 ## Prerequisites
 

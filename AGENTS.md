@@ -15,8 +15,7 @@ dedicated card-based view at `/ai-agents` and an entity-page card.
 - Backstage 1.53+ (New Frontend System + New Backend System).
 - Node.js 22/24, npm workspaces (not yarn — the host Backstage monorepo owns
   the lockfile; both `yarn.lock` and `package-lock.json` are gitignored).
-- esbuild dual ESM/CJS build + `tsc` for `.d.ts` (matches the sibling
-  `@acarmisc/backstage-plugin-litellm-govai` pattern).
+- esbuild dual ESM/CJS build + `tsc` for `.d.ts` (standard Backstage plugin pattern).
 - Tests via `node --test` (no Jest).
 - npm publish via GitHub Actions on tag push
   (`.github/workflows/publish.yaml`).
