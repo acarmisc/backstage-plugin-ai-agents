@@ -52,7 +52,10 @@ npm test --workspace @acarmisc/backstage-plugin-ai-agents-backend
 ```
 
 Tests use Node's built-in test runner (`node --test`) — no Jest. Test files
-live alongside source as `*.test.ts`.
+live alongside source as `*.test.ts`. `npm test` also runs with
+`--experimental-test-coverage`, printing a per-file line/branch/function
+coverage table after the test results — no separate coverage command
+needed.
 
 ## Dev mode (frontend only)
 
