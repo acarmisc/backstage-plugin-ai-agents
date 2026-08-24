@@ -104,14 +104,13 @@ annotation reference table.
 
 ## Live environment
 
-The plugin is wired into the host Backstage app at
-`~/playground/host-backstage-app` (Backstage
-1.53, deployed to GKE at `https://backstage.example.internal`). The
-host consumes the npm package (`^0.1.0`); local dev uses `file:` deps.
+The plugin is wired into a host Backstage app on a local checkout
+(Backstage 1.53, deployed to GKE at a staging URL). The host consumes the
+npm package (`^0.1.0`); local dev uses `file:` deps.
 
 When iterating against the host:
 1. Build the plugin: `npm run build --workspace @acarmisc/backstage-plugin-ai-agents`.
-2. Sync the dist: `cp packages/plugin-ai-agents/dist/* /abs/path/to/host-backstage-app/node_modules/@acarmisc/backstage-plugin-ai-agents/dist/`.
+2. Sync the dist: `cp packages/plugin-ai-agents/dist/* <path-to-host-checkout>/node_modules/@acarmisc/backstage-plugin-ai-agents/dist/`.
 3. Restart the host dev server (webpack dev server caches `node_modules`
    dist; a restart forces recompilation).
 4. Revert any temporary host changes (guest provider, etc.) before
