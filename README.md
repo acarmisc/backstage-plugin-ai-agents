@@ -449,14 +449,14 @@ Azure ML, HTTP…) by implementing `AgentInvoker` from the backend package.
 
 ```bash
 # Build both packages
-yarn build
+npm run build --workspaces
 
 # Run tests (node --test)
-yarn workspace @acarmisc/backstage-plugin-ai-agents test
-yarn workspace @acarmisc/backstage-plugin-ai-agents-backend test
+npm test --workspace @acarmisc/backstage-plugin-ai-agents
+npm test --workspace @acarmisc/backstage-plugin-ai-agents-backend
 
 # Standalone frontend dev mode (renders sample agents, no catalog/backend)
-cd packages/plugin-ai-agents && yarn start
+cd packages/plugin-ai-agents && npm start
 ```
 
 The dev mode (`packages/plugin-ai-agents/dev/index.tsx`) bundles six sample
@@ -470,11 +470,15 @@ or backend required.
   `kind: Component, spec.type: ai-agent`; an `entityToAgent` mapper reads the
   annotation namespace into a typed `AiAgent` shape. The optional status
   overlay is fetched from the backend and merged client-side.
-- **Backend** is tiny and stateless: it resolves entity refs via the catalog
-  service token, reads each agent's `health`/`endpoint` annotation, probes it
-  with a short timeout, and maps the HTTP result to a status state. Results
-  are cached in-memory for `statusCacheTtlMs` to survive bursts. The catalog
-  remains the single source of truth for agent data — no new persistence.
+- **Backend** provides two modes: stateless status probing (default), and
+  optional persistence. The stateless path resolves entity refs via the
+  catalog service token, reads each agent's `health`/`endpoint` annotation,
+  probes it with a short timeout, and maps the HTTP result to a status state,
+  cached in-memory for `statusCacheTtlMs` to survive bursts. When a database
+  is configured, the backend additionally persists invocation history and
+  reviews to `invocations` and `agent_reviews` tables; the plugin degrades
+  gracefully to status-only mode without one. The catalog remains the single
+  source of truth for agent data.
 
 ## Design decisions
 
@@ -520,9 +524,7 @@ git push origin ai-agents-backend@X.Y.Z
    (prevents publishing the wrong version).
 2. Installs with `--legacy-peer-deps`, builds, runs `npm publish --access
    public` using the `NPM_TOKEN` repo secret.
-3. Auto-creates a GitHub Release with generated release notes (tag pushes
-   only; manual `workflow_dispatch` runs publish without creating a
-   release).
+3. Auto-creates a GitHub Release with generated release notes.
 
 ### Tag conventions
 
@@ -533,18 +535,6 @@ git push origin ai-agents-backend@X.Y.Z
 
 The version in the tag **must** match the `version` field in the
 corresponding `package.json`, or the workflow fails fast.
-
-### Manual dispatch
-
-To republish the current `package.json` version without cutting a tag (e.g.
-after a failed publish), use the GitHub Actions "Run workflow" button on the
-Publish workflow page, or:
-
-```bash
-gh workflow run publish.yaml \
-  -f package=ai-agents \
-  -f ref=<branch-or-sha>
-```
 
 ## License
 

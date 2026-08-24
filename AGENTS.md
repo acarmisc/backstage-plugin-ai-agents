@@ -13,8 +13,8 @@ dedicated card-based view at `/ai-agents` and an entity-page card.
 ## Stack at a glance
 
 - Backstage 1.53+ (New Frontend System + New Backend System).
-- Node.js 22/24, npm workspaces (not yarn — the host Backstage monorepo owns
-  the lockfile; both `yarn.lock` and `package-lock.json` are gitignored).
+- Node.js 22/24, npm workspaces. This repository owns its own `package-lock.json`
+  (committed); `yarn.lock` is gitignored (yarn is not used).
 - esbuild dual ESM/CJS build + `tsc` for `.d.ts` (standard Backstage plugin pattern).
 - Tests via `node --test` (no Jest).
 - npm publish via GitHub Actions on tag push
@@ -138,9 +138,9 @@ Do not run `npm publish` locally — CI is the source of truth.
 
 ## Common traps
 
-- **Don't commit `yarn.lock` or `package-lock.json`** — both are gitignored.
-  The host Backstage monorepo owns the lockfile; this repo is consumed as
-  npm packages.
+- **Commit `package-lock.json`, ignore `yarn.lock`** — this repo owns its own
+  lockfile via npm workspaces (package-lock.json is tracked); yarn is not used
+  and yarn.lock is gitignored.
 - **Don't commit `dist/` or `node_modules/`** — both gitignored. The npm
   package's `prepack` script rebuilds `dist` before publish.
 - **`npm run build` from the root may fail** under Yarn 4 install-state
