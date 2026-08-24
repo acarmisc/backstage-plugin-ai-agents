@@ -42,7 +42,7 @@
     "postpack": ""
   },
   "dependencies": {
-    "@acarmisc/backstage-plugin-ai-agents-backend": "^0.3.0",
+    "@acarmisc/backstage-plugin-ai-agents-backend": "^0.4.0",
     "@backstage/backend-plugin-api": "^1.9.1",
     "@backstage/config": "^1.3.0"
   },
