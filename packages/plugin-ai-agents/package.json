@@ -63,7 +63,7 @@
   "peerDependencies": {
     "@types/react": "^18.0.0",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^6.20.0"
   },
   "devDependencies": {
@@ -80,7 +80,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^19.2.4",
     "esbuild": "^0.28.0",
-    "react-dom": "^18.0.0",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^6.20.0",
     "typescript": "^5.9.3"
   }
