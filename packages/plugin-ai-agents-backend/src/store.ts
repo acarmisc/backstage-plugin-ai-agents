@@ -1,5 +1,10 @@
+import path from 'path';
 import { Knex } from 'knex';
 import { InvocationRecord, ReviewRecord, ReviewsSummary } from './types';
+
+async function runMigrations(knex: Knex): Promise<void> {
+  await knex.migrate.latest({ directory: path.join(__dirname, '..', 'migrations') });
+}
 
 type DbRow = {
   id: number;
@@ -34,21 +39,7 @@ export class InvocationStore {
 
   static async create(knex: Knex): Promise<InvocationStore> {
     if (!knex) throw new Error('Knex instance is required to create InvocationStore');
-    const exists = await knex.schema.hasTable('invocations');
-    if (!exists) {
-      await knex.schema.createTable('invocations', table => {
-        table.increments('id').primary();
-        table.string('entity_ref').notNullable().index();
-        table.string('user_ref', 200).nullable();
-        table.string('session_id', 80).notNullable();
-        table.text('prompt').notNullable();
-        table.enum('status', ['ok', 'error']).notNullable();
-        table.text('response_text').nullable();
-        table.text('error_message').nullable();
-        table.bigInteger('latency_ms').nullable();
-        table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable().index();
-      });
-    }
+    await runMigrations(knex);
     return new InvocationStore(knex);
   }
 
@@ -108,17 +99,7 @@ export class ReviewStore {
 
   static async create(knex: Knex): Promise<ReviewStore> {
     if (!knex) throw new Error('Knex instance is required to create ReviewStore');
-    const exists = await knex.schema.hasTable('agent_reviews');
-    if (!exists) {
-      await knex.schema.createTable('agent_reviews', table => {
-        table.increments('id').primary();
-        table.string('entity_ref').notNullable().index();
-        table.string('user_ref', 200).nullable();
-        table.integer('rating').notNullable();
-        table.text('comment').nullable();
-        table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable().index();
-      });
-    }
+    await runMigrations(knex);
     return new ReviewStore(knex);
   }
 
