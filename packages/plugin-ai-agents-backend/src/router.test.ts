@@ -415,3 +415,76 @@ test('GET /reviews returns 501 without database', async () => {
     await close();
   }
 });
+
+test('GET /statuses returns 400 when more than 200 refs provided', async () => {
+  const refs = Array.from({ length: 201 }, (_, i) => `component:default/agent-${i}`).join(',');
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/statuses?refs=${encodeURIComponent(refs)}`);
+    assert.equal(res.status, 400);
+    const body = await res.json();
+    assert.match(body.error, /too many refs/);
+  } finally {
+    await close();
+  }
+});
+
+test('cache eviction: oldest entries are evicted when cache exceeds max size', async () => {
+  let probeCalls = 0;
+  const countingProbe: ProbeFn = async () => {
+    probeCalls += 1;
+    return { ok: true, status: 200, latencyMs: 1 } as ProbeResult;
+  };
+
+  // Ref-aware stub: resolves each requested ref to its own entity, keyed by
+  // the ref string itself (not by array position), so cache keys line up.
+  const catalogClient = {
+    getEntitiesByRefs: async (r: { entityRefs: string[] }) => ({
+      items: r.entityRefs.map(ref => {
+        const name = ref.split('/').pop()!;
+        return makeEntity(name, {
+          'ai-agent.io/health': `https://api.example.com/${name}/health`,
+        });
+      }),
+    }),
+  };
+
+  const router = await createRouter({
+    config: makeConfig({ probeAllowlist: ['https://api.example.com/*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    maxCacheEntries: 5,
+    probe: countingProbe,
+    catalogClient,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    // Fill the cache to its 5-entry max: agent-0..agent-4, in that order.
+    const first5 = Array.from({ length: 5 }, (_, i) => `component:default/agent-${i}`);
+    await fetch(`${url}/statuses?refs=${first5.join(',')}`);
+    assert.equal(probeCalls, 5);
+
+    // A 6th distinct ref pushes the cache over its max, evicting the oldest
+    // entry (agent-0, the first one inserted).
+    await fetch(`${url}/statuses?refs=component:default/agent-5`);
+    assert.equal(probeCalls, 6);
+
+    // Re-requesting agent-0 must miss the cache (it was evicted) and probe
+    // again, while agent-4 — still within the 5-entry window — must hit the
+    // cache and NOT trigger another probe call.
+    await fetch(
+      `${url}/statuses?refs=component:default/agent-0,component:default/agent-4`,
+    );
+    assert.equal(probeCalls, 7);
+  } finally {
+    await close();
+  }
+});

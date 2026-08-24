@@ -22,6 +22,9 @@ import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './clie
 import { InvocationStore, ReviewStore } from './store';
 import { buildPrompt, makeSessionId } from './invocation';
 
+const MAX_STATUS_REFS = 200;
+const MAX_CACHE_ENTRIES = 2000;
+
 export interface RouterOptions {
   config: Config;
   logger: LoggerService;
@@ -44,6 +47,8 @@ export interface RouterOptions {
     insert(rec: ReviewRecord): Promise<number>;
     summaryFor(ref: string, limit?: number): Promise<ReviewsSummary>;
   };
+  /** Override max cache entries (tests). Defaults to MAX_CACHE_ENTRIES. */
+  maxCacheEntries?: number;
 }
 
 interface CachedStatus {
@@ -68,6 +73,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   const probe = probeOverride ?? buildProbeFn(fetch);
   const invocationsEnabled =
     config.getOptionalBoolean('ai-agents.invocations.enabled') ?? true;
+  const maxCacheEntries = options.maxCacheEntries ?? MAX_CACHE_ENTRIES;
 
   const store = options.database
     ? await InvocationStore.create(await options.database.getClient())
@@ -79,6 +85,16 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   }
 
   const cache = new Map<string, CachedStatus>();
+
+  function localCacheSet(ref: string, status: AgentStatus, expiresAt: number): void {
+    if (cache.size >= maxCacheEntries) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey) {
+        cache.delete(oldestKey);
+      }
+    }
+    cache.set(ref, { status, expiresAt });
+  }
 
   const catalogClient =
     options.catalogClient ??
@@ -107,7 +123,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const url = probeUrlFor(entity);
     if (!url || !isAllowed(url, cfg.probeAllowlist)) {
       const status: AgentStatus = { state: 'unknown', lastChecked: new Date().toISOString() };
-      cache.set(ref, { status, expiresAt: now + cfg.statusCacheTtlMs });
+      localCacheSet(ref, status, now + cfg.statusCacheTtlMs);
       return status;
     }
     try {
@@ -116,11 +132,11 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         authHeader: cfg.probeAuthHeader,
       });
       const status = mapProbeResult(result);
-      cache.set(ref, { status, expiresAt: now + cfg.statusCacheTtlMs });
+      localCacheSet(ref, status, now + cfg.statusCacheTtlMs);
       return status;
     } catch (err: any) {
       const status = mapProbeResult({ error: err?.message ?? 'probe failed' });
-      cache.set(ref, { status, expiresAt: now + cfg.statusCacheTtlMs });
+      localCacheSet(ref, status, now + cfg.statusCacheTtlMs);
       return status;
     }
   }
@@ -134,6 +150,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const refs = refsParameterSplit(refsParam);
     if (!refs.length) {
       res.json({});
+      return;
+    }
+    if (refs.length > MAX_STATUS_REFS) {
+      res.status(400).json({ error: `too many refs (max ${MAX_STATUS_REFS})` });
       return;
     }
     try {
