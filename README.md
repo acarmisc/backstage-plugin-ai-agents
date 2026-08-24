@@ -37,10 +37,15 @@ Built with the Backstage **New Frontend System**
 ## Catalog model
 
 Agents are `Component` entities with `spec.type: ai-agent`. Agent-specific
-fields live under the `ai-agent.acarmisc.org/*` annotation namespace, plus
+fields live under the `ai-agent.io/*` annotation namespace, plus
 `metadata.tags` and `metadata.links`. No custom `spec` schema is needed —
 catalog processors tolerate unknown annotations, which keeps the model
 portable across Backstage versions.
+
+> **Migration note:** Annotations moved from `ai-agent.acarmisc.org/*` to
+> `ai-agent.io/*` in this version. The old prefix is still read as a fallback,
+> so existing entities keep working, but new or updated entities should use
+> the new prefix.
 
 Only `spec.type: ai-agent` is required for an agent to appear on the
 `/ai-agents` page. The `runtime` annotation defaults to `custom` if missing;
@@ -50,20 +55,20 @@ all other annotations are optional.
 
 | Annotation | Required | Description |
 |---|---|---|
-| `ai-agent.acarmisc.org/runtime` | recommended | Runtime badge: `bedrock-agentcore`, `litellm`, `lambda`, `custom`, or any string. Defaults to `custom`. |
-| `ai-agent.acarmisc.org/billing-model` | no | `per-invocation`, `per-token`, `subscription`, `free` (default `free`) |
-| `ai-agent.acarmisc.org/capabilities` | no | Comma- or newline-separated chips, optionally `label:category` |
-| `ai-agent.acarmisc.org/cost-per-1k` | no | USD per 1000 invocations (or per 1M tokens for `per-token`) |
-| `ai-agent.acarmisc.org/budget` | no | Monthly spend cap |
-| `ai-agent.acarmisc.org/avatar` | no | Image URL (falls back to initials on a tinted circle) |
-| `ai-agent.acarmisc.org/version` | no | Version string in the card footer |
-| `ai-agent.acarmisc.org/health` | no | URL the backend probes for live status (preferred) |
-| `ai-agent.acarmisc.org/endpoint` | no | Invocation endpoint; probed if no `health` annotation |
-| `ai-agent.acarmisc.org/runtime-handle` | no | ARN/handle shown in the detail drawer |
-| `ai-agent.acarmisc.org/purpose` | no | Overrides `description` as the card's purpose text |
-| `ai-agent.acarmisc.org/hire-schema` | no | JSON array declaring the "Hire Agent" form fields. See [Hiring an agent](#hiring-an-agent). |
-| `ai-agent.acarmisc.org/prompt-template` | no | Prompt template with `{field_name}` placeholders matching `hire-schema` fields, used to build the AgentCore invocation preview. See [Hiring an agent](#hiring-an-agent). |
-| `ai-agent.acarmisc.org/region` | no | AWS region for the AgentCore runtime, used in the Hire preview's CLI command (e.g. `eu-west-1`). |
+| `ai-agent.io/runtime` | recommended | Runtime badge: `bedrock-agentcore`, `litellm`, `lambda`, `custom`, or any string. Defaults to `custom`. |
+| `ai-agent.io/billing-model` | no | `per-invocation`, `per-token`, `subscription`, `free` (default `free`) |
+| `ai-agent.io/capabilities` | no | Comma- or newline-separated chips, optionally `label:category` |
+| `ai-agent.io/cost-per-1k` | no | USD per 1000 invocations (or per 1M tokens for `per-token`) |
+| `ai-agent.io/budget` | no | Monthly spend cap |
+| `ai-agent.io/avatar` | no | Image URL (falls back to initials on a tinted circle) |
+| `ai-agent.io/version` | no | Version string in the card footer |
+| `ai-agent.io/health` | no | URL the backend probes for live status (preferred) |
+| `ai-agent.io/endpoint` | no | Invocation endpoint; probed if no `health` annotation |
+| `ai-agent.io/runtime-handle` | no | ARN/handle shown in the detail drawer |
+| `ai-agent.io/purpose` | no | Overrides `description` as the card's purpose text |
+| `ai-agent.io/hire-schema` | no | JSON array declaring the "Hire Agent" form fields. See [Hiring an agent](#hiring-an-agent). |
+| `ai-agent.io/prompt-template` | no | Prompt template with `{field_name}` placeholders matching `hire-schema` fields, used to build the AgentCore invocation preview. See [Hiring an agent](#hiring-an-agent). |
+| `ai-agent.io/region` | no | AWS region for the AgentCore runtime, used in the Hire preview's CLI command (e.g. `eu-west-1`). |
 
 Capability categories (used for chip color): `reasoning`, `retrieval`,
 `tools`, `vision`, `voice`, `data`, `safety`. A capability without a
@@ -73,7 +78,7 @@ category renders as a default-colored chip.
 
 ## Hiring an agent
 
-Agents that declare a `ai-agent.acarmisc.org/hire-schema` annotation show a
+Agents that declare a `ai-agent.io/hire-schema` annotation show a
 **Hire Agent** button on their card, detail drawer, and entity-page card.
 Clicking it opens a form rendered from the schema. When the backend is wired
 with an invoker module, a **Run agent** button invokes the agent for real and
@@ -83,7 +88,7 @@ shows the live response; the dialog also builds an invocation preview (prompt
 The `hire-schema` annotation value is a JSON array of field objects:
 
 ```yaml
-ai-agent.acarmisc.org/hire-schema: '[{"name":"project","label":"GitLab project","type":"text","required":true,"help":"e.g. my-org/my-project"},{"name":"target","label":"MR IID","type":"text","required":true},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run"}]'
+ai-agent.io/hire-schema: '[{"name":"project","label":"GitLab project","type":"text","required":true,"help":"e.g. my-org/my-project"},{"name":"target","label":"MR IID","type":"text","required":true},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run"}]'
 ```
 
 | Field key | Type | Description |
@@ -101,7 +106,7 @@ the schema is dropped and the **Hire Agent** button stays hidden.
 
 ### Prompt template
 
-The `ai-agent.acarmisc.org/prompt-template` annotation is a string with
+The `ai-agent.io/prompt-template` annotation is a string with
 `{field_name}` placeholders matching the `hire-schema` fields. As the user
 fills the form, the preview substitutes the placeholders with the field
 values and builds:
@@ -111,14 +116,14 @@ values and builds:
 2. **Payload** — the `{"prompt": "..."}` JSON body for the AgentCore
    `/invocations` endpoint.
 3. **AWS CLI command** — `aws bedrock-agentcore invoke-agent-runtime`,
-   using `ai-agent.acarmisc.org/region` and
-   `ai-agent.acarmisc.org/runtime-handle`. If either is missing, a warning
+   using `ai-agent.io/region` and
+   `ai-agent.io/runtime-handle`. If either is missing, a warning
    chip is shown and the values are left as placeholders.
 
 ```yaml
-ai-agent.acarmisc.org/prompt-template: "Review merge request !{target} in project '{project}'. Action: {action}."
-ai-agent.acarmisc.org/region: us-east-1
-ai-agent.acarmisc.org/runtime-handle: support-triage-runtime
+ai-agent.io/prompt-template: "Review merge request !{target} in project '{project}'. Action: {action}."
+ai-agent.io/region: us-east-1
+ai-agent.io/runtime-handle: support-triage-runtime
 ```
 
 ---
@@ -141,19 +146,19 @@ metadata:
   tags: [ai-agent, llm, support]       # 'ai-agent' tag is conventional but optional
   annotations:
     # --- recommended ---
-    ai-agent.acarmisc.org/runtime: bedrock-agentcore      # bedrock-agentcore | litellm | lambda | custom
-    ai-agent.acarmisc.org/billing-model: per-invocation   # per-invocation | per-token | subscription | free
+    ai-agent.io/runtime: bedrock-agentcore      # bedrock-agentcore | litellm | lambda | custom
+    ai-agent.io/billing-model: per-invocation   # per-invocation | per-token | subscription | free
 
     # --- optional but useful on the card ---
-    ai-agent.acarmisc.org/capabilities: "tool-use:tools,rag:retrieval,reasoning:reasoning"
-    ai-agent.acarmisc.org/cost-per-1k: "0.012"             # USD per 1k invocations (or per 1M tokens)
-    ai-agent.acarmisc.org/version: "1.4.2"
-    ai-agent.acarmisc.org/avatar: https://api.dicebear.com/7.x/bottts/svg?seed=triage
+    ai-agent.io/capabilities: "tool-use:tools,rag:retrieval,reasoning:reasoning"
+    ai-agent.io/cost-per-1k: "0.012"             # USD per 1k invocations (or per 1M tokens)
+    ai-agent.io/version: "1.4.2"
+    ai-agent.io/avatar: https://api.dicebear.com/7.x/bottts/svg?seed=triage
 
     # --- runtime handles (used by the backend status prober) ---
-    ai-agent.acarmisc.org/runtime-handle: arn:aws:bedrock:us-east-1:123:agent/TXXX
-    ai-agent.acarmisc.org/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
-    ai-agent.acarmisc.org/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
+    ai-agent.io/runtime-handle: arn:aws:bedrock:us-east-1:123:agent/TXXX
+    ai-agent.io/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
+    ai-agent.io/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
     # the backend probes `health` first, falls back to `endpoint`; omit both → status "unknown"
 
     # --- standard Backstage annotations (optional, work everywhere) ---
@@ -219,7 +224,7 @@ module, which periodically scans configured GitLab groups for
    ingested agent entity, mapped by `entityToAgent()` into the card data.
 
 5. **The backend status prober** resolves each agent's entity ref via the
-   catalog service token, reads its `ai-agent.acarmisc.org/health` (or
+   catalog service token, reads its `ai-agent.io/health` (or
    `endpoint`) annotation, and probes it for live status.
 
 ### Configuring discovery
@@ -262,7 +267,7 @@ matches every project, so no per-repo allowlist is needed.
 |---|---|
 | Agent doesn't appear in the catalog | The repo is not in a configured GitLab group, or `catalog-info.yaml` is not at the repo root on the default branch. Add the group to `catalog.providers.gitlab` and redeploy, or move the file. |
 | Agent appears in Catalog but not on `/ai-agents` | `spec.type` is not exactly `ai-agent`. The filter is case-sensitive. |
-| Status badge stays `unknown` | No `ai-agent.acarmisc.org/health` or `endpoint` annotation, or the URL is not in `ai-agents.probeAllowlist`, or the backend is disabled (`ai-agents.enabled: false`). |
+| Status badge stays `unknown` | No `ai-agent.io/health` or `endpoint` annotation, or the URL is not in `ai-agents.probeAllowlist`, or the backend is disabled (`ai-agents.enabled: false`). |
 | Status badge shows `down` with `fetch failed` | The health/endpoint URL is unreachable from the Backstage backend (network policy, DNS, or the agent is offline). Check the URL from inside the cluster. |
 | Card shows no capabilities / billing | The corresponding annotations are missing or malformed. Capabilities use `label:category` pairs separated by commas or newlines. |
 

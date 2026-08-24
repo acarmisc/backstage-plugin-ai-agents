@@ -52,7 +52,7 @@ individual workspaces with `npm run build --workspace <name>`.
   `app-config.yaml`.
 
 - **The "Hire Agent" CTA is gated on `hireSchema`.** The
-  `ai-agent.acarmisc.org/hire-schema` annotation (a JSON array of
+  `ai-agent.io/hire-schema` annotation (a JSON array of
   `HireField`) is parsed in `entityToAgent()` into `AiAgent.hireSchema`.
   The CTA button is rendered on `AgentCard`, `AgentDetailDrawer`, and
   `AgentOverviewCard` only when the schema is present and non-empty.
@@ -62,11 +62,11 @@ individual workspaces with `npm run build --workspace <name>`.
   has no browser-side "create entity"; it needs a server-side helper
   that writes YAML to a fetchable location and registers that URL.
   The `HireAgentDialog` builds a **live AgentCore invocation preview**:
-  the `ai-agent.acarmisc.org/prompt-template` annotation (with `{field}`
+  the `ai-agent.io/prompt-template` annotation (with `{field}`
   placeholders matching the hire-schema) is substituted with the form
   values to produce the prompt, the `{"prompt": "..."}` HTTP payload,
   and the `aws bedrock-agentcore invoke-agent-runtime` CLI command (using
-  `ai-agent.acarmisc.org/region` + `runtime-handle`). A **Copy CLI
+  `ai-agent.io/region` + `runtime-handle`). A **Copy CLI
   command** button is the primary action. No persistence or backend call.
 
 - **The `AgentDetailDrawer` uses `@mui/material` v5 `Drawer`** (the plugin's
@@ -91,9 +91,9 @@ individual workspaces with `npm run build --workspace <name>`.
 
 Agents are `Component` entities with:
 - `spec.type: ai-agent` (exact string, case-sensitive — the filter key)
-- `metadata.annotations['ai-agent.acarmisc.org/*']` for agent-specific fields
+- `metadata.annotations['ai-agent.io/*']` for agent-specific fields
 
-The annotation namespace is `ai-agent.acarmisc.org`. Only `spec.type` is
+The annotation namespace is `ai-agent.io`. Only `spec.type` is
 required for an agent to appear on `/ai-agents`; everything else is
 optional with sensible defaults.
 

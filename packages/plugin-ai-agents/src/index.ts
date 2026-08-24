@@ -11,6 +11,7 @@ export type { AiAgentsApiInterface } from './api';
 export {
   AI_AGENT_TYPE,
   AI_AGENT_ANNOTATION_PREFIX,
+  AI_AGENT_ANNOTATION_PREFIX_LEGACY,
   entityToAgent,
 } from './types';
 export type {

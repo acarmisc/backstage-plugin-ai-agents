@@ -9,7 +9,7 @@ import { AgentCoreInvoker } from './invoker';
  * AWS Bedrock AgentCore invocation transport for the ai-agents backend
  * plugin. Reads its configuration from `ai-agents.invocations.agentCore`
  * and resolves per-agent details (region, runtime handle) from the entity's
- * `ai-agent.acarmisc.org/region` and `/runtime-handle` annotations.
+ * `ai-agent.io/region` and `/runtime-handle` annotations.
  */
 export const aiAgentsModuleAgentcore = createBackendModule({
   pluginId: 'ai-agents',

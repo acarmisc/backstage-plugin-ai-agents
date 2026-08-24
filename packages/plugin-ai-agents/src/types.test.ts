@@ -37,16 +37,16 @@ test('entityToAgent parses annotations for runtime, billing, capabilities, versi
       name: 'triage',
       description: 'Routes tickets.',
       annotations: {
-        'ai-agent.acarmisc.org/runtime': 'bedrock-agentcore',
-        'ai-agent.acarmisc.org/runtime-handle': 'arn:aws:bedrock:us-east-1:1:agent/T',
-        'ai-agent.acarmisc.org/endpoint': 'https://api.example.com/invoke',
-        'ai-agent.acarmisc.org/health': 'https://api.example.com/health',
-        'ai-agent.acarmisc.org/billing-model': 'per-token',
-        'ai-agent.acarmisc.org/cost-per-1k': '2.40',
-        'ai-agent.acarmisc.org/budget': '100',
-        'ai-agent.acarmisc.org/capabilities': 'tool-use:tools,rag:retrieval,reasoning',
-        'ai-agent.acarmisc.org/version': '1.2.3',
-        'ai-agent.acarmisc.org/avatar': 'https://example.com/a.png',
+        'ai-agent.io/runtime': 'bedrock-agentcore',
+        'ai-agent.io/runtime-handle': 'arn:aws:bedrock:us-east-1:1:agent/T',
+        'ai-agent.io/endpoint': 'https://api.example.com/invoke',
+        'ai-agent.io/health': 'https://api.example.com/health',
+        'ai-agent.io/billing-model': 'per-token',
+        'ai-agent.io/cost-per-1k': '2.40',
+        'ai-agent.io/budget': '100',
+        'ai-agent.io/capabilities': 'tool-use:tools,rag:retrieval,reasoning',
+        'ai-agent.io/version': '1.2.3',
+        'ai-agent.io/avatar': 'https://example.com/a.png',
       },
       tags: ['ai-agent', 'llm'],
       links: [
@@ -87,7 +87,7 @@ test('entityToAgent prefers explicit purpose annotation over description', () =>
     metadata: {
       name: 'x',
       description: 'Generic desc.',
-      annotations: { 'ai-agent.acarmisc.org/purpose': 'Specific purpose.' },
+      annotations: { 'ai-agent.io/purpose': 'Specific purpose.' },
     },
   });
   assert.equal(entityToAgent(e)!.purpose, 'Specific purpose.');
@@ -97,7 +97,7 @@ test('entityToAgent ignores invalid capability categories', () => {
   const e = baseEntity({
     metadata: {
       name: 'x',
-      annotations: { 'ai-agent.acarmisc.org/capabilities': 'foo:bogus,bar:tools' },
+      annotations: { 'ai-agent.io/capabilities': 'foo:bogus,bar:tools' },
     },
   });
   const caps = entityToAgent(e)!.capabilities;
@@ -128,7 +128,7 @@ test('entityToAgent parses a valid hire-schema annotation', () => {
     metadata: {
       name: 'x',
       annotations: {
-        'ai-agent.acarmisc.org/hire-schema':
+        'ai-agent.io/hire-schema':
           '[{"name":"project","label":"Project","type":"text","required":true},' +
           '{"name":"action","label":"Action","type":"select","options":["dry-run","post"],"default":"dry-run"}]',
       },
@@ -155,7 +155,7 @@ test('entityToAgent coerces unknown hire field types to text', () => {
     metadata: {
       name: 'x',
       annotations: {
-        'ai-agent.acarmisc.org/hire-schema':
+        'ai-agent.io/hire-schema':
           '[{"name":"f","label":"F","type":"bogus"}]',
       },
     },
@@ -168,7 +168,7 @@ test('entityToAgent returns undefined hireSchema for malformed JSON', () => {
   const e = baseEntity({
     metadata: {
       name: 'x',
-      annotations: { 'ai-agent.acarmisc.org/hire-schema': 'not-json{' },
+      annotations: { 'ai-agent.io/hire-schema': 'not-json{' },
     },
   });
   const a = entityToAgent(e)!;
@@ -179,7 +179,7 @@ test('entityToAgent returns undefined hireSchema for non-array JSON', () => {
   const e = baseEntity({
     metadata: {
       name: 'x',
-      annotations: { 'ai-agent.acarmisc.org/hire-schema': '{"a":1}' },
+      annotations: { 'ai-agent.io/hire-schema': '{"a":1}' },
     },
   });
   const a = entityToAgent(e)!;
@@ -191,8 +191,8 @@ test('entityToAgent parses region and prompt-template annotations', () => {
     metadata: {
       name: 'x',
       annotations: {
-        'ai-agent.acarmisc.org/region': 'eu-west-1',
-        'ai-agent.acarmisc.org/prompt-template':
+        'ai-agent.io/region': 'eu-west-1',
+        'ai-agent.io/prompt-template':
           'Review MR !{target} in {project}. Action: {action}.',
       },
     },
@@ -209,4 +209,21 @@ test('entityToAgent leaves region and promptTemplate undefined when absent', () 
   const a = entityToAgent(baseEntity())!;
   assert.equal(a.runtime.region, undefined);
   assert.equal(a.promptTemplate, undefined);
+});
+
+test('entityToAgent falls back to legacy ai-agent.acarmisc.org prefix when new prefix absent', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'legacy-agent',
+      annotations: {
+        'ai-agent.acarmisc.org/runtime': 'bedrock-agentcore',
+        'ai-agent.acarmisc.org/runtime-handle': 'arn:aws:bedrock:us-east-1:1:agent/LEGACY',
+        'ai-agent.acarmisc.org/version': '1.0.0',
+      },
+    },
+  });
+  const a = entityToAgent(e)!;
+  assert.equal(a.runtime.runtime, 'bedrock-agentcore');
+  assert.equal(a.runtime.runtimeHandle, 'arn:aws:bedrock:us-east-1:1:agent/LEGACY');
+  assert.equal(a.version, '1.0.0');
 });

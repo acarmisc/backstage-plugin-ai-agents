@@ -8,6 +8,7 @@ import type { Permission, ResourcePermission } from '@backstage/plugin-permissio
 import { aiAgentInvokePermission, aiAgentHistoryReadPermission } from './permissions';
 import {
   AI_AGENT_ANNOTATION_PREFIX,
+  AI_AGENT_ANNOTATION_PREFIX_LEGACY,
   AI_AGENT_TYPE,
   AgentInvocationRequest,
   AgentInvoker,
@@ -51,7 +52,10 @@ interface CachedStatus {
 }
 
 function annotation(entity: Entity, key: string): string | undefined {
-  return entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`];
+  return (
+    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`] ??
+    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`]
+  );
 }
 
 function probeUrlFor(entity: Entity): string | undefined {

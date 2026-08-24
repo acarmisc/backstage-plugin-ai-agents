@@ -22,7 +22,7 @@ When reviewing security reports, please pay special attention to these areas:
 
 1. **Backend status probing (SSRF surface)**
    - The backend probes URLs from entity annotations: `GET /statuses`, `GET /status/:entityRef` in `packages/plugin-ai-agents-backend/src/router.ts`
-   - URLs come from catalog-sourced `ai-agent.acarmisc.org/health` and `ai-agent.acarmisc.org/endpoint` annotations
+   - URLs come from catalog-sourced `ai-agent.io/health` and `ai-agent.io/endpoint` annotations
    - An allowlist (`ai-agents.probeAllowlist`) can restrict destinations; empty list allows all http(s)
    - Hardening is in progress, but catalog-sourced server-side URL fetches warrant careful review
 

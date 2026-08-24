@@ -108,15 +108,15 @@ metadata:
     ai-agent/runtime: bedrock-agentcore
     ai-agent/billing: per-invocation
   annotations:
-    ai-agent.acarmisc.org/avatar: https://example.com/avatars/triage.png
-    ai-agent.acarmisc.org/runtime: bedrock-agentcore
-    ai-agent.acarmisc.org/runtime-handle: arn:aws:bedrock:us-east-1:...:agent/TXXX
-    ai-agent.acarmisc.org/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
-    ai-agent.acarmisc.org/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
-    ai-agent.acarmisc.org/billing-model: per-invocation
-    ai-agent.acarmisc.org/cost-per-1k: "0.012"
-    ai-agent.acarmisc.org/owner-team: group:default/cs-ops
-    ai-agent.acarmisc.org/version: "1.4.2"
+    ai-agent.io/avatar: https://example.com/avatars/triage.png
+    ai-agent.io/runtime: bedrock-agentcore
+    ai-agent.io/runtime-handle: arn:aws:bedrock:us-east-1:...:agent/TXXX
+    ai-agent.io/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
+    ai-agent.io/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
+    ai-agent.io/billing-model: per-invocation
+    ai-agent.io/cost-per-1k: "0.012"
+    ai-agent.io/owner-team: group:default/cs-ops
+    ai-agent.io/version: "1.4.2"
   links:
     - url: https://grafana.example.com/d/agents/support-triage
       title: Metrics
@@ -140,7 +140,7 @@ spec:
 import { Entity } from '@backstage/catalog-model';
 
 export const AI_AGENT_TYPE = 'ai-agent';
-export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.acarmisc.org';
+export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
 
 export interface AgentRuntimeInfo {
   /** e.g. "bedrock-agentcore", "litellm", "lambda", "custom" */
@@ -201,7 +201,7 @@ export interface AiAgent {
 
 ### Entity → `AiAgent` mapping helper
 
-A pure function `entityToAgent(entity: Entity): AiAgent` in `src/types.ts` reads `metadata.annotations[`${AI_AGENT_ANNOTATION_PREFIX}/...`]`, `metadata.tags`, `metadata.links`, `spec.owner`, `spec.system`, `spec.lifecycle`. Capabilities are parsed from a comma-or-newline-separated annotation (`ai-agent.acarmisc.org/capabilities: "tool-use,rag,vision"`) optionally with category suffixes (`tool-use:tools`).
+A pure function `entityToAgent(entity: Entity): AiAgent` in `src/types.ts` reads `metadata.annotations[`${AI_AGENT_ANNOTATION_PREFIX}/...`]`, `metadata.tags`, `metadata.links`, `spec.owner`, `spec.system`, `spec.lifecycle`. Capabilities are parsed from a comma-or-newline-separated annotation (`ai-agent.io/capabilities: "tool-use,rag,vision"`) optionally with category suffixes (`tool-use:tools`).
 
 ---
 
@@ -477,7 +477,7 @@ Uses `createDevApp` (like govai). Registers a mock catalog with the sample agent
 | Route | Method | Purpose |
 |---|---|---|
 | `/health` | GET | `{ status: 'ok' }` |
-| `/statuses?refs=ref1,ref2` | GET | For each ref, resolve the entity from the catalog, read its `ai-agent.acarmisc.org/health` (or `endpoint`) annotation, probe it with a short timeout, return `{ [entityRef]: AgentStatus }`. |
+| `/statuses?refs=ref1,ref2` | GET | For each ref, resolve the entity from the catalog, read its `ai-agent.io/health` (or `endpoint`) annotation, probe it with a short timeout, return `{ [entityRef]: AgentStatus }`. |
 | `/status/:entityRef` | GET | Same for a single agent — used by the drawer's "Refresh status" button. |
 
 ### `plugin.ts`
@@ -653,7 +653,7 @@ ai-agents:
 | Decision | Choice | Rationale |
 |---|---|---|
 | Agent storage | Backstage catalog `Component`, `spec.type: ai-agent` | Inherits ownership, RBAC, search, relations, providers. No new persistence. Matches "agents as catalog components" intent. |
-| Agent-specific data | `metadata.annotations` under `ai-agent.acarmisc.org/*` + `metadata.tags` + `metadata.links` | Catalog processors tolerate unknown annotations; structured `spec` custom fields are riskier across catalog versions. Tags/links are first-class in the catalog UI already. |
+| Agent-specific data | `metadata.annotations` under `ai-agent.io/*` + `metadata.tags` + `metadata.links` | Catalog processors tolerate unknown annotations; structured `spec` custom fields are riskier across catalog versions. Tags/links are first-class in the catalog UI already. |
 | Frontend framework | New Frontend System (`@backstage/frontend-plugin-api`, `PageBlueprint`, `ApiBlueprint`) | Matches both reference plugins; Backstage 1.50+ standard. |
 | API client deps | `catalogApiRef` + `fetchApiRef` | List/detail from catalog; status probing from the backend. No separate data source. |
 | Backend scope | Health probing only; no agent CRUD | Catalog is the source of truth. Adding/ editing agents happens via the normal catalog workflow (`catalog-info.yaml`, providers, scaffolder templates). Keeps the backend tiny and stateless. |

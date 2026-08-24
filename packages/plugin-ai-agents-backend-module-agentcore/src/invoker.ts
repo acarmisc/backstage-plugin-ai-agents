@@ -133,7 +133,7 @@ export class AgentCoreInvoker {
     const region = req.target?.region ?? this.config.region;
     const runtimeHandle = req.target?.runtimeHandle;
     if (!region) {
-      throw new Error('no AWS region: set the ai-agent.acarmisc.org/region annotation or ai-agents.invocations.agentCore.region');
+      throw new Error('no AWS region: set the ai-agent.io/region annotation or ai-agents.invocations.agentCore.region');
     }
     if (!runtimeHandle) {
       throw new Error('agent has no runtime-handle annotation');

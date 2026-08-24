@@ -1,5 +1,6 @@
 export const AI_AGENT_TYPE = 'ai-agent';
-export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.acarmisc.org';
+export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
+export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
 export type AgentStatusState = 'healthy' | 'degraded' | 'down' | 'unknown';
 
@@ -79,7 +80,7 @@ export interface AgentInvocationRequest {
   sessionId: string;
   prompt: string;
   fields: Record<string, string>;
-  /** Resolved from the entity's ai-agent.acarmisc.org/* annotations. */
+  /** Resolved from the entity's ai-agent.io/* annotations. */
   target: AgentTarget;
 }
 

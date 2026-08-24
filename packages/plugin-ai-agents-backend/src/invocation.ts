@@ -1,8 +1,11 @@
 import { Entity } from '@backstage/catalog-model';
-import { AI_AGENT_ANNOTATION_PREFIX } from './types';
+import { AI_AGENT_ANNOTATION_PREFIX, AI_AGENT_ANNOTATION_PREFIX_LEGACY } from './types';
 
 function annotation(entity: Entity, key: string): string | undefined {
-  return entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`];
+  return (
+    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`] ??
+    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`]
+  );
 }
 
 /** Replace `{name}` placeholders in the template with `values[name]`. */
@@ -17,7 +20,7 @@ export function fillTemplate(
 
 /**
  * Build the invocation prompt for an entity: fill the
- * `ai-agent.acarmisc.org/prompt-template` annotation with the submitted
+ * `ai-agent.io/prompt-template` annotation with the submitted
  * form values, or fall back to a JSON dump of the values.
  */
 export function buildPrompt(entity: Entity, values: Record<string, string>): string {

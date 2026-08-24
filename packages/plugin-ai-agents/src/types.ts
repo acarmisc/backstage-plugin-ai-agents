@@ -4,7 +4,10 @@ import { Entity } from '@backstage/catalog-model';
 export const AI_AGENT_TYPE = 'ai-agent';
 
 /** Annotation namespace for agent-specific fields on a catalog entity. */
-export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.acarmisc.org';
+export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
+
+/** Legacy annotation namespace, kept for backward compatibility. */
+export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
 export type AgentRuntimeName =
   | 'bedrock-agentcore'
@@ -57,7 +60,7 @@ export interface AgentCapability {
 
 /**
  * A single field in an agent's "Hire Agent" form, declared on the catalog
- * entity via the `ai-agent.acarmisc.org/hire-schema` annotation (a JSON
+ * entity via the `ai-agent.io/hire-schema` annotation (a JSON
  * array of these objects). Drives the dynamic form rendered by
  * `HireAgentDialog`.
  */
@@ -142,12 +145,12 @@ export interface AiAgent {
   status?: AgentStatus;
   /**
    * Per-agent "Hire Agent" form schema parsed from the
-   * `ai-agent.acarmisc.org/hire-schema` annotation (JSON array). When
+   * `ai-agent.io/hire-schema` annotation (JSON array). When
    * missing/empty, the Hire Agent CTA is hidden.
    */
   hireSchema?: HireField[];
   /**
-   * Prompt template parsed from the `ai-agent.acarmisc.org/prompt-template`
+   * Prompt template parsed from the `ai-agent.io/prompt-template`
    * annotation, with `{field_name}` placeholders matching `hireSchema`
    * fields. Used by the Hire preview to build the AgentCore invocation
    * payload. When missing, the form values are assembled as a default
@@ -168,7 +171,10 @@ const VALID_CATEGORIES = new Set<AgentCapabilityCategory>([
 ]);
 
 function annotation(entity: Entity, key: string): string | undefined {
-  return entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`];
+  return (
+    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`] ??
+    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`]
+  );
 }
 
 function parseFloatSafe(value: string | undefined): number | undefined {
