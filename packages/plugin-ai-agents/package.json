@@ -73,7 +73,7 @@
     "@backstage/frontend-test-utils": "^0.6.0",
     "@backstage/test-utils": "^1.7.0",
     "@testing-library/dom": "^10.0.0",
-    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.0.0",
     "@types/node": "^20.19.43",
