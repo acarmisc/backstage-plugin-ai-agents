@@ -14,13 +14,8 @@ import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
+import { AgentJobStats } from './AgentJobStats';
 import { getLinkIcon } from './linkIcon';
-
-const LIFECYCLE_COLOR: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
-  production: 'success',
-  experimental: 'warning',
-  deprecated: 'error',
-};
 
 export interface AgentCardProps {
   agent: AiAgent;
@@ -36,9 +31,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   onHire,
 }) => {
   const title = agent.title ?? agent.name;
-  const lifecycleColor = agent.lifecycle
-    ? LIFECYCLE_COLOR[agent.lifecycle] ?? 'default'
-    : 'default';
+  const owner = agent.owner?.replace(/^group:/, '');
+  const footer = [owner, agent.lifecycle, agent.version ? `v${agent.version}` : undefined]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <Card
@@ -56,15 +52,12 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         sx={{ flexGrow: 1, p: 2, alignItems: 'stretch', display: 'flex' }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {/* Header: avatar + title + status */}
+          {/* Header: avatar + title + status dot */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
             <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} />
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
               <Typography variant="subtitle1" fontWeight={700} noWrap title={title}>
                 {title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {agent.name}
               </Typography>
             </Box>
             <AgentStatusBadge status={agent.status} />
@@ -86,8 +79,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             {agent.purpose || 'No description provided.'}
           </Typography>
 
-          {/* Runtime + billing */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1 }}>
+          {/* Runtime */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
             <RuntimeBadge
               runtime={agent.runtime.runtime}
               onClick={onRuntimeClick}
@@ -95,41 +88,40 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             <BillingBadge billing={agent.billing} compact />
           </Box>
 
-          {/* Capabilities */}
+          {/* Capabilities — secondary info, kept visually quiet */}
           {agent.capabilities.length > 0 && (
-            <Box sx={{ mb: 1.5 }}>
+            <Box
+              sx={{
+                mb: 1.5,
+                '& .MuiChip-root': {
+                  height: 20,
+                  color: 'text.secondary',
+                  borderColor: 'divider',
+                  [`& .${chipClasses.label}`]: { px: 0.75, fontSize: '0.65rem' },
+                },
+              }}
+            >
               <AgentCapabilities capabilities={agent.capabilities} />
             </Box>
           )}
 
-          {/* Footer: owner + lifecycle + version */}
-          <Box
-            sx={{
-              mt: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.75,
-              flexWrap: 'wrap',
-            }}
-          >
-            {agent.owner && (
-              <Typography variant="caption" color="text.secondary">
-                {agent.owner}
-              </Typography>
-            )}
-            {agent.lifecycle && (
-              <Chip
-                size="small"
-                color={lifecycleColor}
-                label={agent.lifecycle}
-                variant="outlined"
-                sx={{ height: 20, [`& .${chipClasses.label}`]: { px: 0.75, fontSize: '0.7rem' } }}
-              />
-            )}
-            <Typography variant="caption" color="text.secondary">
-              {agent.version ? `v${agent.version}` : 'N/A'}
-            </Typography>
+          {/* Jobs summary (only when invocation history exists) */}
+          <Box sx={{ mb: 1.5 }}>
+            <AgentJobStats entityRef={agent.entityRef} />
           </Box>
+
+          {/* Footer: owner · lifecycle · version in one uniform muted style */}
+          {footer && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              title={footer}
+              sx={{ mt: 'auto', mb: 0.25 }}
+            >
+              {footer}
+            </Typography>
+          )}
         </Box>
       </CardActionArea>
 
