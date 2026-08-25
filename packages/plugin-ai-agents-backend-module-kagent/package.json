@@ -1,7 +1,7 @@
 {
-  "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore",
-  "version": "0.3.0",
-  "description": "AWS Bedrock AgentCore invocation module for the ai-agents Backstage backend plugin.",
+  "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-kagent",
+  "version": "0.1.0",
+  "description": "kagent (Kubernetes-native agent runtime) invocation module for the ai-agents Backstage backend plugin.",
   "keywords": [
     "backstage",
     "backstage-plugin",
@@ -10,7 +10,7 @@
   "backstage": {
     "role": "backend-plugin-module",
     "pluginId": "ai-agents",
-    "pluginPackage": "@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore"
+    "pluginPackage": "@acarmisc/backstage-plugin-ai-agents-backend-module-kagent"
   },
   "publishConfig": {
     "access": "public"

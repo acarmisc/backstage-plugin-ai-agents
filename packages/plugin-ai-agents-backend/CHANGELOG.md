@@ -3,6 +3,27 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] - 2026-08-25
+
+### Changed
+
+- **BREAKING:** the invoker extension point now supports multiple runtimes
+  side by side. `AiAgentsExtensionPoint.setInvoker(invoker)` was replaced
+  with `registerInvoker(runtime, invoker)`, keyed by the same string used
+  in the entity's `ai-agent.io/runtime` annotation (e.g.
+  `bedrock-agentcore`, `kagent`). `POST /invocations/:ref` now dispatches
+  to the invoker matching the entity's `runtime` annotation; when an
+  entity omits it and exactly one provider module is installed, that
+  single invoker is still used, so existing single-runtime setups are
+  unaffected. `RouterOptions.invoker` was replaced with
+  `invokers: Map<string, AgentInvoker>` accordingly.
+
+### Added
+
+- `AgentTarget.namespace`, resolved from a new `ai-agent.io/namespace`
+  annotation, for runtimes that address agents by namespace + name (e.g.
+  kagent) rather than region + ARN.
+
 ## [0.5.0] - 2026-08-24
 
 ### Security
@@ -70,6 +91,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Initial release: AI Agents Backstage plugin (frontend + backend).
 
+[0.6.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.5.0...ai-agents-backend@0.6.0
 [0.5.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.4.0...ai-agents-backend@0.5.0
 [0.4.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.3.0...ai-agents-backend@0.4.0
 [0.3.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend@0.2.1...ai-agents-backend@0.3.0

@@ -239,7 +239,7 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
     catalogClient: stubCatalog([entity]),
-    invoker,
+    invokers: new Map([['bedrock-agentcore', invoker]]),
   });
   const { url, close } = await startServer(router);
   try {
@@ -281,7 +281,7 @@ test('POST /invocations returns 403 when permissions deny', async () => {
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
     catalogClient: stubCatalog([entity]),
-    invoker,
+    invokers: new Map([['bedrock-agentcore', invoker]]),
     httpAuth: stubHttpAuth(),
     permissions: stubPermissions(AuthorizeResult.DENY),
   });
@@ -315,7 +315,7 @@ test('POST /invocations returns 200 when permissions allow', async () => {
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
     catalogClient: stubCatalog([entity]),
-    invoker,
+    invokers: new Map([['bedrock-agentcore', invoker]]),
     httpAuth: stubHttpAuth(),
     permissions: stubPermissions(AuthorizeResult.ALLOW),
   });
@@ -329,6 +329,68 @@ test('POST /invocations returns 200 when permissions allow', async () => {
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.equal(body.responseText, 'ok:Triage issue JIRA-1');
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations dispatches to the invoker matching the runtime annotation', async () => {
+  const entity = makeEntity('cluster-bot', {
+    'ai-agent.io/runtime': 'kagent',
+    'ai-agent.io/runtime-handle': 'helm-agent',
+    'ai-agent.io/namespace': 'kagent',
+  });
+  const agentcore = { invoke: async () => ({ responseText: 'wrong invoker', latencyMs: 1 }) };
+  const kagent = {
+    invoke: async (req: any) => ({ responseText: `kagent:${req.target.namespace}/${req.target.runtimeHandle}`, latencyMs: 5 }),
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([
+      ['bedrock-agentcore', agentcore],
+      ['kagent', kagent],
+    ]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Fcluster-bot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.responseText, 'kagent:kagent/helm-agent');
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations returns 501 when the runtime annotation matches no registered invoker', async () => {
+  const entity = makeEntity('cluster-bot', { 'ai-agent.io/runtime': 'litellm' });
+  const kagent = { invoke: async () => ({ responseText: 'x', latencyMs: 1 }) };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([['kagent', kagent]]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Fcluster-bot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    assert.equal(res.status, 501);
+    const body = await res.json();
+    assert.match(body.error, /litellm/);
   } finally {
     await close();
   }

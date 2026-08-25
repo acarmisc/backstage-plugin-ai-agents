@@ -3,6 +3,20 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-08-25
+
+### Changed
+
+- **BREAKING:** updated for the backend's new multi-runtime invoker
+  extension point — registers itself via
+  `invokers.registerInvoker('bedrock-agentcore', ...)` instead of the
+  removed `setInvoker(...)`. Requires
+  `@acarmisc/backstage-plugin-ai-agents-backend` `^0.6.0`. No change needed
+  for existing entities that already set
+  `ai-agent.io/runtime: bedrock-agentcore` (the documented setup); entities
+  with no `runtime` annotation still resolve to this invoker as long as
+  it's the only provider module installed.
+
 ## [0.2.0] - 2026-08-24
 
 ### Fixed
@@ -33,6 +47,7 @@ are documented here. Format follows [Keep a Changelog](https://keepachangelog.co
   the backend's `AgentInvoker` extension point via an OAuth2
   client-credentials JWT.
 
+[0.3.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend-module-agentcore@0.2.0...ai-agents-backend-module-agentcore@0.3.0
 [0.2.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend-module-agentcore@0.1.1...ai-agents-backend-module-agentcore@0.2.0
 [0.1.1]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents-backend-module-agentcore@0.1.0...ai-agents-backend-module-agentcore@0.1.1
 [0.1.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/releases/tag/ai-agents-backend-module-agentcore@0.1.0

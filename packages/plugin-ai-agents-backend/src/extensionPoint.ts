@@ -3,11 +3,16 @@ import { AgentInvoker } from './types';
 
 export interface AiAgentsExtensionPoint {
   /**
-   * Register the invocation transport used by `POST /invocations/:ref`.
-   * Provided by a provider module (e.g. `-backend-module-agentcore`).
-   * When no module registers an invoker, the endpoint responds 501.
+   * Register the invocation transport for a given runtime, matched against
+   * the entity's `ai-agent.io/runtime` annotation (e.g. `bedrock-agentcore`,
+   * `kagent`). Provided by a provider module (e.g. `-backend-module-agentcore`,
+   * `-backend-module-kagent`). Multiple modules can be installed side by
+   * side; `POST /invocations/:ref` picks the invoker whose runtime key
+   * matches the entity, falling back to the single registered invoker when
+   * only one module is installed and the entity has no `runtime` annotation.
+   * When no invoker matches, the endpoint responds 501.
    */
-  setInvoker(invoker: AgentInvoker): void;
+  registerInvoker(runtime: string, invoker: AgentInvoker): void;
 }
 
 export const aiAgentsExtensionPoint = createExtensionPoint<AiAgentsExtensionPoint>({

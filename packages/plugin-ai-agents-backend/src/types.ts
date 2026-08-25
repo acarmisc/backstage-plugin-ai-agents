@@ -68,12 +68,14 @@ export interface AgentTarget {
   region?: string;
   runtimeHandle?: string;
   endpoint?: string;
+  /** e.g. the Kubernetes namespace for a kagent-hosted agent. */
+  namespace?: string;
 }
 
 /**
  * Pluggable invocation transport. Implemented by provider modules
- * (e.g. `-backend-module-agentcore`) and registered through
- * `aiAgentsExtensionPoint`.
+ * (e.g. `-backend-module-agentcore`, `-backend-module-kagent`) and
+ * registered per-runtime through `aiAgentsExtensionPoint`.
  */
 export interface AgentInvocationRequest {
   entityRef: string;

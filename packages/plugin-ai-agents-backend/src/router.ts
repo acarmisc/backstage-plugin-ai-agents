@@ -36,8 +36,8 @@ export interface RouterOptions {
   httpAuth?: HttpAuthService;
   /** Optional permissions service for authorization checks. */
   permissions?: PermissionsService;
-  /** The invoker registered by a provider module (e.g. agentcore). */
-  invoker?: AgentInvoker;
+  /** Invokers registered by provider modules (e.g. agentcore, kagent), keyed by runtime. */
+  invokers?: Map<string, AgentInvoker>;
   /** Override the probe function (tests). Defaults to fetch-based. */
   probe?: ProbeFn;
   /** Override the catalog client (tests). Defaults to one built from discovery. */
@@ -67,8 +67,25 @@ function probeUrlFor(entity: Entity): string | undefined {
   return annotation(entity, 'health') ?? annotation(entity, 'endpoint');
 }
 
+/**
+ * Picks the invoker for an entity: the one registered under its
+ * `ai-agent.io/runtime` annotation, or — when the entity declares no
+ * runtime and exactly one module is installed — that single invoker, so
+ * single-runtime setups keep working without the annotation.
+ */
+function resolveInvoker(
+  invokers: Map<string, AgentInvoker> | undefined,
+  entity: Entity,
+): { invoker?: AgentInvoker; runtime?: string } {
+  if (!invokers || invokers.size === 0) return {};
+  const runtime = annotation(entity, 'runtime');
+  if (runtime) return { invoker: invokers.get(runtime), runtime };
+  if (invokers.size === 1) return { invoker: invokers.values().next().value };
+  return {};
+}
+
 export async function createRouter(options: RouterOptions): Promise<Router> {
-  const { config, logger, auth, discovery, probe: probeOverride, invoker, httpAuth, permissions } = options;
+  const { config, logger, auth, discovery, probe: probeOverride, invokers, httpAuth, permissions } = options;
   const cfg: ProbeConfig = readProbeConfig(config);
   const probe = probeOverride ?? buildProbeFn(fetch);
   const invocationsEnabled =
@@ -231,10 +248,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.status(404).json({ error: 'invocations disabled' });
       return;
     }
-    if (!invoker) {
+    if (!invokers || invokers.size === 0) {
       res.status(501).json({
         error:
-          'no invoker registered — install a provider module such as @acarmisc/backstage-plugin-ai-agents-backend-module-agentcore',
+          'no invoker registered — install a provider module such as @acarmisc/backstage-plugin-ai-agents-backend-module-agentcore or -module-kagent',
       });
       return;
     }
@@ -254,6 +271,16 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         return;
       }
 
+      const { invoker, runtime } = resolveInvoker(invokers, entity);
+      if (!invoker) {
+        res.status(501).json({
+          error: runtime
+            ? `no invoker registered for runtime "${runtime}"`
+            : 'multiple invoker modules are installed — set the ai-agent.io/runtime annotation to select one',
+        });
+        return;
+      }
+
       const request: AgentInvocationRequest = {
         entityRef: ref,
         sessionId: makeSessionId(entity.metadata.name),
@@ -263,6 +290,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           region: annotation(entity, 'region'),
           runtimeHandle: annotation(entity, 'runtime-handle'),
           endpoint: annotation(entity, 'endpoint'),
+          namespace: annotation(entity, 'namespace'),
         },
       };
       const who = await userRef(req);

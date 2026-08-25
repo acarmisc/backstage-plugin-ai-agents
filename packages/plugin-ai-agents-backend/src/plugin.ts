@@ -9,11 +9,11 @@ export type { AiAgentsExtensionPoint };
 export const aiAgentsPlugin = createBackendPlugin({
   pluginId: 'ai-agents',
   register(reg) {
-    let invoker: AgentInvoker | undefined;
+    const invokers = new Map<string, AgentInvoker>();
 
     reg.registerExtensionPoint(aiAgentsExtensionPoint, {
-      setInvoker(i: AgentInvoker) {
-        invoker = i;
+      registerInvoker(runtime: string, invoker: AgentInvoker) {
+        invokers.set(runtime, invoker);
       },
     });
 
@@ -37,7 +37,7 @@ export const aiAgentsPlugin = createBackendPlugin({
           database,
           httpAuth,
           permissions,
-          invoker,
+          invokers,
         });
         httpRouter.use(router);
       },

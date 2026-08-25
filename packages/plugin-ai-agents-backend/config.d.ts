@@ -45,6 +45,27 @@ export interface Config {
         /** Per-invocation timeout in milliseconds. @default 120000 */
         timeoutMs?: number;
       };
+      kagent?: {
+        /**
+         * Base URL of the kagent controller's A2A HTTP server, e.g.
+         * `http://kagent-controller.kagent.svc.cluster.local:8083`. The
+         * entity's `endpoint` annotation overrides it per agent.
+         */
+        baseUrl: string;
+        /**
+         * Default Kubernetes namespace agents live in; the entity's
+         * `namespace` annotation overrides it.
+         * @default "kagent"
+         */
+        namespace?: string;
+        /**
+         * Static Authorization header injected into every A2A request.
+         * @visibility secret
+         */
+        authHeader?: string;
+        /** Per-invocation timeout in milliseconds. @default 120000 */
+        timeoutMs?: number;
+      };
     };
   };
 }

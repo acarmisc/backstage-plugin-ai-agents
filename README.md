@@ -27,6 +27,9 @@ separate from the standard catalog browse.
 - `packages/plugin-ai-agents-backend-module-agentcore` — AWS Bedrock
   AgentCore invocation module
   (`@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`)
+- `packages/plugin-ai-agents-backend-module-kagent` — kagent
+  (Kubernetes-native agent runtime) invocation module
+  (`@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`)
 
 Built with the Backstage **New Frontend System**
 (`@backstage/frontend-plugin-api`, `PageBlueprint`, `ApiBlueprint`) and the
@@ -69,6 +72,7 @@ all other annotations are optional.
 | `ai-agent.io/hire-schema` | no | JSON array declaring the "Hire Agent" form fields. See [Hiring an agent](#hiring-an-agent). |
 | `ai-agent.io/prompt-template` | no | Prompt template with `{field_name}` placeholders matching `hire-schema` fields, used to build the AgentCore invocation preview. See [Hiring an agent](#hiring-an-agent). |
 | `ai-agent.io/region` | no | AWS region for the AgentCore runtime, used in the Hire preview's CLI command (e.g. `eu-west-1`). |
+| `ai-agent.io/namespace` | no | Kubernetes namespace for a kagent-hosted agent; defaults to the `-module-kagent` config's `namespace`. |
 
 Capability categories (used for chip color): `reasoning`, `retrieval`,
 `tools`, `vision`, `voice`, `data`, `safety`. A capability without a
@@ -417,9 +421,14 @@ The backend core is transport-agnostic: it resolves the entity, fills the
 prompt template with the submitted form values, persists the invocation
 (`status`, `prompt`, `response`, `user`, `latency`) into the plugin database,
 and delegates the actual call to a pluggable **invoker** registered through
-the `ai-agents.invoker` extension point.
+the `ai-agents.invoker` extension point. Multiple provider modules can be
+installed side by side — the entity's `ai-agent.io/runtime` annotation picks
+which one handles a given agent (e.g. `bedrock-agentcore` vs `kagent`). If
+an entity has no `runtime` annotation and exactly one provider module is
+installed, that single invoker is used, so single-runtime setups don't need
+the annotation.
 
-The shipped provider module invokes AWS Bedrock AgentCore runtimes using a
+The shipped AgentCore module invokes AWS Bedrock AgentCore runtimes using a
 Keycloak client-credentials JWT:
 
 ```yaml
@@ -434,16 +443,40 @@ ai-agents:
       accountId: "123456789012" # only needed if runtime-handle has no full ARN
 ```
 
-Then register the module next to the plugin in your backend:
+The shipped kagent module invokes agents hosted on a [kagent](https://kagent.dev)
+runtime via its A2A endpoint (`/api/a2a/{namespace}/{agent-name}/`, JSON-RPC
+`message/send`):
+
+```yaml
+ai-agents:
+  invocations:
+    kagent:
+      baseUrl: http://kagent-controller.kagent.svc.cluster.local:8083
+      namespace: kagent            # default; the /namespace annotation overrides it
+      # authHeader: "Bearer ..."   # only if the controller sits behind auth
+```
+
+```yaml
+# catalog-info.yaml for a kagent-hosted agent
+metadata:
+  annotations:
+    ai-agent.io/runtime: kagent
+    ai-agent.io/runtime-handle: helm-agent   # the kagent Agent's name
+    ai-agent.io/namespace: kagent            # optional override of the module default
+```
+
+Then register whichever module(s) you need next to the plugin in your backend:
 
 ```ts
 backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
 backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore'));
+backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend-module-kagent'));
 ```
 
-Without a module the endpoint answers 501 and the frontend falls back to the
-CLI-copy flow — other organisations can plug their own invoker (Lambda,
-Azure ML, HTTP…) by implementing `AgentInvoker` from the backend package.
+Without a matching module the endpoint answers 501 and the frontend falls
+back to the CLI-copy flow — other organisations can plug their own invoker
+(Lambda, Azure ML, HTTP…) by implementing `AgentInvoker` from the backend
+package and registering it under a runtime key of their choosing.
 
 ## Development
 
