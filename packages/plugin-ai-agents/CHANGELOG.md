@@ -3,6 +3,22 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.1] - 2026-08-25
+
+### Fixed
+
+- The Hire Agent dialog's "AWS CLI command" preview (and its "missing
+  region/runtime-handle" warning chip) rendered unconditionally,
+  regardless of the entity's `ai-agent.io/runtime` — a kagent, litellm,
+  or custom-runtime agent showed a fabricated `aws bedrock-agentcore
+  invoke-agent-runtime` command that has nothing to do with how it's
+  actually invoked. Both the preview block and the "Copy CLI"/"Copy CLI
+  command" buttons now only appear for `bedrock-agentcore` agents.
+- `setupTests.ts` didn't expose a `DocumentFragment` global, so any
+  jsdom test rendering a MUI `Dialog`/`Modal` (which checks `instanceof
+  DocumentFragment` when mounting its portal) crashed instead of
+  rendering. Added it alongside the other manually-shimmed DOM globals.
+
 ## [0.9.0] - 2026-08-24
 
 ### Changed
@@ -100,6 +116,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Initial release: AI Agents Backstage plugin (frontend + backend).
 
+[0.9.1]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents@0.9.0...ai-agents@0.9.1
 [0.9.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents@0.8.0...ai-agents@0.9.0
 [0.8.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents@0.7.0...ai-agents@0.8.0
 [0.7.0]: https://github.com/acarmisc/backstage-plugin-ai-agents/compare/ai-agents@0.6.1...ai-agents@0.7.0

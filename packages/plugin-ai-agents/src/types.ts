@@ -11,13 +11,14 @@ export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
 export type AgentRuntimeName =
   | 'bedrock-agentcore'
+  | 'kagent'
   | 'litellm'
   | 'lambda'
   | 'custom'
   | string;
 
 export interface AgentRuntimeInfo {
-  /** Runtime identifier, e.g. "bedrock-agentcore", "litellm", "lambda", "custom". */
+  /** Runtime identifier, e.g. "bedrock-agentcore", "kagent", "litellm", "lambda", "custom". */
   runtime: AgentRuntimeName;
   /** Opaque handle/ARN/identifier the backend uses to probe the agent. */
   runtimeHandle?: string;

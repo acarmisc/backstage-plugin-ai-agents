@@ -7,6 +7,9 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 (globalThis as any).window = dom.window;
 (globalThis as any).document = dom.window.document;
 (globalThis as any).HTMLElement = dom.window.HTMLElement;
+// MUI's Modal/Portal machinery (used by Dialog) checks `instanceof
+// DocumentFragment` when mounting into a container.
+(globalThis as any).DocumentFragment = dom.window.DocumentFragment;
 
 // navigator is read-only in Node, so use Object.defineProperty
 try {

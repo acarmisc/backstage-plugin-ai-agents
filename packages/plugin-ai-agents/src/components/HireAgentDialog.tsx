@@ -177,6 +177,12 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
 
   const sessionId = useMemo(makeSessionId, [agent?.entityRef, open]);
 
+  // The CLI preview below is AgentCore-specific (`aws bedrock-agentcore
+  // invoke-agent-runtime`) — showing it for other runtimes (kagent, litellm,
+  // custom...) would be actively misleading, since those don't take a
+  // region/runtime-handle pair and aren't invocable that way at all.
+  const isAgentCoreRuntime = agent?.runtime.runtime === 'bedrock-agentcore';
+
   const cliCommand = useMemo(
     () => (agent ? buildCliCommand(agent, payload, sessionId) : ''),
     [agent, payload, sessionId],
@@ -296,22 +302,24 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                 content={payloadJson}
                 onCopy={() => copy(payloadJson)}
               />
-              <PreviewBlock
-                title="AWS CLI command (preview — actual session id assigned at run time)"
-                language="bash"
-                content={cliCommand}
-                onCopy={() => copy(cliCommand)}
-                missingChip={
-                  !agent.runtime.region || !agent.runtime.runtimeHandle ? (
-                    <Chip
-                      size="small"
-                      color="warning"
-                      label="missing region/runtime-handle — set the annotations"
-                      sx={{ ml: 1 }}
-                    />
-                  ) : undefined
-                }
-              />
+              {isAgentCoreRuntime && (
+                <PreviewBlock
+                  title="AWS CLI command (preview — actual session id assigned at run time)"
+                  language="bash"
+                  content={cliCommand}
+                  onCopy={() => copy(cliCommand)}
+                  missingChip={
+                    !agent.runtime.region || !agent.runtime.runtimeHandle ? (
+                      <Chip
+                        size="small"
+                        color="warning"
+                        label="missing region/runtime-handle — set the annotations"
+                        sx={{ ml: 1 }}
+                      />
+                    ) : undefined
+                  }
+                />
+              )}
             </Stack>
           </Box>
 
@@ -353,7 +361,7 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        {!onInvoke && (
+        {!onInvoke && isAgentCoreRuntime && (
           <Button
             variant="contained"
             disabled={missing}
@@ -365,9 +373,11 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
         )}
         {onInvoke && (
           <>
-            <Button onClick={() => copy(cliCommand)} startIcon={<ContentCopyIcon />}>
-              Copy CLI
-            </Button>
+            {isAgentCoreRuntime && (
+              <Button onClick={() => copy(cliCommand)} startIcon={<ContentCopyIcon />}>
+                Copy CLI
+              </Button>
+            )}
             <Button
               variant="contained"
               disabled={missing || running}
