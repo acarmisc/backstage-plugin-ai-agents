@@ -1,6 +1,6 @@
 {
   "name": "@acarmisc/backstage-plugin-ai-agents",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Backstage frontend plugin for managing AI Agents stored as catalog Components.",
   "keywords": [
     "backstage",

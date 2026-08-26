@@ -53,7 +53,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         sx={{ flexGrow: 1, p: 2, alignItems: 'stretch', display: 'flex' }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {/* Header: avatar + title + status dot */}
+          {/* Header: avatar + title + runtime logo + status dot */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
             <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} />
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -61,6 +61,11 @@ export const AgentCard: React.FC<AgentCardProps> = ({
                 {title}
               </Typography>
             </Box>
+            <RuntimeBadge
+              runtime={agent.runtime.runtime}
+              onClick={onRuntimeClick}
+              variant="icon"
+            />
             <AgentStatusBadge status={agent.status} />
           </Box>
 
@@ -80,13 +85,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             {agent.purpose || 'No description provided.'}
           </Typography>
 
-          {/* Runtime + billing: quiet icon+text notes, styled like the footer */}
+          {/* Billing: quiet icon+text note, styled like the footer */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
-            <RuntimeBadge
-              runtime={agent.runtime.runtime}
-              onClick={onRuntimeClick}
-              variant="text"
-            />
             <BillingBadge billing={agent.billing} compact variant="text" />
           </Box>
 
@@ -101,10 +101,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({
               sx={{
                 mb: 1.5,
                 '& .MuiChip-root': {
-                  height: 20,
+                  height: 22,
                   color: 'text.secondary',
                   borderColor: 'divider',
-                  [`& .${chipClasses.label}`]: { px: 0.75, fontSize: '0.65rem' },
+                  [`& .${chipClasses.label}`]: { px: 0.85, fontSize: '0.7rem' },
                 },
               }}
             >

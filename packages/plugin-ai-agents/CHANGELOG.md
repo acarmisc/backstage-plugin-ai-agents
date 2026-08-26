@@ -3,6 +3,32 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] - 2026-08-26
+
+### Added
+
+- Real brand logos for the `bedrock-agentcore` and `kagent` runtimes (traced
+  from AWS's and kagent's official marks) in place of generic Material
+  icons. `kagent` previously had no icon entry at all and silently fell
+  back to a generic puzzle-piece icon.
+- A "More filters" popover for Lifecycle/Owner, and a removable
+  active-filter chip row (runtime chips carry their brand icon) below the
+  filter bar.
+
+### Changed
+
+- The runtime badge moved from a secondary text row into the agent card
+  header, next to the title, so the runtime is visible at a glance.
+- The runtime filter dropdown now shows each runtime's icon and friendly
+  label instead of the raw annotation value (e.g. `bedrock-agentcore`).
+- Capability chips on agent cards are slightly larger for legibility.
+
+### Fixed
+
+- The agents grid's empty state no longer conflates "no agents registered"
+  with "no agents match the active filters" — the latter now shows its own
+  message with a "Clear filters" action.
+
 ## [0.9.1] - 2026-08-25
 
 ### Fixed

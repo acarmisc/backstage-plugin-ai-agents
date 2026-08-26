@@ -124,14 +124,23 @@ export const AgentsPage: React.FC = () => {
         onReset={reset}
       />
 
-      {agentsWithStatus.length === 0 ? (
+      {allAgents.length === 0 && (
         <EmptyState
           title="No AI agents registered"
-          description="Add a Component with spec.type: ai-agent to the catalog, or adjust your filters."
+          description="Add a Component with spec.type: ai-agent to the catalog."
           missing="content"
           action={<button onClick={() => retry()}>Retry</button>}
         />
-      ) : (
+      )}
+      {allAgents.length > 0 && agentsWithStatus.length === 0 && (
+        <EmptyState
+          title="No agents match these filters"
+          description="Try loosening or clearing your search and filters."
+          missing="data"
+          action={<button onClick={() => reset()}>Clear filters</button>}
+        />
+      )}
+      {agentsWithStatus.length > 0 && (
         <AgentsGrid
           agents={agentsWithStatus}
           onAgentClick={handleCardClick}

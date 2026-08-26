@@ -1,18 +1,21 @@
 import React from 'react';
 import Chip from '@mui/material/Chip';
 import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import MemoryIcon from '@mui/icons-material/Memory';
-import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import type { AgentRuntimeName } from '../types';
+import { AwsIcon } from './icons/AwsIcon';
+import { KagentIcon } from './icons/KagentIcon';
 
 export const RUNTIME_META: Record<
   string,
   { label: string; icon: React.ReactNode }
 > = {
-  'bedrock-agentcore': { label: 'Bedrock AgentCore', icon: <CloudQueueIcon fontSize="small" /> },
+  'bedrock-agentcore': { label: 'Bedrock AgentCore', icon: <AwsIcon /> },
+  kagent: { label: 'kagent', icon: <KagentIcon /> },
   litellm: { label: 'LiteLLM', icon: <MemoryIcon fontSize="small" /> },
   lambda: { label: 'AWS Lambda', icon: <FunctionsIcon fontSize="small" /> },
   custom: { label: 'Custom', icon: <ExtensionIcon fontSize="small" /> },
@@ -31,8 +34,12 @@ export interface RuntimeBadgeProps {
   runtime: AgentRuntimeName;
   size?: 'small' | 'medium';
   onClick?: (runtime: string) => void;
-  /** 'chip' (default) for a standalone pill; 'text' for a quiet icon+caption, matching footer-note styling. */
-  variant?: 'chip' | 'text';
+  /**
+   * 'chip' (default) for a standalone pill; 'text' for a quiet icon+caption,
+   * matching footer-note styling; 'icon' for a bare icon with a tooltip,
+   * for tight spaces like a card header.
+   */
+  variant?: 'chip' | 'text' | 'icon';
 }
 
 export const RuntimeBadge: React.FC<RuntimeBadgeProps> = ({
@@ -42,6 +49,35 @@ export const RuntimeBadge: React.FC<RuntimeBadgeProps> = ({
   variant = 'chip',
 }) => {
   const meta = getRuntimeMeta(runtime);
+
+  if (variant === 'icon') {
+    return (
+      <Tooltip title={meta.label}>
+        <Box
+          onClick={
+            onClick
+              ? e => {
+                  e.stopPropagation();
+                  onClick(runtime);
+                }
+              : undefined
+          }
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            color: 'text.secondary',
+            cursor: onClick ? 'pointer' : 'default',
+            '& svg': { fontSize: 19 },
+            '&:hover': onClick ? { color: 'text.primary' } : undefined,
+          }}
+        >
+          {meta.icon}
+        </Box>
+      </Tooltip>
+    );
+  }
 
   if (variant === 'text') {
     return (
