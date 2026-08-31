@@ -74,7 +74,7 @@
     "@backstage/dev-utils": "^1.1.23",
     "@backstage/test-utils": "^1.7.0",
     "@testing-library/dom": "^10.0.0",
-    "@testing-library/react": "^16.0.0",
+    "@testing-library/react": "^16.3.3",
     "@types/jsdom": "^21.1.6",
     "@types/node": "^20.19.43",
     "@types/react": "^18.2.0",
