@@ -132,6 +132,77 @@ Concretely, the plugin's defensible position is:
 4. **Human and agent surface.** The same catalog is browsable by developers
    and queryable by agents over MCP.
 
+### The lever we already have: LiteLLM
+
+Everything in §2 was external research. There is a closer and, for us,
+stronger lever: **`@acarmisc/backstage-plugin-litellm-govai`**, a sibling
+plugin already in this GitHub account, already deployed, already solving
+three problems the ai-agents plugin currently reinvents badly — identity,
+budget, and multi-runtime invocation.
+
+Since v1.80.8, LiteLLM proxy ships an **A2A Agent Gateway**: agents are
+declared under a top-level `agents` key in `config.yaml` (`agent_name` +
+`agent_card_params`, including the upstream `url` and A2A protocol version),
+invoked at `POST /a2a/{agent_id}` (JSON-RPC, `message/send` /
+`message/stream`), discovered at `GET /v1/agents` (every agent a given
+virtual key can reach, with a `query=` parameter for semantic ranking), and
+authenticated with the same virtual keys LiteLLM already issues for LLM
+calls. Every invocation carries `X-LiteLLM-Trace-Id` (correlates a
+conversation across calls) and `X-LiteLLM-Agent-Id` (attributes spend), and
+shows up in the same Logs tab as everything else the proxy fronts.
+
+That turns LiteLLM into three things at once, each mapping onto a phase of
+this plan:
+
+| LiteLLM capability | Plan phase | What it replaces |
+|---|---|---|
+| `POST /a2a/{agent_id}` — invoke any A2A agent through one client, one auth model, one place agent | Phase 1 (`AgentRuntimeProvider`) | A per-vendor invoker (SigV4 client, JWT client, kagent A2A client…) for every runtime that ends up behind LiteLLM |
+| `GET /v1/agents` — list every agent a key can reach | Phase 3 (entity providers) | Hand-written `catalog-info.yaml`, and — for us specifically — is available *today*, with no AWS Organizations setup and no dependency on any single cloud |
+| `X-LiteLLM-Trace-Id` / `X-LiteLLM-Agent-Id`, LiteLLM's existing team/budget model | Phase 5 (governance & FinOps) | The `budget` / `cost-per-1k` annotations, which are inert strings today — real numbers instead of decoration |
+
+The identity story is the part worth calling out specifically. The govai
+backend already has `toLiteLLMUserId()` (`provisioning.ts`), which maps a
+Backstage user entity ref to a LiteLLM `user_id`, and role-based
+provisioning that gives that user_id its own budget, allowed models and team
+membership the moment they're first seen. If agent invocations route
+through LiteLLM using **the calling user's own virtual key** — resolved the
+same way, through the same provisioning — every "Hire Agent" click is
+individually budgeted and individually attributable, instead of all traffic
+sharing one invoker credential as it does today with the AgentCore module's
+static `clientSecret`. That is a governance property none of the
+vendor-specific providers can give us on their own.
+
+And because AgentCore Runtime itself now speaks A2A (§2, AWS release notes),
+LiteLLM is not "one more runtime to support" — it can become the
+**recommended invocation path for any A2A-capable runtime**, Bedrock
+included, with the vendor-specific SDK clients (Phase 1's AgentCore module)
+kept as the direct path for organisations not running LiteLLM. Concretely:
+
+- **`-backend-module-litellm`**, an `AgentRuntimeProvider` implementation
+  added in Phase 1 alongside the AgentCore module: `invoke()` posts to
+  `/a2a/{agent_id}/message/send` (and `message/stream` for the SSE path once
+  Phase 1's streaming lands) using the litellm-govai plugin's client where
+  installed, or a configured shared virtual key otherwise; `probe()` reads
+  the agent card at `/a2a/{agent_id}/.well-known/agent-card.json`;
+  `describe()` reports the underlying runtime from the card's own metadata
+  rather than a hardcoded label.
+- **`LiteLLMAgentEntityProvider`** in Phase 3, alongside the AWS Agent
+  Registry and generic A2A providers: polls `GET /v1/agents` and ingests
+  each into the catalog. This is very likely the first entity provider we
+  actually turn on in our own environment, since it needs nothing beyond a
+  LiteLLM proxy URL and an admin key — infrastructure we already run.
+- **Phase 5's FinOps rollups read real numbers** the moment invocation goes
+  through LiteLLM: no separate cost-tracking system to build, just a join on
+  `X-LiteLLM-Agent-Id` against LiteLLM's own usage API (`getUsage` /
+  `getTeamUsage`, already implemented in `client.ts`).
+
+This does not replace the vendor-neutral `AgentRuntimeProvider` design in
+Phase 1 — LiteLLM becomes *one more provider behind it*, exactly like
+AgentCore and kagent. It does mean that for organisations running LiteLLM
+(us included), it is very likely the **first** provider worth finishing,
+because it pays for three phases of roadmap at once with infrastructure
+that already exists.
+
 ---
 
 ## 3. Design principles for the evolution
@@ -238,6 +309,15 @@ Alongside it:
   static keys), retries including `RetryableConflictException`, and native
   NDJSON streaming. The existing JWT client-credentials path stays as an
   explicitly configured alternative for inbound-OAuth setups.
+- **LiteLLM provider** (`-backend-module-litellm`, see §2's "lever we
+  already have"): `invoke()` posts to LiteLLM's `/a2a/{agent_id}` A2A
+  gateway using — when the govai plugin's client is available — the calling
+  user's own virtual key via `InvocationContext.credentials`, so spend is
+  attributed per person from day one instead of behind one shared secret;
+  `probe()` reads the agent card; the `usage` chunk is populated straight
+  from LiteLLM's response headers. Because this provider speaks A2A, not a
+  vendor SDK, it can front AgentCore, kagent or anything else LiteLLM
+  proxies without a line of vendor-specific code in the module itself.
 - **Streaming endpoint.** `POST /invocations/:ref/stream` returning SSE, with
   the existing non-streaming endpoint kept for providers without it.
 - **Persist usage.** Add `input_tokens`, `output_tokens`, `cost_usd`,
@@ -245,9 +325,13 @@ Alongside it:
 - **Shared status cache** through `coreServices.cache` instead of a per-pod
   `Map`.
 
-**Acceptance test for the whole phase:** a stock AWS account with an AgentCore
-runtime and an EKS pod with IRSA can invoke an agent, stream the answer, and
-see a real health badge — with no OAuth authorizer and no secrets in config.
+**Acceptance tests for the phase:**
+1. A stock AWS account with an AgentCore runtime and an EKS pod with IRSA can
+   invoke an agent, stream the answer, and see a real health badge — with no
+   OAuth authorizer and no secrets in config.
+2. Two different Backstage users hiring the same LiteLLM-fronted agent show
+   up as two different `user_id`s in LiteLLM's own usage API, each against
+   their own budget.
 
 ### Phase 2 — A data model people can actually write (target v0.13)
 
@@ -287,6 +371,11 @@ Annotations stay fully supported. A typed `spec` becomes the pleasant path.
 Today every agent is a hand-written `catalog-info.yaml`. This is the phase
 with the highest developer-experience payoff.
 
+- **`LiteLLMAgentEntityProvider`**, shipped as part of the Phase 1 LiteLLM
+  module: polls `GET /v1/agents` and ingests every agent a configured admin
+  key can see. Realistically the first provider we turn on ourselves — it
+  needs a LiteLLM proxy URL and a key, infrastructure this organisation
+  already runs, and nothing cloud-specific to configure.
 - **`-backend-module-aws-agent-registry`**: a catalog `EntityProvider` reading
   AWS Agent Registry. With Organizations auto-detection enabled, every
   AgentCore Runtime and Gateway across every member account lands in Backstage
@@ -297,7 +386,8 @@ with the highest developer-experience payoff.
   registry yet: `ListAgentRuntimes` per configured region.
 - **Generic `A2AEntityProvider`**: a list of agent-card URLs, or a discovery
   base, ingested as agents. This is what makes the feature portable rather
-  than AWS-only.
+  than AWS-only, and is the same code path the LiteLLM provider's
+  `/v1/agents` results feed into after resolving each agent's card.
 - Provider-sourced entities are annotated with their origin and are
   read-only; locally authored entities always win, so an org can enrich an
   auto-detected agent without losing the enrichment on the next sync.
@@ -318,14 +408,21 @@ with the highest developer-experience payoff.
 
 ### Phase 5 — Governance and FinOps (target v0.16+)
 
-- Cost and usage rollups per owner and system, from the `usage` chunks.
+- Cost and usage rollups per owner and system, from the `usage` chunks. For
+  agents invoked through the LiteLLM provider these are real numbers from
+  day one — a join on `X-LiteLLM-Agent-Id` against `getUsage()` /
+  `getTeamUsage()`, both already implemented in the govai plugin's
+  `client.ts` — rather than a new pipeline to build.
 - Budget enforcement: refuse invocation past the `budget` annotation, with a
-  clear error rather than a surprise bill.
+  clear error rather than a surprise bill. Where LiteLLM already enforces a
+  per-user or per-team budget (govai's `provisioning.ts` /
+  `teamAdmin.ts`), defer to it instead of a second, competing cap.
 - Quality signals beyond the existing star rating: success rate and p95
   latency computed from the invocations table.
 - Deep links from an invocation to its trace, using the `trace_id` captured in
-  Phase 1 (AgentCore Observability is OTEL-compatible, so this generalises to
-  any OTEL backend).
+  Phase 1 (AgentCore Observability is OTEL-compatible, and LiteLLM's own
+  `X-LiteLLM-Trace-Id` already correlates a conversation across calls, so
+  this generalises to any OTEL backend behind either).
 - Audit export for the invocations table.
 
 ### Cross-cutting, throughout
@@ -380,6 +477,7 @@ the point at which a rename becomes genuinely expensive.
 | Lines of core code that mention a specific vendor | several, in frontend and core backend | 0 |
 | Runtimes supported without patching core | 0 — icons and CLI preview need core edits | unbounded |
 | Agents ingested without hand-written YAML | 0 | majority, via Phase 3 providers |
+| Invocations attributable to an individual Backstage user, not a shared secret | 0% | 100% for agents behind the LiteLLM provider |
 | External contributors able to run the test suite unmodified | uncertain — non-standard toolchain | standard `backstage-cli` flow |
 
 ---
@@ -392,4 +490,10 @@ touches core. Phase 3 is the biggest single DX win but depends on the
 `discover()` hook from Phase 1. Phase 2 can run in parallel with either, since
 it touches the catalog side rather than the invocation side.
 
-If only one thing ships this quarter, it should be **Phase 1**.
+If only one thing ships this quarter, it should be **Phase 1** — and within
+it, the **LiteLLM provider before the AgentCore SDK rewrite**. It needs no
+new infrastructure (we already run LiteLLM), it demonstrates the
+`AgentRuntimeProvider` abstraction end-to-end on real traffic, and it is the
+fastest path to the two things that matter most for an internal pitch: a
+Bedrock agent invoked without a static shared secret, and its cost showing
+up against the right person.
