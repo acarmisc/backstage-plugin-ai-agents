@@ -245,12 +245,26 @@ test('isSafeUrl returns false for undefined', () => {
   assert.equal(isSafeUrl(undefined), false);
 });
 
-test('entityToAgent warns exactly once when legacy annotation is used', () => {
+/**
+ * Runs `fn` with console.warn captured instead of printed, restoring it
+ * afterwards. Centralises the one legitimate console.warn touchpoint in
+ * this test file so only a single line needs the no-console exemption.
+ */
+/* eslint-disable no-console -- capturing/restoring console.warn is the point of this helper */
+function withWarnSpy(fn: (calls: unknown[][]) => void): void {
   const calls: unknown[][] = [];
   const originalWarn = console.warn;
   console.warn = (...args) => calls.push(args);
-
   try {
+    fn(calls);
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+/* eslint-enable no-console */
+
+test('entityToAgent warns exactly once when legacy annotation is used', () => {
+  withWarnSpy(calls => {
     const e = baseEntity({
       metadata: {
         name: 'legacy-avatar-agent',
@@ -285,17 +299,11 @@ test('entityToAgent warns exactly once when legacy annotation is used', () => {
     const a2 = entityToAgent(e)!;
     assert.equal(a2.avatarUrl, 'https://example.com/avatar.png');
     assert.equal(calls.length, 1, 'Warning should only be logged once (dedup)');
-  } finally {
-    console.warn = originalWarn;
-  }
+  });
 });
 
 test('entityToAgent does not warn when new prefix annotation is present', () => {
-  const calls: unknown[][] = [];
-  const originalWarn = console.warn;
-  console.warn = (...args) => calls.push(args);
-
-  try {
+  withWarnSpy(calls => {
     const e = baseEntity({
       metadata: {
         name: 'new-prefix-agent',
@@ -307,17 +315,11 @@ test('entityToAgent does not warn when new prefix annotation is present', () => 
 
     entityToAgent(e);
     assert.equal(calls.length, 0, 'No warning when new prefix is present');
-  } finally {
-    console.warn = originalWarn;
-  }
+  });
 });
 
 test('entityToAgent does not warn when neither prefix has annotation', () => {
-  const calls: unknown[][] = [];
-  const originalWarn = console.warn;
-  console.warn = (...args) => calls.push(args);
-
-  try {
+  withWarnSpy(calls => {
     const e = baseEntity({
       metadata: {
         name: 'no-avatar-agent',
@@ -327,7 +329,5 @@ test('entityToAgent does not warn when neither prefix has annotation', () => {
 
     entityToAgent(e);
     assert.equal(calls.length, 0, 'No warning when annotation is absent');
-  } finally {
-    console.warn = originalWarn;
-  }
+  });
 });

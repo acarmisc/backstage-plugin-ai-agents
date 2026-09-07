@@ -2,6 +2,9 @@ import {
   coreServices,
   createBackendModule,
 } from '@backstage/backend-plugin-api';
+// Registering against the backend package's own extension point is the
+// intended integration path for a provider module, not a stray import.
+// eslint-disable-next-line @backstage/no-mixed-plugin-imports
 import { aiAgentsExtensionPoint } from '@acarmisc/backstage-plugin-ai-agents-backend';
 import { KagentInvoker } from './invoker';
 

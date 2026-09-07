@@ -1,4 +1,8 @@
 import { Config } from '@backstage/config';
+// This module's whole purpose is implementing the AgentInvoker contract the
+// backend package declares — the extension-point mechanism documented in
+// the README, not an accidental cross-plugin dependency.
+// eslint-disable-next-line @backstage/no-mixed-plugin-imports
 import {
   AgentInvocationRequest,
   AgentInvocationResponse,

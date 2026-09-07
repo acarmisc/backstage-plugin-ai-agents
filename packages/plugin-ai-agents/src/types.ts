@@ -185,6 +185,10 @@ function annotation(entity: Entity, key: string): string | undefined {
     const warnKey = `${ref}|${key}`;
     if (!warnedLegacyAnnotations.has(warnKey)) {
       warnedLegacyAnnotations.add(warnKey);
+      // Frontend code has no injected LoggerService to defer to here, and
+      // this fires at most once per (entity, key) — a deliberate exception
+      // to the no-console rule, not routine logging.
+      // eslint-disable-next-line no-console
       console.warn(
         `ai-agents: entity ${ref} uses the legacy "${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}" annotation — migrate to "${AI_AGENT_ANNOTATION_PREFIX}/${key}" (legacy prefix support will be removed).`,
       );
