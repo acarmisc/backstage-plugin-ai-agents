@@ -31,6 +31,10 @@ separate from the standard catalog browse.
   (Kubernetes-native agent runtime) invocation module
   (`@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`)
 
+> **Where this is going:** see [docs/EVOLUTION_PLAN.md](docs/EVOLUTION_PLAN.md)
+> for the roadmap towards a vendor-neutral, multi-runtime agent control
+> plane, and the reasoning behind it.
+
 Built with the Backstage **New Frontend System**
 (`@backstage/frontend-plugin-api`, `PageBlueprint`, `ApiBlueprint`) and the
 **New Backend System** (`@backstage/backend-plugin-api`).
