@@ -10,20 +10,42 @@ import type { AgentRuntimeName } from '../types';
 import { AwsIcon } from './icons/AwsIcon';
 import { KagentIcon } from './icons/KagentIcon';
 
-export const RUNTIME_META: Record<
-  string,
-  { label: string; icon: React.ReactNode }
-> = {
-  'bedrock-agentcore': { label: 'Bedrock AgentCore', icon: <AwsIcon /> },
-  kagent: { label: 'kagent', icon: <KagentIcon /> },
-  litellm: { label: 'LiteLLM', icon: <MemoryIcon fontSize="small" /> },
-  lambda: { label: 'AWS Lambda', icon: <FunctionsIcon fontSize="small" /> },
-  custom: { label: 'Custom', icon: <ExtensionIcon fontSize="small" /> },
-};
+export interface RuntimeDescriptor {
+  label: string;
+  icon: React.ReactNode;
+}
+
+// Internal registry Map - can be extended via registerRuntimeDescriptor()
+const registry = new Map<string, RuntimeDescriptor>([
+  ['bedrock-agentcore', { label: 'Bedrock AgentCore', icon: <AwsIcon /> }],
+  ['kagent', { label: 'kagent', icon: <KagentIcon /> }],
+  ['litellm', { label: 'LiteLLM', icon: <MemoryIcon fontSize="small" /> }],
+  ['lambda', { label: 'AWS Lambda', icon: <FunctionsIcon fontSize="small" /> }],
+  ['custom', { label: 'Custom', icon: <ExtensionIcon fontSize="small" /> }],
+]);
+
+/**
+ * Registers or overwrites a runtime descriptor.
+ * Later registrations override earlier ones, allowing provider modules to extend or customize.
+ */
+export function registerRuntimeDescriptor(
+  runtime: string,
+  descriptor: RuntimeDescriptor,
+): void {
+  registry.set(runtime, descriptor);
+}
+
+/**
+ * Returns a read-only Map of currently registered runtime descriptors.
+ * This is the primary way to access the live registry state.
+ */
+export function getRuntimeMetaRegistry(): ReadonlyMap<string, RuntimeDescriptor> {
+  return registry;
+}
 
 export function getRuntimeMeta(runtime: AgentRuntimeName) {
   return (
-    RUNTIME_META[runtime] ?? {
+    registry.get(runtime) ?? {
       label: String(runtime),
       icon: <ExtensionIcon fontSize="small" />,
     }
