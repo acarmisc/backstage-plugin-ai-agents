@@ -40,15 +40,23 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     Done when: an unknown runtime string renders a neutral chip instead of
     nothing; existing snapshot/interaction tests for known runtimes unchanged.
 
-[ ] P0-04  Resolve the backend base path via discoveryApi
+[!] P0-04  Resolve the backend base path via discoveryApi
     Files: packages/plugin-ai-agents/src/api.ts, src/plugin.tsx, dev/index.tsx
-    Do: AiAgentsApi should take a DiscoveryApi dependency (discoveryApiRef
-        from @backstage/core-plugin-api) and resolve the base URL via
-        discoveryApi.getBaseUrl('ai-agents') instead of the hardcoded
-        '/api/ai-agents' string. Wire it through ApiBlueprint's deps in
-        plugin.tsx. Update dev/index.tsx's stub wiring accordingly.
-    Done when: no literal '/api/ai-agents' remains in api.ts; frontend build
-    and tests pass; dev mode still boots.
+    BLOCKED: AGENTS.md ("Non-obvious wiring") explicitly documents the
+    hardcoded '/api/ai-agents' relative path as deliberate, not a bug, and
+    says: "don't try to 'fix' it by adding discoveryApi resolution unless
+    you also fix the sibling plugins" (litellm, litellm-chat — same relative-
+    path pattern, for the same same-origin-behind-the-ingress reason). This
+    session's repo scope only covers ai-agents and litellm-govai, not
+    litellm-chat, so fixing this plugin alone would leave the three plugins
+    inconsistent, exactly what the note warns against. Re-scope as a
+    cross-repo change coordinated with whoever owns litellm-chat, or get
+    explicit sign-off to diverge from the sibling plugins, before picking
+    this back up.
+    Done when: (unchanged) no literal '/api/ai-agents' remains in api.ts;
+    frontend build and tests pass; dev mode still boots — AND the sibling
+    plugins are updated in the same change, or a documented decision says
+    why ai-agents is diverging from them.
 
 [ ] P0-05  Warn on legacy annotation prefix usage
     Files: packages/plugin-ai-agents/src/types.ts,

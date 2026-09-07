@@ -241,7 +241,13 @@ Cheap, unblocking, and best done before the code grows.
   module.
 - Make the runtime badge registry data-driven: providers declare label, icon
   and docs URL; unknown runtimes render a neutral chip rather than nothing.
-- Resolve the backend base path through `discoveryApi`.
+- Resolve the backend base path through `discoveryApi` — **coordinated with
+  the sibling litellm plugins**, which share the same hardcoded relative-path
+  pattern for the same reason (documented in this repo's `AGENTS.md`: it
+  relies on app and backend being same-origin behind the ingress, which
+  holds in this org's production topology). Changing only this plugin would
+  leave the three inconsistent; either fix all three together or record an
+  explicit decision to diverge.
 - Deprecate `ai-agent.acarmisc.org/*`: keep reading it for one more minor,
   log a warning naming the entity, and remove it in v0.13.
 - Split the 573-line README into `docs/` (`install`, `catalog-model`,
