@@ -29,7 +29,7 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     Done when: core invocation.ts has no AgentCore-specific comment/logic;
     existing agentcore invoker tests still pass; router.test.ts still passes.
 
-[ ] P0-03  Make the runtime badge data-driven
+[~] P0-03  Make the runtime badge data-driven
     Files: packages/plugin-ai-agents/src/components/RuntimeBadge.tsx
     Do: replace the hardcoded { 'bedrock-agentcore': ..., kagent: ... } map
         with a small exported registry (Record<string, RuntimeDescriptor>)
