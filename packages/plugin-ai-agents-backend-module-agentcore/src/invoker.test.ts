@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
 import {
   extractResponseText,
+  padSessionId,
   readAgentCoreConfig,
 } from './invoker';
 
@@ -41,4 +42,24 @@ test('readAgentCoreConfig reads full config', () => {
 
 test('readAgentCoreConfig returns undefined when unconfigured', () => {
   assert.equal(readAgentCoreConfig(new ConfigReader({})), undefined);
+});
+
+test('padSessionId pads to minimum 33 characters', () => {
+  const shortId = 'short';
+  const padded = padSessionId(shortId);
+  assert.equal(padded.length, 33);
+  assert.match(padded, /^short0+$/);
+});
+
+test('padSessionId caps at 80 characters', () => {
+  const longId = 'a'.repeat(100);
+  const padded = padSessionId(longId);
+  assert.equal(padded.length, 80);
+  assert.equal(padded, longId.slice(0, 80));
+});
+
+test('padSessionId preserves ids between 33 and 80 characters', () => {
+  const mediumId = 'a'.repeat(50);
+  const padded = padSessionId(mediumId);
+  assert.equal(padded, mediumId);
 });

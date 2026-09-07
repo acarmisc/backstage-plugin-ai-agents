@@ -29,9 +29,12 @@ export function buildPrompt(entity: Entity, values: Record<string, string>): str
   return JSON.stringify(values, null, 2);
 }
 
-/** AgentCore requires session ids of at least 33 characters. */
+/**
+ * Build a reasonably unique session id for an invocation.
+ * Session id format is: `{entityName}-{timestamp}-{random}`.
+ */
 export function makeSessionId(entityName: string, random: () => string = defaultRandom): string {
-  return `${entityName}-${Date.now().toString(36)}-${random()}`.padEnd(33, '0').slice(0, 80);
+  return `${entityName}-${Date.now().toString(36)}-${random()}`;
 }
 
 function defaultRandom(): string {

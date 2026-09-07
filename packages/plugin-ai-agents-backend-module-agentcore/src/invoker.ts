@@ -33,6 +33,14 @@ interface CachedToken {
 }
 
 /**
+ * Pad a session id to AWS Bedrock AgentCore's minimum length requirement (33 characters),
+ * then cap it at 80 characters as per the service limits.
+ */
+export function padSessionId(sessionId: string): string {
+  return sessionId.padEnd(33, '0').slice(0, 80);
+}
+
+/**
  * Extracts human-readable text from the various payload shapes AgentCore
  * runtimes return (plain text, {"result": ...}, {"output": {...}}, SSE...).
  */
@@ -154,6 +162,12 @@ export class AgentCoreInvoker {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
+      // padSessionId() below is not yet threaded onto this request: AgentCore
+      // expects the session id via a dedicated request parameter (the SDK's
+      // `runtimeSessionId`, a header on a raw HTTPS call) — not inside the
+      // JSON payload, which is the agent's own input and must not gain an
+      // unexpected `sessionId` field. Wiring this in properly belongs to
+      // moving this module onto the AWS SDK (docs/EVOLUTION_PLAN.md, P1-05).
       const res = await this.fetchImpl(url, {
         method: 'POST',
         signal: controller.signal,

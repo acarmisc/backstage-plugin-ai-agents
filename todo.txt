@@ -20,7 +20,7 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     string literals; `npm test --workspace @acarmisc/backstage-plugin-ai-agents`
     passes.
 
-[ ] P0-02  Move AgentCore session-id padding out of core
+[x] P0-02  Move AgentCore session-id padding out of core
     Files: packages/plugin-ai-agents-backend/src/invocation.ts,
            packages/plugin-ai-agents-backend-module-agentcore/src/invoker.ts
     Do: core's makeSessionId() should generate a plain unique id with no
