@@ -575,3 +575,91 @@ test('cache eviction: oldest entries are evicted when cache exceeds max size', a
     await close();
   }
 });
+
+test('GET /statuses warns exactly once per entity when legacy health annotation is used', async () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => calls.push(args);
+
+  try {
+    // Use a unique entity name to avoid interference from Set-based dedup from other tests
+    const entity = makeEntity('legacy-health-unique', {
+      'ai-agent.acarmisc.org/health': 'https://api.example.com/health',
+    });
+    let probeCalls = 0;
+    const probe: ProbeFn = async () => {
+      probeCalls++;
+      return { ok: true, status: 200, latencyMs: 10 } as ProbeResult;
+    };
+    const router = await createRouter({
+      config: makeConfig({ probeAllowlist: ['https://api.example.com*'] }),
+      logger: noopLogger,
+      auth: stubAuth(),
+      discovery: { getBaseUrl: async () => 'http://x' } as any,
+      catalogClient: stubCatalog([entity]),
+      probe,
+    });
+    const { url, close } = await startServer(router);
+    try {
+      // First request triggers warning
+      const res1 = await fetch(`${url}/statuses?refs=component:default/legacy-health-unique`);
+      const body1 = await res1.json();
+      assert.equal(body1['component:default/legacy-health-unique'].state, 'healthy');
+      assert.equal(calls.length, 1, 'Warning should be logged once for legacy annotation');
+      assert.ok(
+        String(calls[0][0]).includes('ai-agent.acarmisc.org/health'),
+        'Warning should mention legacy annotation',
+      );
+      assert.ok(
+        String(calls[0][0]).includes('ai-agent.io/health'),
+        'Warning should mention new annotation',
+      );
+
+      // Second request with same entity: cache hit, so annotation() not called again, no new warning
+      const res2 = await fetch(`${url}/statuses?refs=component:default/legacy-health-unique`);
+      await res2.json();
+      // Note: Cache hit means no additional probes, so annotation() likely isn't called again,
+      // so we still expect calls.length === 1
+      assert.equal(calls.length, 1, 'Warning should remain at 1 (cache prevents re-evaluation)');
+    } finally {
+      await close();
+    }
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test('GET /statuses does not warn when new prefix health annotation is present', async () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => calls.push(args);
+
+  try {
+    const entity = makeEntity('new-prefix-health', {
+      'ai-agent.io/health': 'https://api.example.com/health',
+    });
+    const probe: ProbeFn = async () => ({
+      ok: true,
+      status: 200,
+      latencyMs: 10,
+    } as ProbeResult);
+    const router = await createRouter({
+      config: makeConfig({ probeAllowlist: ['https://api.example.com*'] }),
+      logger: noopLogger,
+      auth: stubAuth(),
+      discovery: { getBaseUrl: async () => 'http://x' } as any,
+      catalogClient: stubCatalog([entity]),
+      probe,
+    });
+    const { url, close } = await startServer(router);
+    try {
+      const res = await fetch(`${url}/statuses?refs=component:default/new-prefix-health`);
+      await res.json();
+      assert.equal(calls.length, 0, 'No warning when new prefix is present');
+    } finally {
+      await close();
+    }
+  } finally {
+    console.warn = originalWarn;
+  }
+});

@@ -58,7 +58,7 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     plugins are updated in the same change, or a documented decision says
     why ai-agents is diverging from them.
 
-[~] P0-05  Warn on legacy annotation prefix usage
+[x] P0-05  Warn on legacy annotation prefix usage
     Files: packages/plugin-ai-agents/src/types.ts,
            packages/plugin-ai-agents-backend/src/router.ts (annotation() helper)
     Do: when a value is only found under ai-agent.acarmisc.org/* and NOT under

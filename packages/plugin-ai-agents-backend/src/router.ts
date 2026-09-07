@@ -56,11 +56,27 @@ interface CachedStatus {
   expiresAt: number;
 }
 
+const warnedLegacyAnnotations = new Set<string>();
+
 function annotation(entity: Entity, key: string): string | undefined {
-  return (
-    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`] ??
-    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`]
-  );
+  const newValue = entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`];
+  if (newValue !== undefined) {
+    return newValue;
+  }
+
+  const legacyValue = entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`];
+  if (legacyValue !== undefined) {
+    const ref = `${entity.kind.toLowerCase()}:${entity.metadata.namespace ?? 'default'}/${entity.metadata.name}`;
+    const warnKey = `${ref}|${key}`;
+    if (!warnedLegacyAnnotations.has(warnKey)) {
+      warnedLegacyAnnotations.add(warnKey);
+      console.warn(
+        `ai-agents: entity ${ref} uses the legacy "${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}" annotation — migrate to "${AI_AGENT_ANNOTATION_PREFIX}/${key}" (legacy prefix support will be removed).`,
+      );
+    }
+  }
+
+  return legacyValue;
 }
 
 function probeUrlFor(entity: Entity): string | undefined {

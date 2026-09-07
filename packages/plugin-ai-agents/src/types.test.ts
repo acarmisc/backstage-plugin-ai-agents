@@ -244,3 +244,90 @@ test('isSafeUrl rejects javascript: URLs', () => {
 test('isSafeUrl returns false for undefined', () => {
   assert.equal(isSafeUrl(undefined), false);
 });
+
+test('entityToAgent warns exactly once when legacy annotation is used', () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => calls.push(args);
+
+  try {
+    const e = baseEntity({
+      metadata: {
+        name: 'legacy-avatar-agent',
+        annotations: {
+          'ai-agent.acarmisc.org/avatar': 'https://example.com/avatar.png',
+        },
+      },
+    });
+
+    // First call: should trigger warning
+    const a1 = entityToAgent(e)!;
+    assert.equal(a1.avatarUrl, 'https://example.com/avatar.png');
+    assert.equal(calls.length, 1);
+    assert.ok(
+      String(calls[0][0]).includes('legacy'),
+      'Warning should mention legacy',
+    );
+    assert.ok(
+      String(calls[0][0]).includes('ai-agent.acarmisc.org/avatar'),
+      'Warning should reference legacy annotation key',
+    );
+    assert.ok(
+      String(calls[0][0]).includes('ai-agent.io/avatar'),
+      'Warning should reference new annotation key',
+    );
+    assert.ok(
+      String(calls[0][0]).includes('legacy-avatar-agent'),
+      'Warning should mention entity name',
+    );
+
+    // Second call with same entity: should NOT trigger another warning
+    const a2 = entityToAgent(e)!;
+    assert.equal(a2.avatarUrl, 'https://example.com/avatar.png');
+    assert.equal(calls.length, 1, 'Warning should only be logged once (dedup)');
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test('entityToAgent does not warn when new prefix annotation is present', () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => calls.push(args);
+
+  try {
+    const e = baseEntity({
+      metadata: {
+        name: 'new-prefix-agent',
+        annotations: {
+          'ai-agent.io/avatar': 'https://example.com/avatar-new.png',
+        },
+      },
+    });
+
+    entityToAgent(e);
+    assert.equal(calls.length, 0, 'No warning when new prefix is present');
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test('entityToAgent does not warn when neither prefix has annotation', () => {
+  const calls: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => calls.push(args);
+
+  try {
+    const e = baseEntity({
+      metadata: {
+        name: 'no-avatar-agent',
+        annotations: {},
+      },
+    });
+
+    entityToAgent(e);
+    assert.equal(calls.length, 0, 'No warning when annotation is absent');
+  } finally {
+    console.warn = originalWarn;
+  }
+});
