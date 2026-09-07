@@ -1,0 +1,370 @@
+AI AGENTS PLUGIN — IMPLEMENTATION BACKLOG
+Derived from docs/EVOLUTION_PLAN.md. One task = one self-contained unit of
+work, small enough for a single agent turn, with an explicit "done when".
+Status: [ ] open  [~] in progress  [x] done  [!] blocked (see note)
+
+Legend: files are relative to repo root unless noted.
+
+================================================================
+PHASE 0 — Neutralisation and toolchain (target v0.11)
+================================================================
+
+[ ] P0-01  Extract the AWS CLI preview out of core HireAgentDialog
+    Files: packages/plugin-ai-agents/src/components/HireAgentDialog.tsx
+    Do: move buildCliCommand() and everything AgentCore-specific into a new
+        packages/plugin-ai-agents/src/components/agentCoreCliHint.ts, called
+        only when agent.runtime.runtime === 'bedrock-agentcore'. No behaviour
+        change yet — this is isolation, not the generic reproduce() hook
+        (that's P1-03). Keep existing tests passing.
+    Done when: HireAgentDialog.tsx no longer contains "aws bedrock-agentcore"
+    string literals; `npm test --workspace @acarmisc/backstage-plugin-ai-agents`
+    passes.
+
+[ ] P0-02  Move AgentCore session-id padding out of core
+    Files: packages/plugin-ai-agents-backend/src/invocation.ts,
+           packages/plugin-ai-agents-backend-module-agentcore/src/invoker.ts
+    Do: core's makeSessionId() should generate a plain unique id with no
+        padding assumption. Move the "pad to 33 chars, AgentCore requires it"
+        logic into the agentcore module (wrap core's id before use).
+    Done when: core invocation.ts has no AgentCore-specific comment/logic;
+    existing agentcore invoker tests still pass; router.test.ts still passes.
+
+[ ] P0-03  Make the runtime badge data-driven
+    Files: packages/plugin-ai-agents/src/components/RuntimeBadge.tsx
+    Do: replace the hardcoded { 'bedrock-agentcore': ..., kagent: ... } map
+        with a small exported registry (Record<string, RuntimeDescriptor>)
+        plus a registerRuntimeDescriptor() function, and a neutral default
+        chip (label = the raw runtime string, generic icon) for anything not
+        registered. Keep AwsIcon/KagentIcon as the pre-registered defaults so
+        current behaviour is unchanged.
+    Done when: an unknown runtime string renders a neutral chip instead of
+    nothing; existing snapshot/interaction tests for known runtimes unchanged.
+
+[ ] P0-04  Resolve the backend base path via discoveryApi
+    Files: packages/plugin-ai-agents/src/api.ts, src/plugin.tsx, dev/index.tsx
+    Do: AiAgentsApi should take a DiscoveryApi dependency (discoveryApiRef
+        from @backstage/core-plugin-api) and resolve the base URL via
+        discoveryApi.getBaseUrl('ai-agents') instead of the hardcoded
+        '/api/ai-agents' string. Wire it through ApiBlueprint's deps in
+        plugin.tsx. Update dev/index.tsx's stub wiring accordingly.
+    Done when: no literal '/api/ai-agents' remains in api.ts; frontend build
+    and tests pass; dev mode still boots.
+
+[ ] P0-05  Warn on legacy annotation prefix usage
+    Files: packages/plugin-ai-agents/src/types.ts,
+           packages/plugin-ai-agents-backend/src/router.ts (annotation() helper)
+    Do: when a value is only found under ai-agent.acarmisc.org/* and NOT under
+        ai-agent.io/*, log a one-line warning naming the entity ref and the
+        annotation key (frontend: console.warn once per entity per session,
+        backend: logger.warn). Do not change resolution behaviour — legacy
+        keeps working as fallback.
+    Done when: a fixture entity using only the legacy prefix triggers exactly
+    one warning per annotation key; existing behaviour/tests unaffected.
+
+[ ] P0-06  Full permission coverage on write endpoints
+    Files: packages/plugin-ai-agents-backend/src/router.ts, router.test.ts,
+           README.md (permissions section)
+    Do: POST /reviews/:entityRef currently never calls checkPermission — add
+        an aiAgentReviewWritePermission (packages/plugin-ai-agents-backend/src/permissions.ts)
+        and gate the route on it, same pattern as aiAgentInvokePermission.
+        Document the new permission in the README's permission policy example.
+    Done when: an unauthorized POST /reviews/:ref returns 403 in a new test;
+    existing review tests updated to grant the permission where needed.
+
+[ ] P0-07  Split the README into docs/
+    Files: README.md -> docs/install.md, docs/catalog-model.md,
+           docs/providers.md, docs/operations.md, docs/writing-a-provider.md
+    Do: move the corresponding sections verbatim (no content rewrite), leave
+        README.md as a short landing page (what it does, packages, links to
+        each doc, install one-liner). Keep all existing anchors working via
+        redirect notes where an external link might reference an old heading.
+    Done when: README.md is under ~120 lines; every moved section is reachable
+    from docs/ and linked from the README.
+
+[ ] P0-08  Deprecate the legacy prefix on a timeline
+    Files: packages/plugin-ai-agents/src/types.ts,
+           packages/plugin-ai-agents-backend/src/router.ts, CHANGELOG entries
+    Do: add a code comment + CHANGELOG note stating ai-agent.acarmisc.org/* is
+        removed in v0.13; depends on P0-05 shipping first (a version with
+        warnings) before removal. This task is just the documented commitment,
+        not the removal itself.
+    Done when: both packages' CHANGELOG.md have a "Deprecated" entry for this
+    minor.
+
+[ ] P0-09  Toolchain: migrate plugin-ai-agents-backend to backstage-cli + Jest
+    Files: packages/plugin-ai-agents-backend/{package.json,build.js,tsconfig*}
+    Do: replace the esbuild build.js + node:test setup with
+        `backstage-cli package build` / `backstage-cli package test` (Jest),
+        following the pattern from a current-generation Backstage plugin
+        template. Port existing *.test.ts files to Jest syntax where the
+        assertions differ from node:test.
+    Done when: `npm run build --workspace @acarmisc/backstage-plugin-ai-agents-backend`
+    and `npm test --workspace ...` both succeed via backstage-cli; CI green.
+    NOTE: do this package first as the template; P0-10..P0-12 repeat the
+    pattern for the other three packages once it's proven here.
+
+[ ] P0-10  Toolchain: migrate plugin-ai-agents (frontend) to backstage-cli + Jest
+    Depends on: P0-09 (reuse the proven pattern)
+
+[ ] P0-11  Toolchain: migrate plugin-ai-agents-backend-module-agentcore to backstage-cli + Jest
+    Depends on: P0-09
+
+[ ] P0-12  Toolchain: migrate plugin-ai-agents-backend-module-kagent to backstage-cli + Jest
+    Depends on: P0-09
+
+================================================================
+PHASE 1 — SPI v2 and Bedrock as a first-class citizen (target v0.12)
+================================================================
+
+[ ] P1-01  Define AgentRuntimeProvider and InvocationContext types
+    Files: packages/plugin-ai-agents-backend/src/types.ts (new types),
+           packages/plugin-ai-agents-backend/src/extensionPoint.ts
+    Do: add AgentRuntimeProvider, RuntimeDescriptor, ProviderContext,
+        InvocationContext, AgentChunk, DiscoveredAgent, ReproduceHint as
+        specified in docs/EVOLUTION_PLAN.md Phase 1. Keep AgentInvoker as a
+        deprecated type alias / adapter: any AgentInvoker can be wrapped into
+        an AgentRuntimeProvider with only invoke() implemented.
+    Done when: existing agentcore/kagent modules compile unmodified against
+    the new extension point (via the adapter); new types exported from index.ts.
+
+[ ] P1-02  Wire AgentRuntimeProvider through the extension point and router
+    Files: packages/plugin-ai-agents-backend/src/extensionPoint.ts, plugin.ts,
+           router.ts
+    Depends on: P1-01
+    Do: registerInvoker() becomes registerProvider() (keep registerInvoker as
+        a deprecated wrapper); router's resolveInvoker() becomes
+        resolveProvider(); invocation path builds an InvocationContext and
+        calls provider.invoke(req, ctx) instead of invoker.invoke(req).
+    Done when: router.test.ts passes with both a legacy AgentInvoker-wrapped
+    module and a native AgentRuntimeProvider registered side by side.
+
+[ ] P1-03  Implement reproduce() and wire it into the frontend
+    Files: module-agentcore/src/module.ts (describe/reproduce),
+           plugin-ai-agents-backend/src/router.ts (expose via a new endpoint
+           or embed in the invocation response), HireAgentDialog.tsx
+    Depends on: P0-01, P1-01, P1-02
+    Do: move the CLI-hint logic isolated in P0-01 into AgentCoreInvoker as
+        its reproduce() implementation; HireAgentDialog renders whatever hint
+        the backend returns instead of runtime === 'bedrock-agentcore'.
+    Done when: no runtime-name string comparison remains in HireAgentDialog.tsx.
+
+[ ] P1-04  describe() and the runtime descriptor registry
+    Files: module-agentcore/src/module.ts, module-kagent/src/module.ts,
+           plugin-ai-agents-backend/src/router.ts (expose descriptors via
+           GET /runtimes or embed in /health), RuntimeBadge.tsx (P0-03)
+    Depends on: P0-03, P1-01
+    Do: each module implements describe() (label, icon ref, docs URL); the
+        frontend's runtime registry (P0-03) is populated from this at
+        startup instead of being purely hardcoded defaults.
+    Done when: AwsIcon/KagentIcon labels come from the backend's describe(),
+    not a frontend literal.
+
+[ ] P1-05  AgentCore provider on the AWS SDK
+    Files: new packages/plugin-ai-agents-backend-module-agentcore/src/awsInvoker.ts,
+           module.ts, config.d.ts, package.json (add @aws-sdk/client-bedrock-agentcore)
+    Depends on: P1-01, P1-02
+    Do: implement invoke() using the SDK's InvokeAgentRuntime with the
+        default credential provider chain (IRSA/instance role/profile/static),
+        parse text/event-stream via ctx.emit(), map RetryableConflictException
+        to a retry. Keep the existing JWT TokenClient path as an alternative,
+        selected by config (ai-agents.invocations.agentCore.auth: 'sdk' | 'jwt',
+        default 'sdk' when no tokenUrl is configured).
+    Done when: a new awsInvoker.test.ts (mocked SDK client) covers success,
+    streaming chunks, and RetryableConflictException retry; existing JWT path
+    tests unaffected.
+
+[ ] P1-06  probe() for AgentCore
+    Files: module-agentcore/src/invoker.ts or awsInvoker.ts
+    Depends on: P1-05
+    Do: implement probe() using a lightweight AgentCore API call (e.g. a
+        GetAgentRuntime / describe call) rather than the generic HTTP GET,
+        so Bedrock agents stop being permanently "unknown".
+    Done when: probe() returns 'healthy'/'degraded'/'down' from a real SDK
+    call in a mocked test; router.ts calls provider.probe() when present,
+    falling back to the generic HTTP probe otherwise.
+
+[ ] P1-07  Streaming invocation endpoint (SSE)
+    Files: plugin-ai-agents-backend/src/router.ts (new route),
+           plugin-ai-agents/src/api.ts, HireAgentDialog.tsx
+    Depends on: P1-02
+    Do: POST /invocations/:entityRef/stream, backed by provider.invoke()'s
+        ctx.emit() forwarded as SSE events; frontend consumes via EventSource
+        or fetch+ReadableStream, falling back to the existing non-streaming
+        endpoint when the provider has no incremental output.
+    Done when: a provider that calls ctx.emit() multiple times produces
+    multiple SSE events observable in a router test; HireAgentDialog shows
+    incremental text.
+
+[ ] P1-08  Persist usage and trace fields
+    Files: plugin-ai-agents-backend/migrations/<new>_add_usage_columns.js,
+           store.ts, types.ts (InvocationRecord), router.ts
+    Do: add input_tokens, output_tokens, cost_usd, trace_id nullable columns
+        to invocations; populate from AgentChunk{type:'usage'|'trace'} when a
+        provider emits them.
+    Done when: migration runs cleanly on a fresh sqlite test db; store.test
+    covers reading the new columns back.
+
+[ ] P1-09  Shared status cache via coreServices.cache
+    Files: plugin-ai-agents-backend/src/router.ts, plugin.ts
+    Do: replace the per-process `Map` cache with coreServices.cache (falls
+        back to in-memory automatically when no cache backend is configured,
+        per Backstage's CacheService semantics).
+    Done when: two router instances sharing a configured cache backend (Redis
+    in a test double) see each other's cached statuses; default in-memory
+    behaviour unchanged when no cache is configured.
+
+[ ] P1-10  LiteLLM provider module (NEW PACKAGE)
+    Files: new packages/plugin-ai-agents-backend-module-litellm/{src,package.json,
+           config.d.ts,build.js,README.md}
+    Depends on: P1-01, P1-02
+    Do: implement AgentRuntimeProvider against LiteLLM's A2A gateway:
+        invoke() -> POST {baseUrl}/a2a/{agent_id}/message/send (and
+        message/stream once P1-07 lands), auth via Authorization: Bearer
+        <virtual key> — read from ctx.credentials when available (per-user,
+        see P1-11) or a configured shared key otherwise; probe() -> GET
+        {baseUrl}/a2a/{agent_id}/.well-known/agent-card.json; describe()
+        reports the runtime name from the card. Config:
+        ai-agents.invocations.litellm.{baseUrl, apiKey}.
+    Done when: invoker.test.ts covers invoke (mocked fetch), probe, and a
+    missing-config error path; package builds and is registrable via
+    `backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend-module-litellm'))`.
+
+[ ] P1-11  Per-user virtual key resolution for the LiteLLM provider
+    Files: plugin-ai-agents-backend-module-litellm/src/*, README.md
+    Depends on: P1-10
+    Do: when @acarmisc/backstage-plugin-litellm-backend is installed
+        alongside, resolve the calling user's LiteLLM user_id via the same
+        toLiteLLMUserId() convention and mint/reuse a personal virtual key
+        (optional peer dependency — feature-detect, degrade to the shared
+        key when the sibling plugin or its client isn't present).
+    Done when: a test with a stubbed litellm-backend client shows two
+    different Backstage users' invocations carrying two different keys; the
+    module still works standalone (shared key) when the sibling isn't
+    installed.
+
+[ ] P1-12  Acceptance check: two-user budget attribution
+    Depends on: P1-10, P1-11
+    Do: manual/integration verification against a local LiteLLM proxy (or a
+        recorded fixture) — two Backstage identities hiring the same agent
+        produce two distinct user_ids in LiteLLM's usage API.
+    Done when: documented in docs/providers.md with the exact steps run and
+    the observed result (this is a verification task, not new code).
+
+================================================================
+PHASE 2 — A data model people can actually write (target v0.13)
+================================================================
+
+[ ] P2-01  AiAgentEntityProcessor: validate annotations at ingestion
+    Files: new packages/catalog-backend-module-ai-agents/{src,package.json}
+    Do: a CatalogProcessor that, for spec.type: ai-agent entities, validates
+        hire-schema JSON, capability categories, and URL safety; emits real
+        processing errors (visible in the catalog UI) instead of the current
+        silent-drop behaviour in parseHireSchema().
+    Done when: an entity with malformed hire-schema shows a catalog
+    processing error in a processor test, not just a missing button.
+
+[ ] P2-02  Optional typed spec.aiAgent
+    Files: plugin-ai-agents/src/types.ts (entityToAgent precedence),
+           plugin-ai-agents-backend/src/router.ts (annotation() equivalent),
+           JSON Schema file
+    Depends on: P2-01
+    Do: entityToAgent() reads spec.aiAgent.* first, falls back to
+        ai-agent.io/* annotations. Publish the JSON Schema under
+        packages/plugin-ai-agents/schema/ai-agent-spec.schema.json.
+    Done when: a fixture entity using only spec.aiAgent produces the same
+    AiAgent shape as the annotation-only equivalent (parametrised test).
+
+[ ] P2-03  hire-schema-ref support
+    Files: plugin-ai-agents/src/types.ts or a backend-side resolver
+    Depends on: P2-01
+    Do: ai-agent.io/hire-schema-ref points at a relative path in the entity's
+        source location; resolved via the catalog's read-location capability
+        (backend-side, since frontend can't fetch arbitrary repo files).
+    Done when: a fixture repo with a separate hire-schema.json resolves
+    identically to the inline JSON annotation.
+
+[ ] P2-04  A2A agent-card import (scaffolder action)
+    Files: new packages/scaffolder-actions-ai-agents (or extend an existing
+           scaffolder package if one exists in this org's templates repo)
+    Depends on: none (can run in parallel with P2-01..03)
+    Do: fetch:///.well-known/agent-card.json -> emit catalog-info.yaml
+        fields (name, description, capabilities from skills, security
+        scheme note). Ships as `ai-agents:import-a2a-card` action.
+    Done when: given a fixture agent-card.json, the action produces a valid
+    catalog-info.yaml Component entity in a scaffolder action test.
+
+================================================================
+PHASE 3 — Agents that appear by themselves (target v0.14)
+================================================================
+
+[ ] P3-01  LiteLLMAgentEntityProvider
+    Files: plugin-ai-agents-backend-module-litellm/src/entityProvider.ts
+    Depends on: P1-10
+    Do: EntityProvider polling GET {baseUrl}/v1/agents on a schedule,
+        emitting Component/ai-agent entities tagged with their LiteLLM
+        agent_id; read-only (locally authored entities always win on
+        conflict, per the design principle in the plan).
+    Done when: a mocked /v1/agents response produces the expected entity
+    mutation batch in a provider test.
+
+[ ] P3-02  Generic A2AEntityProvider
+    Files: new packages/catalog-backend-module-a2a-agents
+    Depends on: P2-04 (shares the agent-card -> entity mapping logic)
+    Do: config-driven list of agent-card URLs (or a discovery base),
+        resolved into entities via the same mapping as P2-04's scaffolder
+        action, refactored into a shared function both call.
+    Done when: provider test covers a static list of card URLs producing
+    correct entities; P2-04's action delegates to the same mapper.
+
+[ ] P3-03  AWS Agent Registry entity provider
+    Files: new packages/plugin-ai-agents-backend-module-aws-agent-registry
+    Do: EntityProvider using the AWS Agent Registry data-plane API
+        (search/list discoverable records) with the AWS SDK credential
+        chain; maps registry status -> spec.lifecycle.
+    Done when: a mocked registry response produces correct entities in a
+    provider test; README documents required IAM permissions.
+
+[ ] P3-04  AgentCore ListAgentRuntimes fallback provider
+    Files: plugin-ai-agents-backend-module-agentcore/src/entityProvider.ts
+    Depends on: P1-05 (reuses the SDK client)
+    Do: for orgs without AWS Agent Registry, list AgentCore runtimes per
+        configured region directly.
+    Done when: mocked ListAgentRuntimes response produces correct entities
+    in a provider test.
+
+================================================================
+PHASE 4 — The portal as an agent control plane (target v0.15)
+================================================================
+
+[ ] P4-01  Expose invocable agents as MCP tools via the Actions Registry
+[ ] P4-02  Scaffolder template "Create an AI agent"
+[ ] P4-03  Model agent dependsOn relations to MCP servers / models / KBs
+    (Not yet broken down further — do this once Phase 3 providers exist and
+    the shape of a "resource" for an MCP server / model is settled.)
+
+================================================================
+PHASE 5 — Governance and FinOps (target v0.16+)
+================================================================
+
+[ ] P5-01  Cost/usage rollups per owner and system
+[ ] P5-02  Budget enforcement deferring to LiteLLM where applicable
+[ ] P5-03  Success rate / p95 latency quality signals
+[ ] P5-04  Deep links from an invocation to its trace
+[ ] P5-05  Audit export for the invocations table
+    (Not yet broken down further — depends on P1-08's usage/trace columns
+    and enough real invocation volume to be worth rolling up.)
+
+================================================================
+CROSS-CUTTING (interleave with any phase above)
+================================================================
+
+[ ] X-01  i18n via createTranslationRef for all user-facing frontend strings
+[ ] X-02  OpenAPI schema for the backend + generated client
+[ ] X-03  examples/ — runnable Backstage app + docker-compose, no AWS account
+[ ] X-04  Screenshots + short demo in the README
+
+================================================================
+OPEN DECISION (not a task — needs a human call before Phase 3 starts)
+================================================================
+npm scope: keep @acarmisc/*, move to a neutral org, or propose upstream to
+Backstage community plugins. See docs/EVOLUTION_PLAN.md §5.
