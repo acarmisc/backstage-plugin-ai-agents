@@ -9,7 +9,7 @@ Legend: files are relative to repo root unless noted.
 PHASE 0 — Neutralisation and toolchain (target v0.11)
 ================================================================
 
-[ ] P0-01  Extract the AWS CLI preview out of core HireAgentDialog
+[x] P0-01  Extract the AWS CLI preview out of core HireAgentDialog
     Files: packages/plugin-ai-agents/src/components/HireAgentDialog.tsx
     Do: move buildCliCommand() and everything AgentCore-specific into a new
         packages/plugin-ai-agents/src/components/agentCoreCliHint.ts, called

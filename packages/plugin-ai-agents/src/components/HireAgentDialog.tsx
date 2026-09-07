@@ -16,6 +16,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import type { InvocationResult } from '../api';
 import type { AiAgent, HireField } from '../types';
+import { buildCliCommand, makeSessionId } from './agentCoreCliHint';
 
 export interface HireAgentDialogProps {
   agent: AiAgent | null;
@@ -48,35 +49,6 @@ function fillTemplate(
 /** Build the AgentCore HTTP invocation payload (the JSON body of /invocations). */
 function buildPayload(prompt: string): { prompt: string } {
   return { prompt };
-}
-
-/** Escape single quotes in a string for POSIX shell single-quoting. */
-function shellEscapeSingleQuoted(value: string): string {
-  return value.replace(/'/g, `'\\''`);
-}
-
-/** Build the equivalent AWS CLI command for the AgentCore invocation. */
-function buildCliCommand(
-  agent: AiAgent,
-  payload: { prompt: string },
-  sessionId: string,
-): string {
-  const region = agent.runtime.region ?? '<region>';
-  const handle = agent.runtime.runtimeHandle ?? '<runtime-handle>';
-  const body = JSON.stringify(payload);
-  return [
-    'aws bedrock-agentcore invoke-agent-runtime',
-    `--region '${shellEscapeSingleQuoted(region)}'`,
-    `--agent-runtime-id '${shellEscapeSingleQuoted(handle)}'`,
-    `--runtime-session-id '${shellEscapeSingleQuoted(sessionId)}'`,
-    `--payload '${shellEscapeSingleQuoted(body)}'`,
-  ].join(' \\\n  ');
-}
-
-/** AgentCore enforces session ids of at least 33 characters. */
-function makeSessionId(): string {
-  const raw = `hire-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-  return raw.padEnd(33, '0').slice(0, 80);
 }
 
 const PreviewBlock: React.FC<{
@@ -177,10 +149,9 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
 
   const sessionId = useMemo(makeSessionId, [agent?.entityRef, open]);
 
-  // The CLI preview below is AgentCore-specific (`aws bedrock-agentcore
-  // invoke-agent-runtime`) — showing it for other runtimes (kagent, litellm,
-  // custom...) would be actively misleading, since those don't take a
-  // region/runtime-handle pair and aren't invocable that way at all.
+  // The CLI preview below is AgentCore-specific — showing it for other runtimes
+  // (kagent, litellm, custom...) would be actively misleading, since those don't
+  // take a region/runtime-handle pair and aren't invocable that way at all.
   const isAgentCoreRuntime = agent?.runtime.runtime === 'bedrock-agentcore';
 
   const cliCommand = useMemo(
