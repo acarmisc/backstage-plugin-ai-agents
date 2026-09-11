@@ -69,7 +69,7 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     Done when: a fixture entity using only the legacy prefix triggers exactly
     one warning per annotation key; existing behaviour/tests unaffected.
 
-[ ] P0-06  Full permission coverage on write endpoints
+[~] P0-06  Full permission coverage on write endpoints
     Files: packages/plugin-ai-agents-backend/src/router.ts, router.test.ts,
            README.md (permissions section)
     Do: POST /reviews/:entityRef currently never calls checkPermission — add
