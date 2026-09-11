@@ -89,7 +89,7 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     Done when: README.md is under ~120 lines; every moved section is reachable
     from docs/ and linked from the README.
 
-[ ] P0-08  Deprecate the legacy prefix on a timeline
+[x] P0-08  Deprecate the legacy prefix on a timeline
     Files: packages/plugin-ai-agents/src/types.ts,
            packages/plugin-ai-agents-backend/src/router.ts, CHANGELOG entries
     Do: add a code comment + CHANGELOG note stating ai-agent.acarmisc.org/* is

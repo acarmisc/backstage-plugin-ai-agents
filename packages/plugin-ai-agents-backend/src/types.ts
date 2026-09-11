@@ -1,5 +1,12 @@
 export const AI_AGENT_TYPE = 'ai-agent';
 export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
+/**
+ * Legacy annotation namespace, kept as a read fallback for entities that
+ * haven't migrated. Deprecated: reading it now logs a one-time warning per
+ * entity (see the `annotation()` helpers in router.ts and invocation.ts);
+ * support for it will be removed in a future minor release. See
+ * CHANGELOG.md.
+ */
 export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
 export type AgentStatusState = 'healthy' | 'degraded' | 'down' | 'unknown';

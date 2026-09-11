@@ -3,6 +3,16 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Deprecated
+
+- The `ai-agent.acarmisc.org/*` annotation prefix. It is still read as a
+  fallback when `ai-agent.io/*` is absent, but doing so now logs a one-time
+  warning per entity naming the entity and the annotation key. Support for
+  the legacy prefix will be removed in a future minor release — migrate any
+  remaining `catalog-info.yaml` files to `ai-agent.io/*` ahead of that.
+
 ## [0.6.0] - 2026-08-25
 
 ### Changed

@@ -6,7 +6,12 @@ export const AI_AGENT_TYPE = 'ai-agent';
 /** Annotation namespace for agent-specific fields on a catalog entity. */
 export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
 
-/** Legacy annotation namespace, kept for backward compatibility. */
+/**
+ * Legacy annotation namespace, kept as a read fallback for entities that
+ * haven't migrated. Deprecated: reading it now logs a one-time warning per
+ * entity (see `annotation()` below); support for it will be removed in a
+ * future minor release. See CHANGELOG.md.
+ */
 export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
 export type AgentRuntimeName =
