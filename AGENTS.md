@@ -165,6 +165,6 @@ Do not run `npm publish` locally — CI is the source of truth.
 - `packages/plugin-ai-agents/src/components/AgentOverviewCard.tsx` — the
   entity-page card.
 - `packages/plugin-ai-agents-backend/src/router.ts` — `/statuses` + `/status/:ref`.
-- `README.md` — user-facing docs (install, catalog model, discovery,
-  releasing).
+- `README.md` — landing page; user-facing docs (install, catalog model,
+  discovery, releasing) live under `docs/`.
 - `CONTRIBUTING.md` — contributor setup.

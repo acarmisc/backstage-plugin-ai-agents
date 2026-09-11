@@ -79,7 +79,7 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     Done when: an unauthorized POST /reviews/:ref returns 403 in a new test;
     existing review tests updated to grant the permission where needed.
 
-[~] P0-07  Split the README into docs/
+[x] P0-07  Split the README into docs/
     Files: README.md -> docs/install.md, docs/catalog-model.md,
            docs/providers.md, docs/operations.md, docs/writing-a-provider.md
     Do: move the corresponding sections verbatim (no content rewrite), leave

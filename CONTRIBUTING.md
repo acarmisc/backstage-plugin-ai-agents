@@ -103,7 +103,7 @@ For end-to-end testing against a real Backstage monorepo:
 
 ## Releasing
 
-See the [Releasing section in the README](./README.md#releasing). Cuts are
+See the [Releasing section](./docs/operations.md#releasing). Cuts are
 tag-driven: bump `package.json`, commit, tag
 `ai-agents@<version>` (or `ai-agents-backend@<version>`), push the tag. The
 GitHub Actions publish workflow handles npm publish + GitHub Release.
