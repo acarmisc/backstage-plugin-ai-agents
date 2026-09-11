@@ -12,4 +12,10 @@ export const aiAgentHistoryReadPermission = createPermission({
   attributes: { action: 'read' },
 });
 
-export const aiAgentsPermissions = [aiAgentInvokePermission, aiAgentHistoryReadPermission];
+/** Permission for submitting a review (rating + comment) on an AI agent */
+export const aiAgentReviewWritePermission = createPermission({
+  name: 'ai-agent.review.write',
+  attributes: { action: 'create' },
+});
+
+export const aiAgentsPermissions = [aiAgentInvokePermission, aiAgentHistoryReadPermission, aiAgentReviewWritePermission];

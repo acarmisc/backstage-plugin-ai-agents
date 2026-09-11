@@ -503,6 +503,33 @@ test('GET /reviews returns 501 without database', async () => {
   }
 });
 
+test('POST /reviews returns 403 when permissions deny', async () => {
+  const entity = makeEntity('triage', {});
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.DENY),
+    reviews: { insert: async () => 1, summaryFor: async () => ({ reviews: [], count: 0, average: null }) },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: 4 }),
+    });
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.match(body.error, /not authorized/);
+  } finally {
+    await close();
+  }
+});
+
 test('GET /statuses returns 400 when more than 200 refs provided', async () => {
   const refs = Array.from({ length: 201 }, (_, i) => `component:default/agent-${i}`).join(',');
   const router = await createRouter({

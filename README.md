@@ -403,6 +403,16 @@ All under `/api/ai-agents`, all Backstage-auth-authenticated:
 | `/reviews/:entityRef` | POST | Submit a review. Body: `{ rating: 0-5, comment? }`. Requires a database |
 | `/reviews/:entityRef` | GET | Reviews + count + average rating (`?limit=` up to 100). Requires a database |
 
+## Permissions
+
+The backend plugin gates write operations on AI agents with Backstage's permission system. When a permissions service is configured, all authenticated users must be granted the relevant permission to perform these actions; when no permissions service is configured, all operations are allowed.
+
+| Permission | Action | Description |
+|---|---|---|
+| `ai-agent.invoke` | `update` | Required to invoke (run) an agent |
+| `ai-agent.history.read` | `read` | Required to view an agent's invocation history |
+| `ai-agent.review.write` | `create` | Required to submit a review (rating + comment) on an agent |
+
 ## Agent reviews
 
 Users can rate an agent from 0 to 5 stars and leave an optional comment.

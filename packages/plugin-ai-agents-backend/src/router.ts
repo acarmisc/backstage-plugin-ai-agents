@@ -5,7 +5,7 @@ import { CatalogClient } from '@backstage/catalog-client';
 import { Entity } from '@backstage/catalog-model';
 import { AuthorizeResult } from '@backstage/plugin-permission-common';
 import type { Permission, ResourcePermission } from '@backstage/plugin-permission-common';
-import { aiAgentInvokePermission, aiAgentHistoryReadPermission } from './permissions';
+import { aiAgentInvokePermission, aiAgentHistoryReadPermission, aiAgentReviewWritePermission } from './permissions';
 import {
   AI_AGENT_ANNOTATION_PREFIX,
   AI_AGENT_ANNOTATION_PREFIX_LEGACY,
@@ -369,6 +369,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   router.post('/reviews/:entityRef', async (req, res) => {
     if (!reviews) {
       res.status(501).json({ error: 'no database configured' });
+      return;
+    }
+    if (!(await checkPermission(req, aiAgentReviewWritePermission))) {
+      res.status(403).json({ error: 'not authorized to review this agent' });
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
