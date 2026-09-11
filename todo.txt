@@ -110,6 +110,35 @@ PHASE 0 — Neutralisation and toolchain (target v0.11)
     and `npm test --workspace ...` both succeed via backstage-cli; CI green.
     NOTE: do this package first as the template; P0-10..P0-12 repeat the
     pattern for the other three packages once it's proven here.
+    DEFERRED (2026-09-11): recon before dispatching found this is bigger than
+    the description above suggests — do not hand this to a subagent on the
+    original framing alone. Concrete findings from running
+    `backstage-cli package build` (v0.36.4, already a devDependency) against
+    the real package:
+      1. `exports["."]` must become a plain STRING pointing at SOURCE
+         (`"./src/index.ts"`), not the current
+         `{ "types": "./dist/index.d.ts", "default": "./dist/index.cjs.js" }`
+         object — confirmed via @backstage/cli-module-build's entryPoints.js,
+         which throws "Exports field value must be a string" otherwise. This
+         is backstage-cli's actual convention: the committed package.json
+         points at src/ for dev, and prepack/postpack rewrite it to dist/
+         paths at publish time. `main`/`types` need the equivalent treatment.
+      2. Jest is not installed ANYWHERE in this monorepo (root or any
+         package) — `backstage-cli package test` expects it. This is a new
+         dependency + config surface, not just a script swap.
+      3. Blast radius: module-agentcore and module-kagent both resolve
+         `@acarmisc/backstage-plugin-ai-agents-backend` via this package's
+         main/types/exports (workspace resolution today, real npm resolution
+         for external consumers after publish) — get the rewrite wrong and
+         their builds break, possibly only surfacing at actual `npm publish`
+         time, not in local dev.
+    Recommendation for whoever picks this up: (a) confirm the
+    prepack/postpack rewrite pattern against a real current-generation
+    Backstage plugin's committed package.json before changing anything here,
+    (b) add Jest + port ONE test file as a small first PR to prove the
+    pattern before touching build.js/exports, (c) rebuild module-agentcore
+    and module-kagent locally after the exports change, don't just trust
+    this package's own build/test going green.
 
 [ ] P0-10  Toolchain: migrate plugin-ai-agents (frontend) to backstage-cli + Jest
     Depends on: P0-09 (reuse the proven pattern)
