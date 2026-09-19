@@ -3,6 +3,16 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.1] - 2026-09-19
+
+### Fixed
+
+- Register `aiAgentsPermissions` with `coreServices.permissionsRegistry`.
+  Without it the `ai-agent.invoke` / `ai-agent.history.read` permissions were
+  invisible to the RBAC backend, so they could not be granted in the `/rbac`
+  UI and every invocation was denied with "not authorized to invoke this
+  agent". Mirrors what the LiteLLM backend plugin already does.
+
 ## [0.7.0] - 2026-09-19
 
 ### Added
