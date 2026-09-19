@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
 import {
+  buildPayload,
   extractResponseText,
   readAgentCoreConfig,
 } from './invoker';
@@ -41,4 +42,46 @@ test('readAgentCoreConfig reads full config', () => {
 
 test('readAgentCoreConfig returns undefined when unconfigured', () => {
   assert.equal(readAgentCoreConfig(new ConfigReader({})), undefined);
+});
+
+test('buildPayload sends structured fields and always includes post', () => {
+  const payload = buildPayload({
+    entityRef: 'component:default/dinesh',
+    sessionId: 's'.repeat(33),
+    threadId: 't1',
+    prompt: 'Review MR !42',
+    fields: {},
+    args: { post: false, target: '42', project: 'innovation/x', model: 'sonnet-5' },
+    tags: ['channel:backstage', 'session:t1'],
+    traceUserId: 'user:default/jane',
+    target: {},
+  });
+  assert.equal(payload.prompt, 'Review MR !42');
+  assert.equal(payload.post, false);
+  assert.equal(payload.target, '42');
+  assert.equal(payload.project, 'innovation/x');
+  assert.equal(payload.model, 'sonnet-5');
+  assert.equal(payload.trace_user_id, 'user:default/jane');
+  assert.deepEqual(payload.litellm_tags, [
+    'agent:dinesh',
+    'channel:backstage',
+    'session:t1',
+  ]);
+});
+
+test('buildPayload includes post=true and knowledge_base_ids when requested', () => {
+  const payload = buildPayload({
+    entityRef: 'component:default/erlich',
+    sessionId: 's'.repeat(33),
+    threadId: 't1',
+    prompt: 'why is the deploy failing',
+    fields: {},
+    args: { post: true, knowledgeBaseIds: ['kb-1', 'kb-2'] },
+    tags: [],
+    target: {},
+  });
+  assert.equal(payload.post, true);
+  assert.deepEqual(payload.knowledge_base_ids, ['kb-1', 'kb-2']);
+  assert.deepEqual(payload.litellm_tags, ['agent:erlich']);
+  assert.equal(payload.trace_user_id, undefined);
 });

@@ -99,8 +99,12 @@ export interface InvocationRecord {
   entityRef: string;
   userRef?: string | null;
   sessionId: string;
+  /** Conversation thread this invocation belongs to. */
+  threadId?: string | null;
   prompt: string;
   status: 'ok' | 'error';
+  /** True when the run was allowed to perform external writes. */
+  post?: boolean;
   responseText?: string | null;
   errorMessage?: string | null;
   latencyMs?: number | null;

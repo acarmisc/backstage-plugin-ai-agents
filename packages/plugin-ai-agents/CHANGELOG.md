@@ -3,6 +3,26 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0] - 2026-09-19
+
+### Added
+
+- The Hire dialog is now a **conversation**: the first run shows in the chat
+  as a dry-run, subsequent messages continue the same thread, and a
+  "Confirm and publish" step re-runs with writes enabled once the user
+  approves the result. A follow-up composer keeps the agent's session.
+- `AgentSpend` shows LiteLLM cost (USD, tokens, per-model breakdown) for the
+  agent and, when scoped, for one conversation. Hidden when LiteLLM is not
+  configured.
+- `InvocationHistory` labels each run `dry-run` or `published`.
+
+### Changed
+
+- `AiAgentsApi.invokeAgent` accepts `{ threadId, post }`, returns the
+  `threadId`/`post` from the backend, and `HireAgentDialog.onInvoke`
+  forwards them. Invocations are dry-run by default.
+- The invocation preview is collapsed behind a toggle.
+
 ## [0.10.0] - 2026-08-26
 
 ### Added

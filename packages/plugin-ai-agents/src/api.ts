@@ -14,10 +14,15 @@ export interface AiAgentsApiInterface {
   getAgent(entityRef: string): Promise<AiAgent | undefined>;
   /** Probe live status for the given entity refs via the backend. */
   getStatuses(entityRefs: string[]): Promise<Record<string, AgentStatus>>;
-  /** Run the Hire Agent invocation for the given entity with form values. */
+  /**
+   * Run the Hire Agent invocation for the given entity with form values.
+   * `threadId` continues an existing conversation; `post` overrides the
+   * dry-run default (used by the confirm-and-publish step).
+   */
   invokeAgent(
     entityRef: string,
     values: Record<string, string>,
+    opts?: { threadId?: string; post?: boolean },
   ): Promise<InvocationResult>;
   /** Recent invocations for an agent, latest first. */
   getInvocations(entityRef: string, limit?: number): Promise<InvocationRecord[]>;
@@ -28,10 +33,30 @@ export interface AiAgentsApiInterface {
     entityRef: string,
     review: { rating: number; comment?: string },
   ): Promise<{ id: number }>;
+  /**
+   * Aggregated LiteLLM spend attributed to a thread (or the whole agent when
+   * no thread is given). Returns null when LiteLLM is not configured.
+   */
+  getSpend(
+    entityRef: string,
+    opts?: { threadId?: string; days?: number },
+  ): Promise<SpendSummary | null>;
+}
+
+/** Aggregated LLM spend for an agent or one conversation thread. */
+export interface SpendSummary {
+  spend: number;
+  totalTokens: number;
+  requests: number;
+  byModel: Record<string, number>;
 }
 
 export interface InvocationResult {
   sessionId: string;
+  /** Thread the invocation belongs to; pass it back to continue the chat. */
+  threadId?: string;
+  /** Whether the run was allowed to perform external writes. */
+  post?: boolean;
   responseText: string;
   latencyMs?: number;
 }
@@ -79,13 +104,18 @@ export class AiAgentsApi implements AiAgentsApiInterface {
   async invokeAgent(
     entityRef: string,
     values: Record<string, string>,
+    opts: { threadId?: string; post?: boolean } = {},
   ): Promise<InvocationResult> {
     const res = await this.opts.fetchApi.fetch(
       `${this.basePath}/invocations/${encodeURIComponent(entityRef)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values }),
+        body: JSON.stringify({
+          values,
+          ...(opts.threadId ? { threadId: opts.threadId } : {}),
+          ...(opts.post !== undefined ? { post: opts.post } : {}),
+        }),
       },
     );
     const body = (await res.json()) as InvocationResult & { error?: string };
@@ -115,6 +145,27 @@ export class AiAgentsApi implements AiAgentsApiInterface {
       throw new Error(`failed to load reviews (${res.status})`);
     }
     return (await res.json()) as ReviewsSummary;
+  }
+
+  async getSpend(
+    entityRef: string,
+    opts: { threadId?: string; days?: number } = {},
+  ): Promise<SpendSummary | null> {
+    const params = new URLSearchParams();
+    if (opts.threadId) params.append('thread', opts.threadId);
+    if (opts.days) params.append('days', String(opts.days));
+    const query = params.toString();
+    try {
+      const res = await this.opts.fetchApi.fetch(
+        `${this.basePath}/invocations/${encodeURIComponent(entityRef)}/spend${query ? `?${query}` : ''}`,
+      );
+      // 501 = LiteLLM not configured; treat as "no spend data" rather than
+      // an error so callers can hide the section cleanly.
+      if (!res.ok) return null;
+      return (await res.json()) as SpendSummary;
+    } catch {
+      return null;
+    }
   }
 
   async addReview(

@@ -1,6 +1,6 @@
 {
   "name": "@acarmisc/backstage-plugin-ai-agents-backend",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Backstage backend plugin for AI Agents live status probing and invocations.",
   "keywords": [
     "backstage",
@@ -49,6 +49,7 @@
     "postpack": ""
   },
   "dependencies": {
+    "@acarmisc/backstage-plugin-litellm-backend": "^0.14.0",
     "@backstage/backend-plugin-api": "^1.9.1",
     "@backstage/catalog-client": "^1.9.0",
     "@backstage/catalog-model": "^1.7.0",

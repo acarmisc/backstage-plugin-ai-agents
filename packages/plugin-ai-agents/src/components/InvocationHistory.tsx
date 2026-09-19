@@ -116,6 +116,21 @@ export const InvocationHistory: React.FC<{
               <Typography variant="caption" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
                 {r.prompt.replace(/\s+/g, ' ').slice(0, 60)}
               </Typography>
+              {r.post ? (
+                <Chip
+                  size="small"
+                  color="warning"
+                  label="published"
+                  sx={{ height: 18, fontSize: '0.65rem' }}
+                />
+              ) : (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label="dry-run"
+                  sx={{ height: 18, fontSize: '0.65rem' }}
+                />
+              )}
               {r.latencyMs !== undefined && r.latencyMs !== null && r.status === 'ok' && (
                 <Chip
                   size="small"

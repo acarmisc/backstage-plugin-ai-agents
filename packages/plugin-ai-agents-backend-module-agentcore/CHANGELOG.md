@@ -3,6 +3,23 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-09-19
+
+### Changed
+
+- The invoker now sends the structured AgentCore payload the CES agents'
+  entrypoint (`deploy/app.py`) expects — `prompt` plus `target`, `project`,
+  `post`, `model`, `knowledge_base_ids`, `mode`, `litellm_tags` and
+  `trace_user_id` — instead of only `{ prompt }`.
+- `post` is always included and defaults to `false`, closing the dry-run
+  footgun where an omitted field was read as "post for real".
+- The conversation thread id is sent as the
+  `X-Amzn-Bedrock-AgentCore-Runtime-Session-Id` header, keeping multi-turn
+  memory alive across invocations.
+- Adds the `agent:<name>` cost tag to every invocation.
+
+Requires `@acarmisc/backstage-plugin-ai-agents-backend` `^0.7.0`.
+
 ## [0.3.0] - 2026-08-25
 
 ### Changed

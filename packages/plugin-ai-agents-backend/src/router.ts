@@ -20,7 +20,19 @@ import {
 } from './types';
 import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './client';
 import { InvocationStore, ReviewStore } from './store';
-import { buildPrompt, makeSessionId } from './invocation';
+import {
+  buildInvocationArgs,
+  buildInvocationTags,
+  buildPrompt,
+  makeThreadId,
+  normalizeSessionId,
+} from './invocation';
+import {
+  aggregateSpend,
+  buildSpendReader,
+  spendTagMatcher,
+  spendWindow,
+} from './spend';
 
 const MAX_STATUS_REFS = 200;
 const MAX_CACHE_ENTRIES = 2000;
@@ -49,6 +61,8 @@ export interface RouterOptions {
   };
   /** Override max cache entries (tests). Defaults to MAX_CACHE_ENTRIES. */
   maxCacheEntries?: number;
+  /** Override the LiteLLM spend reader (tests). Defaults to one from config. */
+  spendReader?: import('./spend').SpendReader;
 }
 
 interface CachedStatus {
@@ -100,6 +114,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   if (!reviews && options.database) {
     reviews = await ReviewStore.create(await options.database.getClient());
   }
+
+  // Spend attribution is optional: it reads the LiteLLM instance the govai
+  // plugin is configured against. No LiteLLM config → the route answers 501.
+  const spendReader = options.spendReader ?? buildSpendReader(config);
 
   const cache = new Map<string, CachedStatus>();
 
@@ -262,6 +280,23 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const ref = decodeURIComponent(req.params.entityRef);
     const values: Record<string, string> =
       req.body && typeof req.body.values === 'object' ? req.body.values : {};
+    // Follow-up turns of a conversation send a free-text prompt directly;
+    // without it the prompt is rendered from the entity's template.
+    const explicitPrompt =
+      typeof req.body?.prompt === 'string' && req.body.prompt.trim()
+        ? req.body.prompt
+        : undefined;
+    // A thread groups the turns of one conversation. Reusing it keeps the
+    // AgentCore session alive (multi-turn memory) and gives cost grouping a
+    // stable code. A caller that omits it starts a new conversation.
+    const threadId =
+      typeof req.body?.threadId === 'string' && req.body.threadId
+        ? req.body.threadId
+        : makeThreadId(ref.split('/').pop() ?? 'agent');
+    // Publish confirmation: the UI always dry-runs first, then re-invokes
+    // with post=true once the user confirms the result in the conversation.
+    const postOverride =
+      typeof req.body?.post === 'boolean' ? req.body.post : undefined;
 
     try {
       const { items } = await resolveEntities([ref]);
@@ -281,11 +316,17 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         return;
       }
 
+      const who = await userRef(req);
+      const args = buildInvocationArgs(values, { post: postOverride });
       const request: AgentInvocationRequest = {
         entityRef: ref,
-        sessionId: makeSessionId(entity.metadata.name),
-        prompt: buildPrompt(entity, values),
+        threadId,
+        sessionId: normalizeSessionId(threadId),
+        prompt: explicitPrompt ?? buildPrompt(entity, values),
         fields: values,
+        args,
+        tags: buildInvocationTags({ threadId, userRef: who, entityRef: ref }),
+        traceUserId: who,
         target: {
           region: annotation(entity, 'region'),
           runtimeHandle: annotation(entity, 'runtime-handle'),
@@ -293,7 +334,6 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           namespace: annotation(entity, 'namespace'),
         },
       };
-      const who = await userRef(req);
 
       let responseText: string;
       try {
@@ -303,13 +343,17 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           entityRef: ref,
           userRef: who,
           sessionId: request.sessionId,
+          threadId,
           prompt: request.prompt,
           status: 'ok',
+          post: args.post,
           responseText,
           latencyMs: result.latencyMs || null,
         });
         res.json({
           sessionId: request.sessionId,
+          threadId,
+          post: args.post,
           responseText,
           latencyMs: result.latencyMs,
         });
@@ -320,11 +364,13 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           entityRef: ref,
           userRef: who,
           sessionId: request.sessionId,
+          threadId,
           prompt: request.prompt,
           status: 'error',
+          post: args.post,
           errorMessage: message,
         });
-        res.status(502).json({ error: message, sessionId: request.sessionId });
+        res.status(502).json({ error: message, sessionId: request.sessionId, threadId });
       }
     } catch (err: any) {
       logger.error('Failed to resolve agent for invocation', err);
@@ -347,6 +393,28 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.json(await store.listForEntity(ref, limit));
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? 'unknown error' });
+    }
+  });
+
+  router.get('/invocations/:entityRef/spend', async (req, res) => {
+    if (!spendReader) {
+      res.status(501).json({ error: 'liteLLM is not configured — spend unavailable' });
+      return;
+    }
+    if (!(await checkPermission(req, aiAgentHistoryReadPermission))) {
+      res.status(403).json({ error: 'not authorized to read this agent history' });
+      return;
+    }
+    const ref = decodeURIComponent(req.params.entityRef);
+    const threadId =
+      typeof req.query.thread === 'string' && req.query.thread ? req.query.thread : undefined;
+    const window = spendWindow(Number(req.query.days) || undefined);
+    try {
+      const rows = await spendReader.getSpendLogs({ ...window, page_size: 1000 });
+      res.json(aggregateSpend(rows, spendTagMatcher({ threadId, entityRef: ref })));
+    } catch (err: any) {
+      logger.warn(`Failed to read LiteLLM spend: ${err?.message ?? err}`);
+      res.status(502).json({ error: err?.message ?? 'failed to read spend' });
     }
   });
 

@@ -61,8 +61,11 @@ test('KagentInvoker posts a message/send JSON-RPC request to the namespaced A2A 
   const result = await invoker.invoke({
     entityRef: 'component:default/helm-bot',
     sessionId: 'session-1234567890123456789012345678',
+    threadId: 'helm-bot-thread',
     prompt: 'list pods',
     fields: {},
+    args: { post: false },
+    tags: [],
     target: { runtimeHandle: 'helm-agent' },
   });
 
@@ -72,7 +75,7 @@ test('KagentInvoker posts a message/send JSON-RPC request to the namespaced A2A 
   const body = JSON.parse(calls[0].init.body);
   assert.equal(body.method, 'message/send');
   assert.equal(body.params.message.parts[0].text, 'list pods');
-  assert.equal(body.params.message.contextId, 'session-1234567890123456789012345678');
+  assert.equal(body.params.message.contextId, 'helm-bot-thread');
 });
 
 test('KagentInvoker throws when no runtime-handle annotation is set', async () => {
@@ -84,8 +87,11 @@ test('KagentInvoker throws when no runtime-handle annotation is set', async () =
     invoker.invoke({
       entityRef: 'component:default/x',
       sessionId: 's',
+      threadId: 't',
       prompt: 'p',
       fields: {},
+      args: { post: false },
+      tags: [],
       target: {},
     }),
     /runtime-handle/,

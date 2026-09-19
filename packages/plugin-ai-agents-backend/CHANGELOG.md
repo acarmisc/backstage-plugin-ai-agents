@@ -3,6 +3,34 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0] - 2026-09-19
+
+### Added
+
+- Invocations now carry a **conversation thread**. `POST /invocations/:ref`
+  accepts an optional `threadId` (a new one is minted when omitted) and
+  returns it; the request's `sessionId` is derived from it deterministically,
+  so every turn of a conversation maps to the same AgentCore session. The
+  thread also becomes a `session:<threadId>` cost tag, and both `threadId`
+  and `post` are persisted on the invocation record (migration
+  `20260919120000_add_invocation_thread`).
+- `GET /invocations/:ref/spend` returns LiteLLM spend attributed to a thread
+  (`?thread=`) or to the whole agent, read from the LiteLLM instance the
+  `litellm.*` config points at. Answers 501 when LiteLLM is not configured.
+
+### Changed
+
+- **BREAKING:** `AgentInvocationRequest` gained `threadId`, `args`, `tags`
+  and `traceUserId`. `args` carries the structured agent inputs (`target`,
+  `project`, `post`, `model`, `knowledgeBaseIds`, `mode`) that the agent
+  entrypoint reads directly, instead of only the rendered prompt.
+- `post` is now always sent explicitly and **defaults to false** (dry-run).
+  Previously it was never sent, and agent entrypoints default an omitted
+  `post` to true — a "dry-run" selection could post real feedback.
+- `POST /invocations/:ref` also accepts a free-text `prompt` for follow-up
+  turns and a boolean `post` override.
+- `makeSessionId` was replaced by `normalizeSessionId` / `makeThreadId`.
+
 ## [0.6.0] - 2026-08-25
 
 ### Changed

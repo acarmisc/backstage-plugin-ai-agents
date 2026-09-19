@@ -3,6 +3,15 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-09-19
+
+### Changed
+
+- The A2A `contextId` now carries the conversation thread id, so multi-turn
+  context is preserved across invocations of the same thread.
+- Requires `@acarmisc/backstage-plugin-ai-agents-backend` `^0.7.0` for the
+  extended `AgentInvocationRequest` (`threadId`, `args`, `tags`).
+
 ## [0.1.0] - 2026-08-25
 
 - Initial release: [kagent](https://kagent.dev) invocation module, calling

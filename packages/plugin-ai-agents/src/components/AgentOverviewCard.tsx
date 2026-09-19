@@ -159,7 +159,7 @@ export const AgentOverviewCard: React.FC = () => {
           agent={agent}
           open={hireOpen}
           onClose={() => setHireOpen(false)}
-          onInvoke={values => api.invokeAgent(agent.entityRef, values)}
+          onInvoke={(values, opts) => api.invokeAgent(agent.entityRef, values, opts)}
         />
       )}
     </Box>

@@ -162,8 +162,8 @@ export const AgentsPage: React.FC = () => {
         agent={hireAgent}
         open={hireOpen}
         onClose={() => setHireOpen(false)}
-        onInvoke={async values => {
-          const result = await api.invokeAgent(hireAgent!.entityRef, values);
+        onInvoke={async (values, opts) => {
+          const result = await api.invokeAgent(hireAgent!.entityRef, values, opts);
           setInvocationNonce(n => n + 1);
           return result;
         }}

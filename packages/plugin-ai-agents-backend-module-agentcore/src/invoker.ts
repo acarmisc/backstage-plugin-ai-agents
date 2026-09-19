@@ -68,6 +68,39 @@ export function extractResponseText(body: string): string {
   }
 }
 
+/**
+ * Map the generic invocation request onto the AgentCore entrypoint payload
+ * (`ces-ai-agents/deploy/app.py`): the agent reads `target`, `project`,
+ * `post`, `model`, `knowledge_base_ids`, `mode`,
+ * `litellm_tags` and `trace_user_id` as first-class fields — not just the
+ * rendered prompt. `post` is always explicit because the entrypoint defaults
+ * an omitted value to true, which would silently turn a dry-run into a
+ * posting run.
+ */
+export function buildPayload(req: AgentInvocationRequest): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    prompt: req.prompt,
+    post: req.args.post,
+  };
+  if (req.args.target) payload.target = req.args.target;
+  if (req.args.project) payload.project = req.args.project;
+  if (req.args.model) payload.model = req.args.model;
+  if (req.args.mode) payload.mode = req.args.mode;
+  if (req.args.knowledgeBaseIds?.length) {
+    payload.knowledge_base_ids = req.args.knowledgeBaseIds;
+  }
+  const autoTags = [`agent:${runtimeName(req.entityRef)}`];
+  payload.litellm_tags = [...autoTags, ...req.tags];
+  if (req.traceUserId) payload.trace_user_id = req.traceUserId;
+  return payload;
+}
+
+/** The agent name (last ref segment) used as the per-agent cost tag. */
+function runtimeName(entityRef: string): string {
+  const name = entityRef.split('/').pop();
+  return name || entityRef;
+}
+
 /** Minimal OAuth2 client-credentials client with in-memory token cache. */
 export class TokenClient {
   private cached?: CachedToken;
@@ -154,14 +187,18 @@ export class AgentCoreInvoker {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        // Reusing the session id across turns of one conversation keeps the
+        // AgentCore microVM session (and its multi-turn memory) alive.
+        'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': req.sessionId,
+      };
       const res = await this.fetchImpl(url, {
         method: 'POST',
         signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: req.prompt }),
+        headers,
+        body: JSON.stringify(buildPayload(req)),
       });
       const latencyMs = Date.now() - start;
       const bodyText = await res.text();

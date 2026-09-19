@@ -16,8 +16,10 @@ type DbRow = {
   entity_ref: string;
   user_ref: string | null;
   session_id: string;
+  thread_id: string | null;
   prompt: string;
   status: 'ok' | 'error';
+  post: boolean;
   response_text: string | null;
   error_message: string | null;
   latency_ms: number | null;
@@ -30,8 +32,10 @@ function toRecord(row: DbRow): InvocationRecord {
     entityRef: row.entity_ref,
     userRef: row.user_ref,
     sessionId: row.session_id,
+    threadId: row.thread_id,
     prompt: row.prompt,
     status: row.status,
+    post: Boolean(row.post),
     responseText: row.response_text,
     errorMessage: row.error_message,
     latencyMs: row.latency_ms,
@@ -54,8 +58,10 @@ export class InvocationStore {
         entity_ref: rec.entityRef,
         user_ref: rec.userRef ?? null,
         session_id: rec.sessionId,
+        thread_id: rec.threadId ?? null,
         prompt: rec.prompt,
         status: rec.status,
+        post: rec.post ?? false,
         response_text: rec.responseText ?? null,
         error_message: rec.errorMessage ?? null,
         latency_ms: rec.latencyMs ?? null,

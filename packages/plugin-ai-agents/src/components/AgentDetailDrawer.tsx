@@ -26,6 +26,7 @@ import { BillingBadge } from './BillingBadge';
 import { getLinkIcon } from './linkIcon';
 import { InvocationHistory } from './InvocationHistory';
 import { AgentReviews } from './AgentReviews';
+import { AgentSpend } from './AgentSpend';
 
 export interface AgentDetailDrawerProps {
   agent: AiAgent | null;
@@ -197,6 +198,8 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
             );
           })()}
         </Row>
+
+        <AgentSpend entityRef={agent.entityRef} />
 
         <InvocationHistory entityRef={agent.entityRef} limit={8} reloadKey={historyReloadKey} />
 

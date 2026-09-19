@@ -253,6 +253,14 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
     assert.equal(body.responseText, 'done:Triage issue JIRA-1');
     assert.ok(body.sessionId.length >= 33);
     assert.equal(requests[0].target.region, 'eu-west-1');
+    // Structured contract: a thread + explicit dry-run default + tags.
+    assert.ok(body.threadId);
+    assert.equal(requests[0].threadId, body.threadId);
+    assert.equal(requests[0].sessionId, body.sessionId);
+    assert.equal(requests[0].args.post, false);
+    assert.equal(body.post, false);
+    assert.ok(requests[0].tags.includes('channel:backstage'));
+    assert.ok(requests[0].tags.includes(`session:${body.threadId}`));
 
     const failRes = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
       method: 'POST',
@@ -262,6 +270,82 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
     assert.equal(failRes.status, 502);
     const failBody = await failRes.json();
     assert.match(failBody.error, /agent exploded/);
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations maps action=post to post=true and reuses a thread', async () => {
+  const entity = makeEntity('dinesh', {
+    'ai-agent.io/prompt-template': 'Review MR !{target} in project {project}',
+  });
+  const requests: any[] = [];
+  const invoker = {
+    invoke: async (req: any) => {
+      requests.push(req);
+      return { responseText: 'review', latencyMs: 1 };
+    },
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([['bedrock-agentcore', invoker]]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Fdinesh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        values: { target: '42', project: 'innovation/ces-ai-agents', action: 'post' },
+        threadId: 'thread-abc',
+      }),
+    });
+    assert.equal(res.status, 200);
+    assert.equal(requests[0].threadId, 'thread-abc');
+    assert.equal(requests[0].args.post, true);
+    assert.equal(requests[0].args.target, '42');
+    assert.equal(requests[0].args.project, 'innovation/ces-ai-agents');
+    // The prompt is still rendered from the template.
+    assert.equal(requests[0].prompt, 'Review MR !42 in project innovation/ces-ai-agents');
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations defaults action to dry-run (post=false)', async () => {
+  const entity = makeEntity('dinesh', {});
+  const requests: any[] = [];
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([
+      [
+        'bedrock-agentcore',
+        {
+          invoke: async (req: any) => {
+            requests.push(req);
+            return { responseText: 'x', latencyMs: 1 };
+          },
+        },
+      ],
+    ]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Fdinesh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: { action: 'dry-run' } }),
+    });
+    assert.equal(res.status, 200);
+    assert.equal(requests[0].args.post, false);
   } finally {
     await close();
   }

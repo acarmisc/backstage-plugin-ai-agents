@@ -92,6 +92,8 @@ export class KagentInvoker {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (this.config.authHeader) headers.Authorization = this.config.authHeader;
 
+    // `contextId` carries the conversation thread so multi-turn memory is
+    // preserved across invocations of the same thread.
     const body = JSON.stringify({
       jsonrpc: '2.0',
       id: randomUUID(),
@@ -100,7 +102,7 @@ export class KagentInvoker {
         message: {
           role: 'user',
           messageId: randomUUID(),
-          contextId: req.sessionId,
+          contextId: req.threadId,
           parts: [{ kind: 'text', text: req.prompt }],
         },
       },

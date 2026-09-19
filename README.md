@@ -84,10 +84,28 @@ category renders as a default-colored chip.
 
 Agents that declare a `ai-agent.io/hire-schema` annotation show a
 **Hire Agent** button on their card, detail drawer, and entity-page card.
-Clicking it opens a form rendered from the schema. When the backend is wired
-with an invoker module, a **Run agent** button invokes the agent for real and
-shows the live response; the dialog also builds an invocation preview (prompt
-+ HTTP payload + AWS CLI command) with a **Copy CLI** fallback for manual runs.
+Clicking it opens a form rendered from the schema.
+
+When the backend is wired with an invoker module, the dialog becomes a
+**conversation**:
+
+1. **Run agent** starts the conversation. Runs are **dry-run by default** —
+   the agent reports back without writing anything to GitLab/Jira.
+2. The result appears in the chat. Follow-up messages continue the same
+   **thread**, which keeps the agent's session (multi-turn memory) alive.
+3. For agents whose schema exposes an `action`/`post` field, a
+   **Confirm and publish** step re-invokes with writes enabled once you
+   approve the result. Nothing is posted before that.
+
+The full input — `prompt`, `target`, `project`, `post`, `model`,
+`litellm_tags` and `trace_user_id` — is sent to the agent as structured
+fields, not just baked into the prompt text. Each invocation carries
+`channel:backstage`, `session:<thread>`, `invoked-by:<user>` and
+`backstage-entity:<ref>` tags so LiteLLM spend can be attributed per agent
+and per conversation; the drawer's **Cost** section shows the result.
+
+A collapsed invocation preview (prompt + HTTP payload + AWS CLI command)
+with a **Copy CLI** fallback is available before the first run.
 
 The `hire-schema` annotation value is a JSON array of field objects:
 
@@ -394,8 +412,9 @@ All under `/api/ai-agents`, all Backstage-auth-authenticated:
 | `/health` | GET | `{ status: 'ok', enabled }` |
 | `/statuses?refs=ref1,ref2` | GET | Live status for the given agent entity refs |
 | `/status/:entityRef` | GET | Single agent status (used by the drawer's Refresh button) |
-| `/invocations/:entityRef` | POST | Run the agent (Hire Agent). Body: `{ values: { field: value, ... } }`. Requires an invoker module; responds 501 otherwise |
+| `/invocations/:entityRef` | POST | Run the agent. Body: `{ values, threadId?, prompt?, post? }`. `post` defaults to `false` (dry-run); `threadId` continues a conversation. Requires an invoker module; responds 501 otherwise |
 | `/invocations/:entityRef` | GET | Invocation history for the agent (latest first, `?limit=` up to 100). Requires a database |
+| `/invocations/:entityRef/spend` | GET | LiteLLM spend attributed to the agent, or to one thread with `?thread=`. Responds 501 when LiteLLM is not configured |
 | `/reviews/:entityRef` | POST | Submit a review. Body: `{ rating: 0-5, comment? }`. Requires a database |
 | `/reviews/:entityRef` | GET | Reviews + count + average rating (`?limit=` up to 100). Requires a database |
 
@@ -417,16 +436,34 @@ respond 501).
 
 ## Agent invocations
 
-The backend core is transport-agnostic: it resolves the entity, fills the
-prompt template with the submitted form values, persists the invocation
-(`status`, `prompt`, `response`, `user`, `latency`) into the plugin database,
-and delegates the actual call to a pluggable **invoker** registered through
-the `ai-agents.invoker` extension point. Multiple provider modules can be
+The backend core is transport-agnostic: it resolves the entity, builds the
+prompt, resolves the structured invocation args (`target`, `project`,
+`post`, ...), persists the invocation (`status`, `prompt`, `response`,
+`user`, `latency`, `threadId`, `post`) into the plugin database, and
+delegates the actual call to a pluggable **invoker** registered through the
+`ai-agents.invoker` extension point. Multiple provider modules can be
 installed side by side — the entity's `ai-agent.io/runtime` annotation picks
 which one handles a given agent (e.g. `bedrock-agentcore` vs `kagent`). If
 an entity has no `runtime` annotation and exactly one provider module is
 installed, that single invoker is used, so single-runtime setups don't need
 the annotation.
+
+`post` is always sent explicitly and defaults to `false` — a run never
+writes to GitLab/Jira until the user confirms in the conversation. Note
+that some agent entrypoints default an *omitted* `post` to true, which is
+exactly the footgun this default closes.
+
+Invocations carry a **thread id**; the derived session id is reused across
+turns (AgentCore receives it as
+`X-Amzn-Bedrock-AgentCore-Runtime-Session-Id`, kagent as the A2A
+`contextId`), so a conversation keeps the agent's memory. Spend is tagged
+`channel:backstage`, `session:<threadId>`, `invoked-by:<user>` and
+`backstage-entity:<ref>`, which is what the drawer's cost section reads back
+through `GET /invocations/:ref/spend`.
+
+Spend attribution requires the same `litellm.baseUrl` / `litellm.masterKey`
+config the LiteLLM governance plugin uses; without it the spend endpoint
+answers 501 and the UI hides the section.
 
 The shipped AgentCore module invokes AWS Bedrock AgentCore runtimes using a
 Keycloak client-credentials JWT:

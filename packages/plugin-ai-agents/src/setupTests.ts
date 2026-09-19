@@ -33,3 +33,10 @@ try {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }));
+
+// MUI's TextareaAutosize (multiline TextField) schedules via rAF on unmount;
+// jsdom in Node does not provide it.
+(globalThis as any).requestAnimationFrame =
+  (globalThis as any).requestAnimationFrame ?? ((cb: FrameRequestCallback) => setTimeout(cb, 0));
+(globalThis as any).cancelAnimationFrame =
+  (globalThis as any).cancelAnimationFrame ?? ((id: number) => clearTimeout(id));
