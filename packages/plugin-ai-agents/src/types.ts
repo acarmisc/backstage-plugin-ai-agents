@@ -243,9 +243,24 @@ function parseHireSchema(raw: string | undefined): HireField[] | undefined {
   }
 }
 
-/** Guards against non-http(s) URLs (e.g. javascript:) in annotation-sourced links. */
+/** Image MIME types accepted in `data:` URLs (script execution is disabled for SVG in <img> context). */
+const SAFE_DATA_IMAGE_RE =
+  /^data:image\/(?:png|jpe?g|webp|gif|avif|svg\+xml)[;,]/i;
+
+/**
+ * Guards annotation-sourced URLs before they reach `src`/`href` attributes.
+ * Accepts absolute http(s) URLs, `data:image/*` URIs (for self-contained
+ * avatars, e.g. base64 embedded in an annotation), and origin-relative paths
+ * (served by the host app itself, so already behind its auth). Rejects
+ * everything else, e.g. `javascript:` and protocol-relative `//host` URLs.
+ */
 export function isSafeUrl(url: string | undefined): url is string {
   if (!url) return false;
+  if (url.startsWith('data:')) return SAFE_DATA_IMAGE_RE.test(url);
+  if (url.startsWith('//')) return false;
+  if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
+    return true;
+  }
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';

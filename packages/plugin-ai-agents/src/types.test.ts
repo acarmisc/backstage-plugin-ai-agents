@@ -241,6 +241,30 @@ test('isSafeUrl rejects javascript: URLs', () => {
   assert.equal(isSafeUrl('javascript:alert(1)'), false);
 });
 
+test('isSafeUrl accepts origin-relative paths', () => {
+  assert.equal(isSafeUrl('/img/agents/triage.png'), true);
+  assert.equal(isSafeUrl('./avatars/a.png'), true);
+  assert.equal(isSafeUrl('../avatars/a.png'), true);
+});
+
+test('isSafeUrl rejects protocol-relative URLs', () => {
+  assert.equal(isSafeUrl('//evil.com/a.png'), false);
+});
+
+test('isSafeUrl accepts image data: URIs', () => {
+  assert.equal(isSafeUrl('data:image/png;base64,iVBORw0KGgo='), true);
+  assert.equal(
+    isSafeUrl('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E'),
+    true,
+  );
+});
+
+test('isSafeUrl rejects non-image data: URIs', () => {
+  assert.equal(isSafeUrl('data:text/html;base64,PHNjcmlwdD4='), false);
+  assert.equal(isSafeUrl('data:application/pdf;base64,JVBERi0='), false);
+  assert.equal(isSafeUrl('data:image/svg+xml'), false);
+});
+
 test('isSafeUrl returns false for undefined', () => {
   assert.equal(isSafeUrl(undefined), false);
 });
