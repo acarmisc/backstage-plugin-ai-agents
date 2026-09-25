@@ -3,6 +3,26 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] - 2026-09-25
+
+### Added
+
+- `ai-agent.io/avatar` now accepts `data:image/*` URIs (e.g. a base64 avatar
+  embedded directly in the annotation) and app-relative paths
+  (`/img/agents/x.png`), so agents on private repositories can ship avatars
+  without exposing them or opening the app's CSP.
+
+### Changed
+
+- `AgentAvatar` no longer re-requests an avatar URL that failed to load: dead
+  URLs (e.g. images behind private-repo auth) are remembered for the page
+  session and the initials fallback shows immediately on later renders.
+- Initials render underneath the image at all times, covering the loading
+  state and giving transparent-background SVG avatars a visible backdrop in
+  dark themes. Images load lazily with `referrer-policy: no-referrer`.
+- Initials now split camelCase names (`kbSearchAgent` → "KA" instead of
+  "KB") and no longer crash on empty names.
+
 ## [0.11.0] - 2026-09-19
 
 ### Added

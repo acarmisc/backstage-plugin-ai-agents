@@ -63,7 +63,7 @@ all other annotations are optional.
 | `ai-agent.io/capabilities` | no | Comma- or newline-separated chips, optionally `label:category` |
 | `ai-agent.io/cost-per-1k` | no | USD per 1000 invocations (or per 1M tokens for `per-token`) |
 | `ai-agent.io/budget` | no | Monthly spend cap |
-| `ai-agent.io/avatar` | no | Image URL (falls back to initials on a tinted circle) |
+| `ai-agent.io/avatar` | no | Image URL: absolute http(s), `data:image/*` (self-contained base64), or an app-relative path like `/img/agents/x.png`. Falls back to initials on a tinted circle. |
 | `ai-agent.io/version` | no | Version string in the card footer |
 | `ai-agent.io/health` | no | URL the backend probes for live status (preferred) |
 | `ai-agent.io/endpoint` | no | Invocation endpoint; probed if no `health` annotation |
