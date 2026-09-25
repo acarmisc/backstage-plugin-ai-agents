@@ -24,6 +24,7 @@ import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
 import { getLinkIcon } from './linkIcon';
+import { useAvatarSrc } from '../hooks/useAvatarBlob';
 import { InvocationHistory } from './InvocationHistory';
 import { AgentReviews } from './AgentReviews';
 import { AgentSpend } from './AgentSpend';
@@ -58,6 +59,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
   onHire,
   historyReloadKey = 0,
 }) => {
+  const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   if (!agent) return null;
   const title = agent.title ?? agent.name;
 
@@ -73,7 +75,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
       PaperProps={{ sx: { width: { xs: '100%', sm: 480 }, overflowX: 'hidden' } }}
     >
       <Box sx={{ p: 2, display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-        <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} size={56} />
+        <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={56} />
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h6">{title}</Typography>
           <Typography

@@ -11,6 +11,7 @@ import WorkIcon from '@mui/icons-material/Work';
 import type { AiAgent } from '../types';
 import { isSafeUrl } from '../types';
 import { AgentAvatar } from './AgentAvatar';
+import { useAvatarSrc } from '../hooks/useAvatarBlob';
 import { AgentStatusBadge } from './AgentStatusBadge';
 import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
@@ -32,6 +33,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   onHire,
 }) => {
   const title = agent.title ?? agent.name;
+  const avatarSrc = useAvatarSrc(agent.entityRef, agent.avatarUrl);
   const owner = agent.owner?.replace(/^group:/, '');
   const footer = [owner, agent.lifecycle, agent.version ? `v${agent.version}` : undefined]
     .filter(Boolean)
@@ -55,7 +57,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {/* Header: avatar + title + runtime logo + status dot */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-            <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} />
+            <AgentAvatar name={agent.name} avatarUrl={avatarSrc} />
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
               <Typography variant="subtitle1" fontWeight={700} noWrap title={title}>
                 {title}

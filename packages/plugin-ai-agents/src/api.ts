@@ -41,6 +41,13 @@ export interface AiAgentsApiInterface {
     entityRef: string,
     opts?: { threadId?: string; days?: number },
   ): Promise<SpendSummary | null>;
+  /**
+   * Fetch the agent's avatar through the backend proxy (which resolves it
+   * with the platform's integration credentials and caches it). Returns
+   * undefined when the proxy is disabled, the URL is not proxyable, or the
+   * upstream fetch failed — callers fall back to the direct `avatarUrl`.
+   */
+  getAvatar(entityRef: string): Promise<Blob | undefined>;
 }
 
 /** Aggregated LLM spend for an agent or one conversation thread. */
@@ -165,6 +172,18 @@ export class AiAgentsApi implements AiAgentsApiInterface {
       return (await res.json()) as SpendSummary;
     } catch {
       return null;
+    }
+  }
+
+  async getAvatar(entityRef: string): Promise<Blob | undefined> {
+    try {
+      const res = await this.opts.fetchApi.fetch(
+        `${this.basePath}/avatar/${encodeURIComponent(entityRef)}`,
+      );
+      if (!res.ok) return undefined;
+      return await res.blob();
+    } catch {
+      return undefined;
     }
   }
 

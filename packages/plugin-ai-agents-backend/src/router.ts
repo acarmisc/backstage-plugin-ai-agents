@@ -19,6 +19,7 @@ import {
   ReviewsSummary,
 } from './types';
 import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './client';
+import { readAvatarProxyConfig, resolveAvatar, createCacheStore, createLocalStore } from './avatar';
 import { InvocationStore, ReviewStore } from './store';
 import {
   buildInvocationArgs,
@@ -63,6 +64,15 @@ export interface RouterOptions {
   maxCacheEntries?: number;
   /** Override the LiteLLM spend reader (tests). Defaults to one from config. */
   spendReader?: import('./spend').SpendReader;
+  /**
+   * Avatar proxy services. `urlReader` fetches through the integrations'
+   * credentials; `cache` persists avatars across processes. Both optional —
+   * without them the route redirects to the original URL.
+   */
+  avatarProxy?: {
+    urlReader?: Pick<import('@backstage/backend-plugin-api').UrlReaderService, 'readUrl'>;
+    cache?: import('@backstage/backend-plugin-api').CacheService;
+  };
 }
 
 interface CachedStatus {
@@ -118,6 +128,18 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   // Spend attribution is optional: it reads the LiteLLM instance the govai
   // plugin is configured against. No LiteLLM config → the route answers 501.
   const spendReader = options.spendReader ?? buildSpendReader(config);
+
+  // Avatar proxy: fetches agent avatars through the integrations' credentials
+  // (e.g. the GitLab token) and caches them, so private-repo images render.
+  const avatarCfg = readAvatarProxyConfig(config);
+  const avatarProxy = {
+    config: avatarCfg,
+    urlReader: options.avatarProxy?.urlReader,
+    store: options.avatarProxy?.cache
+      ? createCacheStore(options.avatarProxy.cache)
+      : createLocalStore(),
+    logger,
+  };
 
   const cache = new Map<string, CachedStatus>();
 
@@ -232,6 +254,47 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     } catch (err: any) {
       logger.error('Failed to probe agent', err);
       res.status(500).json({ error: err?.message ?? 'unknown error' });
+    }
+  });
+
+  router.get('/avatar/:entityRef', async (req: Request, res: Response) => {
+    // Proxy off (or no UrlReader): the frontend falls back to the direct
+    // avatarUrl it already has, so 404 is the cheapest correct answer.
+    if (!avatarCfg.enabled || !avatarProxy.urlReader) {
+      res.status(404).json({ error: 'avatar proxy disabled' });
+      return;
+    }
+    const ref = decodeURIComponent(req.params.entityRef);
+    try {
+      const { items } = await resolveEntities([ref]);
+      const entity = items[0];
+      const url =
+        entity && entity.spec?.type === AI_AGENT_TYPE ? annotation(entity, 'avatar') : undefined;
+      // Only absolute http(s) URLs are proxied: data: URIs and app-relative
+      // paths need no credentials and are fetched by the browser directly.
+      if (!url || !/^https?:\/\//i.test(url)) {
+        res.status(404).json({ error: 'no proxyable avatar' });
+        return;
+      }
+      // Not on the allowlist: redirect so public URLs keep working exactly
+      // as before the proxy existed (browser fetches directly).
+      if (!isAllowed(url, avatarCfg.allowlist)) {
+        res.setHeader('Cache-Control', 'private, max-age=300');
+        res.redirect(302, url);
+        return;
+      }
+      const result = await resolveAvatar(url, avatarProxy);
+      if (result.kind === 'redirect') {
+        res.setHeader('Cache-Control', `private, max-age=${Math.max(60, result.maxAgeSec)}`);
+        res.redirect(302, result.location!);
+        return;
+      }
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Cache-Control', `private, max-age=${result.maxAgeSec}`);
+      res.send(result.data);
+    } catch (err: any) {
+      logger.warn(`avatar route failed for ${ref}: ${err?.message ?? err}`);
+      res.status(500).json({ error: 'avatar lookup failed' });
     }
   });
 

@@ -366,6 +366,10 @@ ai-agents:
   # probeAuthHeader: ${AI_AGENTS_PROBE_TOKEN}   # optional, for gated agents
   # probeAllowlist:
   #   - "https://*.execute-api.*.amazonaws.com/*"
+  # avatarProxy:
+  #   enabled: true                            # serve private-repo avatars
+  #   allowlist:
+  #     - "https://gitlab.example.com/*"
 ```
 
 | Key | Type | Default | Description |
@@ -375,6 +379,19 @@ ai-agents:
 | `ai-agents.statusCacheTtlMs` | number | `15000` | In-memory status cache TTL |
 | `ai-agents.probeAuthHeader` | string | — | Static Authorization header for probes (`@visibility secret`) |
 | `ai-agents.probeAllowlist` | string[] | `[]` | Allowed probe URL origin globs (empty = no probing) |
+| `ai-agents.avatarProxy.enabled` | boolean | `false` | Proxy `http(s)` avatars through the backend (with integration credentials) so private-repo images render |
+| `ai-agents.avatarProxy.allowlist` | string[] | `[]` | Allowed avatar URL origin globs (empty = no proxying; off-allowlist URLs 302 to the direct URL) |
+| `ai-agents.avatarProxy.ttlMs` | number | `86400000` | How long a fetched avatar is served from cache |
+| `ai-agents.avatarProxy.negativeTtlMs` | number | `3600000` | How long a failed fetch is remembered before retrying |
+| `ai-agents.avatarProxy.maxBytes` | number | `524288` | Reject avatars larger than this (bytes) |
+
+With the proxy enabled, `GET /api/ai-agents/avatar/:entityRef` fetches the
+entity's `ai-agent.io/avatar` URL with the backend's integration credentials
+(e.g. the GitLab token) and caches the bytes (positive and negative
+entries, with ETag revalidation). Failures redirect to the original URL so
+public images keep working. The frontend (`useAvatarSrc`) prefers the
+proxied blob for `http(s)` URLs — shared per agent for the page session —
+and uses `data:` URIs and app-relative paths directly.
 
 Without the backend (or with `enabled: false`), the plugin still works —
 cards just show an `unknown` status badge.

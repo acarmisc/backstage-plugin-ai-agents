@@ -18,17 +18,26 @@ function makeEntity(name: string, annotations?: Record<string, string>): Entity 
 }
 
 function makeConfig(over: Record<string, unknown> = {}) {
+  // Path-aware mock: nested keys read "prefix.key" entries (e.g.
+  // "avatarProxy.enabled"), while the top-level "ai-agents" config still
+  // resolves the legacy flat keys existing tests pass ("enabled", ...).
+  const reader = (prefix: string) => ({
+    getOptionalBoolean: (k: string) =>
+      over[`${prefix}${k}`] ?? (prefix === '' ? over[k] : undefined) as boolean | undefined,
+    getOptionalNumber: (k: string) =>
+      over[`${prefix}${k}`] ?? (prefix === '' ? over[k] : undefined) as number | undefined,
+    getOptionalString: (k: string) =>
+      over[`${prefix}${k}`] ?? (prefix === '' ? over[k] : undefined) as string | undefined,
+    getOptionalStringArray: (k: string) =>
+      over[`${prefix}${k}`] ?? (prefix === '' ? over[k] : undefined) as string[] | undefined,
+    getOptionalConfig: (sub: string) => reader(`${prefix}${sub}.`),
+  });
   return {
-    getOptionalConfig: () => ({
-      getOptionalBoolean: (k: string) => (k === 'enabled' ? over.enabled : undefined),
-      getOptionalNumber: (k: string) => over[k as string] as number | undefined,
-      getOptionalString: (k: string) => over[k as string] as string | undefined,
-      getOptionalStringArray: (k: string) => over[k as string] as string[] | undefined,
-    }),
-    getOptionalBoolean: (k: string) => (k === 'enabled' ? over.enabled : undefined),
-    getOptionalNumber: (k: string) => over[k as string] as number | undefined,
-    getOptionalString: (k: string) => over[k as string] as string | undefined,
-    getOptionalStringArray: (k: string) => over[k as string] as string[] | undefined,
+    getOptionalBoolean: (k: string) => over[k],
+    getOptionalNumber: (k: string) => over[k],
+    getOptionalString: (k: string) => over[k],
+    getOptionalStringArray: (k: string) => over[k],
+    getOptionalConfig: (path: string) => reader(path.replace(/^ai-agents\.?/, '')),
   } as any;
 }
 
@@ -655,6 +664,165 @@ test('cache eviction: oldest entries are evicted when cache exceeds max size', a
       `${url}/statuses?refs=component:default/agent-0,component:default/agent-4`,
     );
     assert.equal(probeCalls, 7);
+  } finally {
+    await close();
+  }
+});
+
+// --- Avatar proxy ---
+
+const PNG = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+]);
+
+function stubUrlReader(png?: Buffer, etag?: string) {
+  let calls = 0;
+  return {
+    get calls() {
+      return calls;
+    },
+    readUrl: async () => {
+      calls++;
+      if (!png) {
+        const err: any = new Error('upstream 404');
+        err.status = 404;
+        throw err;
+      }
+      return {
+        buffer: async () => png,
+        etag,
+      };
+    },
+  };
+}
+
+test('GET /avatar 404s when the proxy is disabled', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://git.example.com/a.png' });
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true, 'avatarProxy.allowlist': ['https://git.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    // no urlReader → proxy off regardless of config
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`);
+    assert.equal(res.status, 404);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /avatar 404s for missing, data:, and relative avatars', async () => {
+  const noAvatar = makeEntity('no-avatar');
+  const dataAvatar = makeEntity('data-avatar', { 'ai-agent.io/avatar': 'data:image/png;base64,AAAA' });
+  const relAvatar = makeEntity('rel-avatar', { 'ai-agent.io/avatar': '/img/a.png' });
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([noAvatar, dataAvatar, relAvatar]),
+    avatarProxy: { urlReader: stubUrlReader(PNG) },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    for (const ref of ['no-avatar', 'data-avatar', 'rel-avatar']) {
+      const res = await fetch(`${url}/avatar/${encodeURIComponent(`component:default/${ref}`)}`);
+      assert.equal(res.status, 404, ref);
+    }
+  } finally {
+    await close();
+  }
+});
+
+test('GET /avatar 302s to URLs outside the allowlist', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://public.example.com/a.png' });
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true, 'avatarProxy.allowlist': ['https://git.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    avatarProxy: { urlReader: stubUrlReader(PNG) },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`, { redirect: 'manual' });
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.get('location'), 'https://public.example.com/a.png');
+  } finally {
+    await close();
+  }
+});
+
+test('GET /avatar serves cached images and fetches upstream once', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://git.example.com/a.png' });
+  const urlReader = stubUrlReader(PNG, 'etag-1');
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true, 'avatarProxy.allowlist': ['https://git.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    avatarProxy: { urlReader },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res1 = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`);
+    assert.equal(res1.status, 200);
+    assert.equal(res1.headers.get('content-type'), 'image/png');
+    const bytes = Buffer.from(await res1.arrayBuffer());
+    assert.equal(bytes.subarray(0, 4).toString('hex'), PNG.subarray(0, 4).toString('hex'));
+
+    const res2 = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`);
+    assert.equal(res2.status, 200);
+    assert.equal(urlReader.calls, 1, 'second request must be served from cache');
+  } finally {
+    await close();
+  }
+});
+
+test('GET /avatar negative-caches failed fetches and 302s', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://git.example.com/missing.png' });
+  const urlReader = stubUrlReader(undefined);
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true, 'avatarProxy.allowlist': ['https://git.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    avatarProxy: { urlReader },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    for (let i = 0; i < 2; i++) {
+      const res = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`, { redirect: 'manual' });
+      assert.equal(res.status, 302);
+      assert.equal(res.headers.get('location'), 'https://git.example.com/missing.png');
+    }
+    assert.equal(urlReader.calls, 1, 'negative cache must prevent refetching');
+  } finally {
+    await close();
+  }
+});
+
+test('GET /avatar 302s when upstream is not an image', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://git.example.com/evil' });
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true, 'avatarProxy.allowlist': ['https://git.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    avatarProxy: { urlReader: { readUrl: async () => ({ buffer: async () => Buffer.from('<html>hi</html>') }) } },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`, { redirect: 'manual' });
+    assert.equal(res.status, 302);
   } finally {
     await close();
   }

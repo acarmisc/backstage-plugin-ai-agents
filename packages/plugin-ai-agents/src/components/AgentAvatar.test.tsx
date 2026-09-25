@@ -71,6 +71,15 @@ test('a URL that errored once is never requested again', () => {
   assert.match(second.container.textContent ?? '', /TR/);
 });
 
+test('renders proxied avatars served as blob: object URLs', () => {
+  const { container } = render(
+    <AgentAvatar name="triage" avatarUrl="blob:http://localhost/1234-abcd" />,
+  );
+  const img = container.querySelector('img');
+  assert.ok(img, 'blob: URL from the avatar proxy should render');
+  assert.equal(img?.getAttribute('src'), 'blob:http://localhost/1234-abcd');
+});
+
 test('rejects unsafe avatar URLs and falls back to initials', () => {
   const { container } = render(
     <AgentAvatar

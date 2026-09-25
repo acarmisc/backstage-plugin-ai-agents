@@ -250,13 +250,17 @@ const SAFE_DATA_IMAGE_RE =
 /**
  * Guards annotation-sourced URLs before they reach `src`/`href` attributes.
  * Accepts absolute http(s) URLs, `data:image/*` URIs (for self-contained
- * avatars, e.g. base64 embedded in an annotation), and origin-relative paths
- * (served by the host app itself, so already behind its auth). Rejects
- * everything else, e.g. `javascript:` and protocol-relative `//host` URLs.
+ * avatars, e.g. base64 embedded in an annotation), origin-relative paths
+ * (served by the host app itself, so already behind its auth), and `blob:`
+ * URLs (minted locally via `URL.createObjectURL`, e.g. by `useAvatarSrc`
+ * for proxied avatars — same-origin memory references, inert as `<img>`
+ * sources). Rejects everything else, e.g. `javascript:` and
+ * protocol-relative `//host` URLs.
  */
 export function isSafeUrl(url: string | undefined): url is string {
   if (!url) return false;
   if (url.startsWith('data:')) return SAFE_DATA_IMAGE_RE.test(url);
+  if (url.startsWith('blob:')) return true;
   if (url.startsWith('//')) return false;
   if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
     return true;

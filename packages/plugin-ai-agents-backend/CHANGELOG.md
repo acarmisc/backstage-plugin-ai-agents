@@ -3,6 +3,16 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Avatar proxy (`GET /api/ai-agents/avatar/:entityRef`, opt-in via
+  `ai-agents.avatarProxy`): fetches agent avatars through the integrations'
+  credentials (e.g. the GitLab token) so private-repo images render, with
+  allowlist gating, content sniffing, size limits, ETag revalidation, and
+  positive + negative caching.
+
 ## [0.7.1] - 2026-09-19
 
 ### Fixed

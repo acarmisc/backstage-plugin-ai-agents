@@ -3,6 +3,20 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `isSafeUrl` accepts `blob:` URLs. Without this, avatars fetched through
+  the backend proxy (`useAvatarSrc` mints a `blob:` object URL) were rejected
+  by `AgentAvatar`'s guard and never rendered — the proxy path was dead.
+- `useAvatarSrc` syncs its state with the blob cache when the entity ref
+  changes, so a reused card no longer flashes the previous agent's avatar
+  while the new one loads.
+- `AgentOverviewCard` and `AgentDetailDrawer` now resolve avatars through
+  `useAvatarSrc` like `AgentCard` does, so private-repo avatars render via
+  the proxy everywhere instead of only on cards.
+
 ## [0.12.0] - 2026-09-25
 
 ### Added

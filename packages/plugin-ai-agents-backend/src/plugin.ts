@@ -29,6 +29,8 @@ export const aiAgentsPlugin = createBackendPlugin({
         httpAuth: coreServices.httpAuth,
         permissions: coreServices.permissions,
         permissionsRegistry: coreServices.permissionsRegistry,
+        urlReader: coreServices.urlReader,
+        cache: coreServices.cache,
       },
       async init({
         httpRouter,
@@ -40,6 +42,8 @@ export const aiAgentsPlugin = createBackendPlugin({
         httpAuth,
         permissions,
         permissionsRegistry,
+        urlReader,
+        cache,
       }) {
         // Register the plugin's permissions so the RBAC backend can discover
         // them (they surface in the /rbac UI). Without this the ai-agent.*
@@ -55,6 +59,7 @@ export const aiAgentsPlugin = createBackendPlugin({
           httpAuth,
           permissions,
           invokers,
+          avatarProxy: { urlReader, cache },
         });
         httpRouter.use(router);
       },

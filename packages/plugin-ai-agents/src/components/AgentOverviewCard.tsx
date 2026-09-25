@@ -22,6 +22,7 @@ import { AgentReviews } from './AgentReviews';
 import { useEntity } from '@backstage/plugin-catalog-react';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
+import { useAvatarSrc } from '../hooks/useAvatarBlob';
 
 const RUNTIME_ICON: Record<string, React.ReactNode> = {
   'bedrock-agentcore': <CloudQueueIcon fontSize="small" />,
@@ -49,15 +50,16 @@ export const AgentOverviewCard: React.FC = () => {
   const { entity } = useEntity();
   const api = useApi(aiAgentsApiRef);
   const [hireOpen, setHireOpen] = useState(false);
-  if (!entity || entity.spec?.type !== 'ai-agent') return null;
-  const agent = entityToAgent(entity);
+  const agent =
+    entity && entity.spec?.type === 'ai-agent' ? entityToAgent(entity) : undefined;
+  const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   if (!agent) return null;
   const canHire = !!(agent.hireSchema && agent.hireSchema.length > 0);
 
   return (
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-        <AgentAvatar name={agent.name} avatarUrl={agent.avatarUrl} size={48} />
+        <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={48} />
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h6" noWrap>{agent.title ?? agent.name}</Typography>
           <Typography variant="caption" color="text.secondary" noWrap>
