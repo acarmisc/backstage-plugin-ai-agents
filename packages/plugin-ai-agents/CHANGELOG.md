@@ -3,7 +3,14 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.13.0] - 2026-09-25
+
+### Added
+
+- `useAvatarSrc` hook: resolves `http(s)` avatars through the backend proxy
+  (shared per-agent blob-URL cache for the page session, direct-URL
+  fallback), now used by `AgentCard`, `AgentOverviewCard` and
+  `AgentDetailDrawer`.
 
 ### Fixed
 
