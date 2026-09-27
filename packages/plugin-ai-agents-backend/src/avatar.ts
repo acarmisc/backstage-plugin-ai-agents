@@ -106,6 +106,17 @@ function cacheKey(url: string): string {
   return `avatar:${createHash('sha256').update(url).digest('hex')}`;
 }
 
+/**
+ * Backstage's GitLab UrlReader only understands `/-/blob/` file URLs, but
+ * catalog authors naturally paste the `/-/raw/` links GitLab's UI offers.
+ * Both address the same file at the same ref, so rewrite raw → blob before
+ * fetching (and key the cache on the normalized form so both spellings
+ * share one entry). Redirects keep serving the original URL.
+ */
+export function normalizeAvatarUrl(url: string): string {
+  return url.replace(/\/-\/raw\//, '/-/blob/');
+}
+
 export interface AvatarProxyDeps {
   config: AvatarProxyConfig;
   /** Backstage UrlReader: resolves fetches through the integrations' credentials. */
@@ -129,7 +140,8 @@ export async function resolveAvatar(
   deps: AvatarProxyDeps,
 ): Promise<AvatarResolution> {
   const { config, urlReader, store, logger } = deps;
-  const key = cacheKey(url);
+  const fetchUrl = normalizeAvatarUrl(url);
+  const key = cacheKey(fetchUrl);
   const now = Date.now();
 
   const cached = await store.get(key).catch(() => undefined);
@@ -150,7 +162,7 @@ export async function resolveAvatar(
   }
 
   try {
-    const response = await urlReader.readUrl(url, { etag: cached?.etag });
+    const response = await urlReader.readUrl(fetchUrl, { etag: cached?.etag });
     const buf = await response.buffer();
     if (buf.length === 0 || buf.length > config.maxBytes) {
       throw new Error(`avatar size ${buf.length} exceeds limit ${config.maxBytes}`);

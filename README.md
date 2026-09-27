@@ -389,9 +389,11 @@ With the proxy enabled, `GET /api/ai-agents/avatar/:entityRef` fetches the
 entity's `ai-agent.io/avatar` URL with the backend's integration credentials
 (e.g. the GitLab token) and caches the bytes (positive and negative
 entries, with ETag revalidation). Failures redirect to the original URL so
-public images keep working. The frontend (`useAvatarSrc`) prefers the
-proxied blob for `http(s)` URLs — shared per agent for the page session —
-and uses `data:` URIs and app-relative paths directly.
+public images keep working. GitLab `/-/raw/` avatar URLs are rewritten to
+their equivalent `/-/blob/` form before fetching, since Backstage's GitLab
+`UrlReader` only understands the latter. The frontend (`useAvatarSrc`)
+prefers the proxied blob for `http(s)` URLs — shared per agent for the page
+session — and uses `data:` URIs and app-relative paths directly.
 
 Without the backend (or with `enabled: false`), the plugin still works —
 cards just show an `unknown` status badge.

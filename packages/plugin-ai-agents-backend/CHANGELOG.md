@@ -3,6 +3,17 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.1] - 2026-09-27
+
+### Fixed
+
+- Avatar proxy rewrites GitLab `/-/raw/` URLs to their equivalent `/-/blob/`
+  form before fetching. Backstage's GitLab `UrlReader` rejects `/-/raw/`
+  paths ("Url path must include /blob/"), so every annotated avatar using
+  the raw links from GitLab's UI failed, negative-cached, and fell back to
+  initials. Cache keys use the normalized form so both spellings share one
+  entry; redirects still serve the original URL.
+
 ## [0.8.0] - 2026-09-25
 
 ### Added

@@ -809,6 +809,34 @@ test('GET /avatar negative-caches failed fetches and 302s', async () => {
   }
 });
 
+test('GET /avatar rewrites GitLab /-/raw/ URLs to /-/blob/ for the reader', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://git.example.com/r/-/raw/main/a.png' });
+  const seen: string[] = [];
+  const router = await createRouter({
+    config: makeConfig({ 'avatarProxy.enabled': true, 'avatarProxy.allowlist': ['https://git.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    avatarProxy: {
+      urlReader: {
+        readUrl: async (u: string) => {
+          seen.push(u);
+          return { buffer: async () => PNG };
+        },
+      },
+    },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`);
+    assert.equal(res.status, 200);
+    assert.deepEqual(seen, ['https://git.example.com/r/-/blob/main/a.png']);
+  } finally {
+    await close();
+  }
+});
+
 test('GET /avatar 302s when upstream is not an image', async () => {
   const entity = makeEntity('triage', { 'ai-agent.io/avatar': 'https://git.example.com/evil' });
   const router = await createRouter({
