@@ -28,6 +28,8 @@ export interface AgentRuntimeInfo {
   healthUrl?: string;
   /** AWS region for the AgentCore runtime (e.g. "eu-west-1"), used by the Hire preview. */
   region?: string;
+  /** Optional telemetry ID for trace correlation and metric tagging. */
+  telemetryId?: string;
 }
 
 export type AgentBillingModel =
@@ -319,6 +321,7 @@ export function entityToAgent(
       endpoint: annotation(entity, 'endpoint'),
       healthUrl: annotation(entity, 'health'),
       region: annotation(entity, 'region'),
+      telemetryId: annotation(entity, 'telemetry-id'),
     },
     billing: {
       model: annotation(entity, 'billing-model') ?? 'free',
