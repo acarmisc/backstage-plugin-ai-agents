@@ -106,8 +106,9 @@ test('fetches http(s) avatars through the proxy and shares the blob', async () =
     'component:default/hook-share',
     'https://git.example.com/a.png',
   );
-  // While the proxy fetch is in flight the direct URL is shown.
-  assert.equal(srcOf(first.container), 'https://git.example.com/a.png');
+  // While the proxy fetch is in flight nothing is shown: the browser must
+  // not hit the upstream host directly.
+  assert.equal(srcOf(first.container), '(none)');
   await waitFor(() =>
     assert.match(srcOf(first.container) ?? '', /^blob:http:\/\/localhost\/mock-/),
   );

@@ -114,7 +114,31 @@ function cacheKey(url: string): string {
  * share one entry). Redirects keep serving the original URL.
  */
 export function normalizeAvatarUrl(url: string): string {
-  return url.replace(/\/-\/raw\//, '/-/blob/');
+  return stripCredentialParams(url.replace(/\/-\/raw\//, '/-/blob/'));
+}
+
+const CREDENTIAL_PARAMS = ['token', 'private_token', 'job_token', 'access_token', 'auth_token'];
+
+/**
+ * Catalog authors often paste GitLab links carrying a personal `?token=`
+ * (as copied from the UI's raw view). The backend authenticates with the
+ * integrations' credentials instead, so drop these params: they'd otherwise
+ * be forwarded upstream, baked into the cache key, and written to logs.
+ */
+export function stripCredentialParams(url: string): string {
+  try {
+    const parsed = new URL(url);
+    let changed = false;
+    for (const name of CREDENTIAL_PARAMS) {
+      if (parsed.searchParams.has(name)) {
+        parsed.searchParams.delete(name);
+        changed = true;
+      }
+    }
+    return changed ? parsed.toString() : url;
+  } catch {
+    return url;
+  }
 }
 
 export interface AvatarProxyDeps {
@@ -193,7 +217,7 @@ export async function resolveAvatar(
         maxAgeSec: Math.round(config.ttlMs / 1000),
       };
     }
-    logger.warn(`avatar fetch failed for ${url}: ${(err as any)?.message ?? err}`);
+    logger.warn(`avatar fetch failed for ${fetchUrl}: ${(err as any)?.message ?? err}`);
     const entry: CachedAvatar = { failed: true, contentType: '', data: '', expiresAt: now + config.negativeTtlMs };
     await store.set(key, entry, config.negativeTtlMs).catch(() => {});
     return { kind: 'redirect', location: url, maxAgeSec: 0 };

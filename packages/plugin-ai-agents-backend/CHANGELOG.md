@@ -3,6 +3,15 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Avatar proxy strips credential query params (`token`, `private_token`,
+  `job_token`, `access_token`, `auth_token`) from avatar URLs before fetching,
+  so pasted `?token=` links no longer reach the `UrlReader`, the cache key or
+  the logs; the integrations' credentials are used instead.
+
 ## [0.8.1] - 2026-09-27
 
 ### Fixed

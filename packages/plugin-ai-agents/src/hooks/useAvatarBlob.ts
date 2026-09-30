@@ -22,9 +22,11 @@ const failedRefs = new Set<string>();
  * (`fetchApi` attaches the Backstage identity token; the backend resolves
  * the image with its integration credentials, e.g. the GitLab token, and
  * caches it). `data:` URIs and app-relative paths are used directly since
- * they need no credentials. On any proxy failure the original URL is
- * returned so public URLs keep working, and `AgentAvatar`'s own fallback
- * covers the rest.
+ * they need no credentials. While the proxy request is in flight nothing is
+ * returned (the avatar shows its initials) so the browser never hits the
+ * upstream host directly — for private repos that request can only fail.
+ * Only after the proxy has failed is the original URL returned, so public
+ * URLs keep working, and `AgentAvatar`'s own fallback covers the rest.
  */
 export function useAvatarSrc(
   entityRef: string | undefined,
@@ -33,9 +35,15 @@ export function useAvatarSrc(
   const api = useApi(aiAgentsApiRef);
   const direct = avatarUrl && isSafeUrl(avatarUrl) ? avatarUrl : undefined;
   const needsProxy = !!entityRef && !!direct && /^https?:\/\//i.test(direct);
-  const [blobSrc, setBlobSrc] = useState<string | undefined>(() =>
+  const [, setBlobSrc] = useState<string | undefined>(() =>
     entityRef ? blobUrls.get(entityRef) : undefined,
   );
+  // Bumped when a proxy fetch fails so the hook re-renders and falls back.
+  const [, setFailureTick] = useState(0);
+  const markFailed = (ref: string) => {
+    failedRefs.add(ref);
+    setFailureTick(t => t + 1);
+  };
 
   useEffect(() => {
     if (!entityRef || !needsProxy) return undefined;
@@ -53,7 +61,7 @@ export function useAvatarSrc(
       .then(blob => {
         if (!alive) return;
         if (!blob) {
-          failedRefs.add(entityRef);
+          markFailed(entityRef);
           return;
         }
         const url = URL.createObjectURL(blob);
@@ -61,13 +69,15 @@ export function useAvatarSrc(
         setBlobSrc(url);
       })
       .catch(() => {
-        failedRefs.add(entityRef);
+        if (alive) markFailed(entityRef);
+        else failedRefs.add(entityRef);
       });
     return () => {
       alive = false;
     };
   }, [api, entityRef, needsProxy]);
 
-  if (blobSrc) return blobSrc;
-  return direct;
+  if (!needsProxy) return direct;
+  // Proxy still pending → no src; proxy failed → direct URL as a last resort.
+  return blobUrls.get(entityRef!) ?? (failedRefs.has(entityRef!) ? direct : undefined);
 }

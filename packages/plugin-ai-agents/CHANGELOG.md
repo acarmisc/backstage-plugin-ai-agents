@@ -3,6 +3,15 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `useAvatarSrc` no longer returns the upstream `http(s)` avatar URL while the
+  backend proxy request is in flight, so the browser stops requesting private
+  GitLab images directly (which always failed). The direct URL is used only
+  after the proxy has failed.
+
 ## [0.13.0] - 2026-09-25
 
 ### Added
