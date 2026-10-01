@@ -3,6 +3,14 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-10-01
+
+### Changed
+
+- Depend on `@acarmisc/backstage-plugin-ai-agents-backend@^0.9.0` (was
+  `^0.7.0`, which under 0.x semver excluded 0.8/0.9 and made hosts on the
+  current backend install a second, nested copy of it).
+
 ## [0.2.0] - 2026-09-19
 
 ### Changed
