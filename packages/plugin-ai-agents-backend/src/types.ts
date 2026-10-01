@@ -11,6 +11,45 @@ export interface AgentStatus {
   message?: string;
 }
 
+export type RunState = 'running' | 'completed' | 'failed' | 'unknown';
+
+export interface RunEvent {
+  seq: number;
+  name: string;
+  event: string;
+  tool?: string;
+  outcome?: string;
+  target?: string;
+  project?: string;
+  incomplete?: string;
+  ts?: string;
+}
+
+export interface AgentRun {
+  runId: string;
+  agent: string;
+  target?: string;
+  project?: string;
+  mode?: string;
+  state: RunState;
+  startedAt?: string;
+  updatedAt?: string;
+  currentActivity?: string;
+  seq?: number;
+  verdict?: string;
+  events?: RunEvent[];
+}
+
+/**
+ * Server-side adapter for an OTel store. The router resolves the catalog
+ * entity's telemetry id before calling this interface, keeping catalog access
+ * and provider credentials outside the browser.
+ */
+export interface TelemetryProvider {
+  getRuns(telemetryId: string, limit?: number): Promise<AgentRun[]>;
+  getRunTimeline(telemetryId: string, runId: string): Promise<RunEvent[] | null>;
+}
+
 export interface ProbeConfig {
   enabled: boolean;
   probeTimeoutMs: number;

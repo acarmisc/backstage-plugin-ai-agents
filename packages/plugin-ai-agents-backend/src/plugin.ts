@@ -1,7 +1,7 @@
 import { coreServices, createBackendPlugin } from '@backstage/backend-plugin-api';
 import { aiAgentsExtensionPoint, AiAgentsExtensionPoint } from './extensionPoint';
 import { createRouter } from './router';
-import { AgentInvoker } from './types';
+import { AgentInvoker, TelemetryProvider } from './types';
 import { aiAgentsPermissions } from './permissions';
 
 export { aiAgentsExtensionPoint };
@@ -11,10 +11,14 @@ export const aiAgentsPlugin = createBackendPlugin({
   pluginId: 'ai-agents',
   register(reg) {
     const invokers = new Map<string, AgentInvoker>();
+    let telemetryProvider: TelemetryProvider | undefined;
 
     reg.registerExtensionPoint(aiAgentsExtensionPoint, {
       registerInvoker(runtime: string, invoker: AgentInvoker) {
         invokers.set(runtime, invoker);
+      },
+      registerTelemetryProvider(provider: TelemetryProvider) {
+        telemetryProvider = provider;
       },
     });
 
@@ -59,6 +63,7 @@ export const aiAgentsPlugin = createBackendPlugin({
           httpAuth,
           permissions,
           invokers,
+          telemetryProvider,
           avatarProxy: { urlReader, cache },
         });
         httpRouter.use(router);

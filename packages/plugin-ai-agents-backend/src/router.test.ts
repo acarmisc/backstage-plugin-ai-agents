@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net';
 import type { Entity } from '@backstage/catalog-model';
 import { AuthorizeResult } from '@backstage/plugin-permission-common';
 import { createRouter } from './router';
-import type { ProbeFn, ProbeResult } from './types';
+import type { ProbeFn, ProbeResult, TelemetryProvider } from './types';
 
 function makeEntity(name: string, annotations?: Record<string, string>): Entity {
   return {
@@ -199,6 +199,46 @@ test('GET /status/:ref returns 404 for missing entity', async () => {
   try {
     const res = await fetch(`${url}/status/component:default/missing`);
     assert.equal(res.status, 404);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /runs resolves the catalog telemetry id before querying the provider', async () => {
+  const entity = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const calls: string[] = [];
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async (telemetryId, limit) => {
+      calls.push(`${telemetryId}:${limit}`);
+      return [{ runId: 'trace-1', agent: telemetryId, state: 'running' }];
+    },
+    getRunTimeline: async () => [],
+  };
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/runs/component%3Adefault%2Fdinesh?limit=2`);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), [{ runId: 'trace-1', agent: 'dinesh', state: 'running' }]);
+    assert.deepEqual(calls, ['dinesh:2']);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /runs returns 501 without a telemetry provider', async () => {
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    assert.equal((await fetch(`${url}/runs/component%3Adefault%2Fdinesh`)).status, 501);
   } finally {
     await close();
   }

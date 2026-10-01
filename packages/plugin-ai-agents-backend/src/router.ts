@@ -17,6 +17,7 @@ import {
   ProbeFn,
   ReviewRecord,
   ReviewsSummary,
+  TelemetryProvider,
 } from './types';
 import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './client';
 import { readAvatarProxyConfig, resolveAvatar, createCacheStore, createLocalStore } from './avatar';
@@ -51,6 +52,8 @@ export interface RouterOptions {
   permissions?: PermissionsService;
   /** Invokers registered by provider modules (e.g. agentcore, kagent), keyed by runtime. */
   invokers?: Map<string, AgentInvoker>;
+  /** Optional server-side OTel-store adapter for live run timelines. */
+  telemetryProvider?: TelemetryProvider;
   /** Override the probe function (tests). Defaults to fetch-based. */
   probe?: ProbeFn;
   /** Override the catalog client (tests). Defaults to one built from discovery. */
@@ -109,7 +112,7 @@ function resolveInvoker(
 }
 
 export async function createRouter(options: RouterOptions): Promise<Router> {
-  const { config, logger, auth, discovery, probe: probeOverride, invokers, httpAuth, permissions } = options;
+  const { config, logger, auth, discovery, probe: probeOverride, invokers, telemetryProvider, httpAuth, permissions } = options;
   const cfg: ProbeConfig = readProbeConfig(config);
   const probe = probeOverride ?? buildProbeFn(fetch);
   const invocationsEnabled =
@@ -526,6 +529,59 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.json(await reviews.summaryFor(ref, limit));
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? 'unknown error' });
+    }
+  });
+
+  router.get('/runs/:entityRef', async (req, res) => {
+    if (!telemetryProvider) {
+      res.status(501).json({ error: 'telemetry not configured' });
+      return;
+    }
+    const ref = decodeURIComponent(req.params.entityRef);
+    const [entity] = (await catalogClient.getEntitiesByRefs({ entityRefs: [ref] })).items;
+    const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
+      ? annotation(entity, 'telemetry-id')
+      : undefined;
+    if (!telemetryId) {
+      res.json([]);
+      return;
+    }
+    const limit = Math.min(Math.max(Number(req.query.limit) || 5, 1), 50);
+    try {
+      res.json(await telemetryProvider.getRuns(telemetryId, limit));
+    } catch (err: any) {
+      logger.error('Failed to fetch agent runs', err);
+      res.status(502).json({ error: 'telemetry query failed' });
+    }
+  });
+
+  router.get('/runs/:entityRef/:runId', async (req, res) => {
+    if (!telemetryProvider) {
+      res.status(501).json({ error: 'telemetry not configured' });
+      return;
+    }
+    const ref = decodeURIComponent(req.params.entityRef);
+    const [entity] = (await catalogClient.getEntitiesByRefs({ entityRefs: [ref] })).items;
+    const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
+      ? annotation(entity, 'telemetry-id')
+      : undefined;
+    if (!telemetryId) {
+      res.status(404).json({ error: 'agent telemetry is not configured' });
+      return;
+    }
+    try {
+      const events = await telemetryProvider.getRunTimeline(
+        telemetryId,
+        decodeURIComponent(req.params.runId),
+      );
+      if (events === null) {
+        res.status(404).json({ error: 'run not found' });
+        return;
+      }
+      res.json(events);
+    } catch (err: any) {
+      logger.error('Failed to fetch agent run timeline', err);
+      res.status(502).json({ error: 'telemetry query failed' });
     }
   });
 

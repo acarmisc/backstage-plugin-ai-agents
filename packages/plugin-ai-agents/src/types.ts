@@ -95,6 +95,35 @@ export interface AgentStatus {
   message?: string;
 }
 
+export type RunState = 'running' | 'completed' | 'failed' | 'unknown';
+
+export interface RunEvent {
+  seq: number;
+  name: string;
+  event: string;
+  tool?: string;
+  outcome?: string;
+  target?: string;
+  project?: string;
+  incomplete?: string;
+  ts?: string;
+}
+
+export interface AgentRun {
+  runId: string;
+  agent: string;
+  target?: string;
+  project?: string;
+  mode?: string;
+  state: RunState;
+  startedAt?: string;
+  updatedAt?: string;
+  currentActivity?: string;
+  seq?: number;
+  verdict?: string;
+  events?: RunEvent[];
+}
+
 /** A persisted agent invocation, as returned by the backend history API. */
 export interface InvocationRecord {
   id?: number;

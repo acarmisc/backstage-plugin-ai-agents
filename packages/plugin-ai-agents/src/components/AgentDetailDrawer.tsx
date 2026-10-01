@@ -28,6 +28,7 @@ import { useAvatarSrc } from '../hooks/useAvatarBlob';
 import { InvocationHistory } from './InvocationHistory';
 import { AgentReviews } from './AgentReviews';
 import { AgentSpend } from './AgentSpend';
+import { RunTimeline } from './RunTimeline';
 
 export interface AgentDetailDrawerProps {
   agent: AiAgent | null;
@@ -202,6 +203,8 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
         </Row>
 
         <AgentSpend entityRef={agent.entityRef} />
+
+        {agent.runtime.telemetryId && <RunTimeline entityRef={agent.entityRef} />}
 
         <InvocationHistory entityRef={agent.entityRef} limit={8} reloadKey={historyReloadKey} />
 

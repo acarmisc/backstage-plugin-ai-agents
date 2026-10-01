@@ -4,9 +4,11 @@ import {
   AI_AGENT_TYPE,
   AiAgent,
   AgentStatus,
+  AgentRun,
   entityToAgent,
   InvocationRecord,
   ReviewsSummary,
+  RunEvent,
 } from './types';
 
 export interface AiAgentsApiInterface {
@@ -26,6 +28,10 @@ export interface AiAgentsApiInterface {
   ): Promise<InvocationResult>;
   /** Recent invocations for an agent, latest first. */
   getInvocations(entityRef: string, limit?: number): Promise<InvocationRecord[]>;
+  /** Recent OTel runs; empty when the telemetry adapter is not configured. */
+  getRuns(entityRef: string, limit?: number): Promise<AgentRun[]>;
+  /** Ordered activity events for one OTel run. */
+  getRunTimeline(entityRef: string, runId: string): Promise<RunEvent[] | null>;
   /** Reviews (latest first) plus count and average rating for an agent. */
   getReviews(entityRef: string, limit?: number): Promise<ReviewsSummary>;
   /** Submit a 0-5 star review with an optional comment. */
@@ -141,6 +147,33 @@ export class AiAgentsApi implements AiAgentsApiInterface {
       return (await res.json()) as InvocationRecord[];
     } catch {
       return [];
+    }
+  }
+
+  async getRuns(entityRef: string, limit = 5): Promise<AgentRun[]> {
+    try {
+      const res = await this.opts.fetchApi.fetch(
+        `${this.basePath}/runs/${encodeURIComponent(entityRef)}?limit=${limit}`,
+      );
+      if (!res.ok) return [];
+      return (await res.json()) as AgentRun[];
+    } catch {
+      return [];
+    }
+  }
+
+  async getRunTimeline(
+    entityRef: string,
+    runId: string,
+  ): Promise<RunEvent[] | null> {
+    try {
+      const res = await this.opts.fetchApi.fetch(
+        `${this.basePath}/runs/${encodeURIComponent(entityRef)}/${encodeURIComponent(runId)}`,
+      );
+      if (!res.ok) return null;
+      return (await res.json()) as RunEvent[];
+    } catch {
+      return null;
     }
   }
 

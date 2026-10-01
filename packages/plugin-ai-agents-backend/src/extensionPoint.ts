@@ -1,5 +1,5 @@
 import { createExtensionPoint } from '@backstage/backend-plugin-api';
-import { AgentInvoker } from './types';
+import { AgentInvoker, TelemetryProvider } from './types';
 
 export interface AiAgentsExtensionPoint {
   /**
@@ -13,6 +13,8 @@ export interface AiAgentsExtensionPoint {
    * When no invoker matches, the endpoint responds 501.
    */
   registerInvoker(runtime: string, invoker: AgentInvoker): void;
+  /** Register the single server-side source for normalized OTel run data. */
+  registerTelemetryProvider(provider: TelemetryProvider): void;
 }
 
 export const aiAgentsExtensionPoint = createExtensionPoint<AiAgentsExtensionPoint>({
