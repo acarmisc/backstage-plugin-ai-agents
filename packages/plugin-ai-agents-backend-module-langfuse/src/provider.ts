@@ -1,5 +1,5 @@
 import type { Config } from '@backstage/config';
-import type { AgentRun, RunEvent, TelemetryProvider } from '@acarmisc/backstage-plugin-ai-agents-backend';
+import type { AgentRun, RunEvent, TelemetryProvider, AgentInsights } from '@acarmisc/backstage-plugin-ai-agents-backend';
 
 export interface LangfuseConfig {
   baseUrl: string;
@@ -52,6 +52,14 @@ type FetchFn = typeof fetch;
 type Filter = Record<string, unknown>;
 
 const eq = (column: string, value: string): Filter => ({ type: 'string', column, operator: '=', value });
+
+/** Nearest-rank percentile: sorted ascending, index = ceil(p/100*n)-1 */
+export function percentile(values: number[], p: number): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, index)] ?? 0;
+}
 
 /** `review_quality` is a JSON object, or its (possibly truncated) string form. */
 function readQuality(meta: Record<string, unknown> | undefined): {
@@ -196,6 +204,131 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       });
     }
     return events;
+  }
+
+  async getInsights(telemetryId: string, hours: number): Promise<AgentInsights> {
+    const clampedHours = Math.min(Math.max(hours, 1), 72);
+    const withinMs = clampedHours * 3600_000;
+
+    // Fetch invoke observations and tool observations in parallel
+    const [invokes, tools] = await Promise.all([
+      this.query([eq('type', 'AGENT'), eq('name', `${telemetryId}-invoke`)], MAX_PAGES, withinMs),
+      this.query(
+        [
+          eq('type', 'TOOL'),
+          { type: 'stringObject', column: 'metadata', key: SERVICE_KEY, operator: 'contains', value: `${this.cfg.servicePrefix}${telemetryId}` },
+        ],
+        MAX_PAGES,
+        withinMs,
+      ),
+    ]);
+
+    // Build a set of finished trace IDs (those with invoke observations)
+    const finishedTraces = new Set(invokes.map(o => o.traceId));
+
+    // Categorize runs: finished (from invokes) and live/unknown (from tools without invokes)
+    const finished: Array<{ traceId: string; startTime: string; endTime: string; state: 'completed' | 'failed' }> = invokes.map(o => ({
+      traceId: o.traceId,
+      startTime: o.startTime,
+      endTime: o.endTime ?? o.startTime,
+      state: o.level === 'ERROR' ? 'failed' : 'completed',
+    }));
+
+    // Group tools by trace to find live/unknown runs
+    const liveTraces = new Map<string, Observation[]>();
+    for (const tool of tools) {
+      if (finishedTraces.has(tool.traceId)) continue; // Skip traces with invoke observations
+      liveTraces.set(tool.traceId, [...(liveTraces.get(tool.traceId) ?? []), tool]);
+    }
+
+    const live: Array<{ traceId: string; startTime: string; state: 'running' | 'unknown' }> = [];
+    for (const [traceId, traceTools] of liveTraces) {
+      const sorted = [...traceTools].sort((a, b) => a.startTime.localeCompare(b.startTime));
+      const last = sorted[sorted.length - 1];
+      const lastEnd = last.endTime ?? last.startTime;
+      const active = this.now() - Date.parse(lastEnd) < this.cfg.runningWindowSeconds * 1000;
+      live.push({
+        traceId,
+        startTime: sorted[0].startTime,
+        state: active ? 'running' : 'unknown',
+      });
+    }
+
+    // Calculate totals
+    const totals = {
+      runs: finished.length + live.length,
+      completed: finished.filter(r => r.state === 'completed').length,
+      failed: finished.filter(r => r.state === 'failed').length,
+      running: live.filter(r => r.state === 'running').length,
+      unknown: live.filter(r => r.state === 'unknown').length,
+    };
+
+    // Calculate duration stats for finished runs
+    const durations = finished
+      .map(r => Date.parse(r.endTime) - Date.parse(r.startTime))
+      .filter(d => d > 0);
+    const durationMs = {
+      p50: durations.length ? percentile(durations, 50) : 0,
+      p95: durations.length ? percentile(durations, 95) : 0,
+    };
+
+    // Build histogram: exactly clampedHours buckets, oldest first
+    // Each bucket represents a UTC hour: bucket start = UTC hour start for each of the last clampedHours hours INCLUDING current hour
+    const now = this.now();
+    const buckets = [];
+    for (let i = clampedHours - 1; i >= 0; i--) {
+      const bucketTime = now - i * 3600_000;
+      const bucketDate = new Date(bucketTime);
+      bucketDate.setUTCMinutes(0, 0, 0);
+      const isoStr = bucketDate.toISOString();
+      // Remove milliseconds to match expected format (HH:MM:00Z instead of HH:MM:00.000Z)
+      const bucketStart = isoStr.replace(/\.\d{3}Z$/, 'Z');
+      const bucketEnd = new Date(Date.parse(bucketStart) + 3600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+      const runsInBucket = finished.filter(r => {
+        const runStart = Date.parse(r.startTime);
+        return runStart >= Date.parse(bucketStart) && runStart < Date.parse(bucketEnd);
+      });
+
+      buckets.push({
+        start: bucketStart,
+        runs: runsInBucket.length,
+        failed: runsInBucket.filter(r => r.state === 'failed').length,
+      });
+    }
+
+    // Aggregate tools: group by name, calculate stats
+    const toolStats = new Map<string, { calls: number; errors: number; latencies: number[] }>();
+    for (const tool of tools) {
+      const name = toolName(tool);
+      const stat = toolStats.get(name) ?? { calls: 0, errors: 0, latencies: [] };
+      stat.calls++;
+      if (toolFailed(tool)) stat.errors++;
+      if (typeof tool.latency === 'number') {
+        stat.latencies.push(tool.latency * 1000); // Convert seconds to ms
+      }
+      toolStats.set(name, stat);
+    }
+
+    // Convert to array and sort by calls descending, take top 10
+    const topTools = Array.from(toolStats.entries())
+      .map(([name, stat]) => ({
+        name,
+        calls: stat.calls,
+        errors: stat.errors,
+        avgMs: stat.latencies.length ? Math.round(stat.latencies.reduce((a, b) => a + b, 0) / stat.latencies.length) : 0,
+        p95Ms: stat.latencies.length ? Math.round(percentile(stat.latencies, 95)) : 0,
+      }))
+      .sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name))
+      .slice(0, 10);
+
+    return {
+      windowHours: clampedHours,
+      totals,
+      durationMs,
+      histogram: buckets,
+      tools: topTools,
+    };
   }
 
   private finishedRun(agent: string, o: Observation): AgentRun {

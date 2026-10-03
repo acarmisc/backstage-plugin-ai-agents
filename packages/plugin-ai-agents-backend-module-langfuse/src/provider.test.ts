@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
-import { LangfuseTelemetryProvider, readLangfuseConfig, LangfuseConfig } from './provider';
+import { LangfuseTelemetryProvider, readLangfuseConfig, LangfuseConfig, percentile } from './provider';
 
 const cfg: LangfuseConfig = {
   baseUrl: 'http://lf',
@@ -178,4 +178,175 @@ test('target and project come from the invoke span attributes', async () => {
   const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
   const runs = await p.getRuns('dinesh');
   assert.deepEqual(runs.map(r => [r.target, r.project]), [['!148', 'lux/ds'], ['CES-12', undefined]]);
+});
+
+test('percentile uses nearest-rank method with empty and single value', () => {
+  assert.equal(percentile([], 50), 0);
+  assert.equal(percentile([100], 50), 100);
+  assert.equal(percentile([10, 20, 30], 50), 20);
+  assert.equal(percentile([10, 20, 30, 40, 50], 95), 50);
+});
+
+test('getInsights calculates totals with running/unknown split', async () => {
+  const rows = [
+    invoke('completed1', '2026-10-03T09:00:00Z', '2026-10-03T09:01:00Z'),
+    invoke('failed1', '2026-10-03T08:00:00Z', '2026-10-03T08:01:00Z', {}, 'ERROR'),
+    tool('a', 'running1', 'get_x', '2026-10-03T09:59:00Z', '2026-10-03T09:59:30Z'),
+    tool('b', 'unknown1', 'get_y', '2026-10-03T09:50:00Z', '2026-10-03T09:50:05Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  assert.equal(insights.totals.runs, 4);
+  assert.equal(insights.totals.completed, 1);
+  assert.equal(insights.totals.failed, 1);
+  assert.equal(insights.totals.running, 1);
+  assert.equal(insights.totals.unknown, 1);
+});
+
+test('getInsights histogram has exactly N buckets, last is current UTC hour', async () => {
+  const rows = [
+    invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:01:00Z'),
+    invoke('t2', '2026-10-03T08:30:00Z', '2026-10-03T08:31:00Z'),
+    invoke('t3', '2026-10-03T08:00:00Z', '2026-10-03T08:01:00Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 3);
+  assert.equal(insights.histogram.length, 3);
+  // Last bucket should be current hour: 10:00:00Z
+  assert.equal(insights.histogram[2].start, '2026-10-03T10:00:00Z');
+  // Previous bucket: 09:00:00Z
+  assert.equal(insights.histogram[1].start, '2026-10-03T09:00:00Z');
+  // Oldest bucket: 08:00:00Z
+  assert.equal(insights.histogram[0].start, '2026-10-03T08:00:00Z');
+  // Runs counted in correct buckets
+  assert.equal(insights.histogram[2].runs, 0); // No runs in current hour (10:00:00Z)
+  assert.equal(insights.histogram[1].runs, 1); // t1 at 09:00:00Z
+  assert.equal(insights.histogram[0].runs, 2); // t2, t3 at 08:00:00Z (08:30 and 08:00)
+});
+
+test('getInsights histogram counts failed runs per bucket', async () => {
+  const rows = [
+    invoke('ok', '2026-10-03T09:00:00Z', '2026-10-03T09:01:00Z'),
+    invoke('fail', '2026-10-03T09:30:00Z', '2026-10-03T09:31:00Z', {}, 'ERROR'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 2);
+  const hour9Bucket = insights.histogram.find(b => b.start === '2026-10-03T09:00:00Z');
+  assert.equal(hour9Bucket?.runs, 2);
+  assert.equal(hour9Bucket?.failed, 1);
+});
+
+test('getInsights aggregates tools by name, sorted by calls, top 10 cap', async () => {
+  const tools_rows = [
+    tool('a', 't1', 'tool_a', '2026-10-03T09:00:00Z', '2026-10-03T09:00:01Z', 'success'),
+    tool('b', 't1', 'tool_a', '2026-10-03T09:00:02Z', '2026-10-03T09:00:03Z', 'success'),
+    tool('c', 't1', 'tool_b', '2026-10-03T09:00:04Z', '2026-10-03T09:00:05Z', 'error'),
+    tool('d', 't1', 'tool_c', '2026-10-03T09:00:06Z', '2026-10-03T09:00:07Z', 'success'),
+    invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(tools_rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  assert.equal(insights.tools.length, 3);
+  assert.equal(insights.tools[0].name, 'tool_a');
+  assert.equal(insights.tools[0].calls, 2);
+  assert.equal(insights.tools[0].errors, 0);
+  assert.equal(insights.tools[1].name, 'tool_b');
+  assert.equal(insights.tools[1].calls, 1);
+  assert.equal(insights.tools[1].errors, 1);
+  assert.equal(insights.tools[2].name, 'tool_c');
+  assert.equal(insights.tools[2].calls, 1);
+  assert.equal(insights.tools[2].errors, 0);
+});
+
+test('getInsights keeps top 10 tools from 12 distinct tools', async () => {
+  const tools_rows: Array<unknown> = [];
+  for (let i = 0; i < 12; i++) {
+    tools_rows.push(tool(`t${i}`, 'trace', `tool_${i}`, '2026-10-03T09:00:00Z', '2026-10-03T09:00:01Z'));
+  }
+  tools_rows.push(invoke('trace', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z'));
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(tools_rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  assert.equal(insights.tools.length, 10);
+});
+
+test('getInsights counts tools without latency in calls but excludes from avgMs/p95Ms', async () => {
+  const tools_rows: Array<unknown> = [
+    { ...tool('a', 't1', 'tool_a', '2026-10-03T09:00:00Z', '2026-10-03T09:00:01Z'), latency: 0.1 },
+    { ...tool('b', 't1', 'tool_a', '2026-10-03T09:00:02Z', '2026-10-03T09:00:03Z'), latency: null },
+    { ...tool('c', 't1', 'tool_a', '2026-10-03T09:00:04Z', '2026-10-03T09:00:05Z'), latency: 0.2 },
+    invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(tools_rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  const toolAStat = insights.tools.find((t: { name: string }) => t.name === 'tool_a');
+  assert.equal(toolAStat?.calls, 3); // All 3 counted
+  // avgMs = (100 + 200) / 2 = 150
+  assert.equal(toolAStat?.avgMs, 150);
+  // p95 of [100, 200] = 200 (nearest-rank)
+  assert.equal(toolAStat?.p95Ms, 200);
+});
+
+test('getInsights durationMs calculates p50 and p95 from finished run durations', async () => {
+  const rows = [
+    invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z'), // 10 seconds
+    invoke('t2', '2026-10-03T09:01:00Z', '2026-10-03T09:01:30Z'), // 30 seconds
+    invoke('t3', '2026-10-03T09:02:00Z', '2026-10-03T09:02:50Z'), // 50 seconds
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  // Durations in ms: [10000, 30000, 50000]
+  // Sorted: [10000, 30000, 50000]
+  // p50 at index ceil(50/100*3)-1 = ceil(1.5)-1 = 2-1 = 1 → 30000
+  // p95 at index ceil(95/100*3)-1 = ceil(2.85)-1 = 3-1 = 2 → 50000
+  assert.equal(insights.durationMs.p50, 30000);
+  assert.equal(insights.durationMs.p95, 50000);
+});
+
+test('getInsights returns durationMs 0 when no finished runs', async () => {
+  const rows = [
+    tool('a', 'live1', 'get_x', '2026-10-03T09:59:00Z', '2026-10-03T09:59:30Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  assert.equal(insights.durationMs.p50, 0);
+  assert.equal(insights.durationMs.p95, 0);
+});
+
+test('getInsights metadata never leaks json_schema or other raw metadata', async () => {
+  const rows = [
+    tool('a', 't1', 'tool_a', '2026-10-03T09:00:00Z', '2026-10-03T09:00:01Z'),
+    invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights = await p.getInsights('dinesh', 24);
+  const out = JSON.stringify(insights);
+  assert.ok(!out.includes('json_schema'), 'must never leak metadata.json_schema');
+  assert.ok(!out.includes('must never leak'), 'must never leak metadata values');
+});
+
+test('getInsights caches queries: two calls → one fetch pair', async () => {
+  const calls: URL[] = [];
+  const rows = [
+    invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z'),
+    tool('a', 't1', 'tool_a', '2026-10-03T09:00:00Z', '2026-10-03T09:00:01Z'),
+  ];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows, calls), () => NOW);
+  await p.getInsights('dinesh', 24);
+  const firstCallCount = calls.length;
+  await p.getInsights('dinesh', 24);
+  const secondCallCount = calls.length;
+  // Two identical calls should use the cache and not make additional API calls
+  assert.equal(secondCallCount, firstCallCount);
+  assert.ok(firstCallCount > 0, 'should have made at least one query');
+});
+
+test('getInsights clamps hours between 1 and 72', async () => {
+  const rows = [invoke('t1', '2026-10-03T09:00:00Z', '2026-10-03T09:00:10Z')];
+  const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
+  const insights0 = await p.getInsights('dinesh', 0);
+  const insights200 = await p.getInsights('dinesh', 200);
+  assert.equal(insights0.windowHours, 1);
+  assert.equal(insights200.windowHours, 72);
+  assert.equal(insights0.histogram.length, 1);
+  assert.equal(insights200.histogram.length, 72);
 });

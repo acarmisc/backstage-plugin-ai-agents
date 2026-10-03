@@ -244,6 +244,126 @@ test('GET /runs returns 501 without a telemetry provider', async () => {
     await close();
   }
 });
+
+test('GET /insights passes clamped hours to provider', async () => {
+  const entity = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const calls: Array<[string, number]> = [];
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async () => [],
+    getRunTimeline: async () => [],
+    getInsights: async (telemetryId, hours) => {
+      calls.push([telemetryId, hours]);
+      return {
+        windowHours: hours,
+        totals: { runs: 0, running: 0, completed: 0, failed: 0, unknown: 0 },
+        durationMs: { p50: 0, p95: 0 },
+        histogram: [],
+        tools: [],
+      };
+    },
+  };
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res1 = await fetch(`${url}/insights/component%3Adefault%2Fdinesh?hours=999`);
+    assert.equal(res1.status, 200);
+    assert.deepEqual(calls[0], ['dinesh', 72]);
+
+    const res2 = await fetch(`${url}/insights/component%3Adefault%2Fdinesh`);
+    assert.equal(res2.status, 200);
+    assert.deepEqual(calls[1], ['dinesh', 24]);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /insights returns 501 without a telemetry provider', async () => {
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    assert.equal((await fetch(`${url}/insights/component%3Adefault%2Fdinesh`)).status, 501);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /insights returns 501 when provider lacks getInsights', async () => {
+  const entity = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async () => [],
+    getRunTimeline: async () => [],
+  };
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    assert.equal((await fetch(`${url}/insights/component%3Adefault%2Fdinesh`)).status, 501);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /insights returns 404 without telemetry-id annotation', async () => {
+  const entity = makeEntity('dinesh');
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async () => [],
+    getRunTimeline: async () => [],
+    getInsights: async () => ({
+      windowHours: 24,
+      totals: { runs: 0, running: 0, completed: 0, failed: 0, unknown: 0 },
+      durationMs: { p50: 0, p95: 0 },
+      histogram: [],
+      tools: [],
+    }),
+  };
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/insights/component%3Adefault%2Fdinesh`);
+    assert.equal(res.status, 404);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /insights returns 502 when provider throws', async () => {
+  const entity = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async () => [],
+    getRunTimeline: async () => [],
+    getInsights: async () => {
+      throw new Error('provider error');
+    },
+  };
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/insights/component%3Adefault%2Fdinesh`);
+    assert.equal(res.status, 502);
+  } finally {
+    await close();
+  }
+});
+
 test('POST /invocations returns 501 without an invoker module', async () => {
   const entity = makeEntity('triage', {
     'ai-agent.acarmisc.org/runtime-handle': 'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/x',
