@@ -3,6 +3,22 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.2] - 2026-10-03
+
+### Changed
+
+- Components are plain functions instead of `React.FC` (Backstage ADR006).
+- `AgentCardProps`, `HireAgentDialogProps`, `StarRatingProps`,
+  `AgentWorkspacePanelProps`, `RunState`, `InvocationResult`, `SpendSummary`
+  and `InvocationRecord` are exported, so every public signature can be typed.
+- `@types/react` is an optional peer dependency.
+- New README for the npm page, with screenshots.
+
+### Fixed
+
+- `npm start` (the standalone dev app) failed with
+  `plugin.getId is not a function`.
+
 ## [0.16.1] - 2026-10-03
 
 ### Removed

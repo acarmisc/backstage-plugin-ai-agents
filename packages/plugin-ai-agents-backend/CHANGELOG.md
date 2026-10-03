@@ -3,6 +3,17 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.5] - 2026-10-03
+
+### Changed
+
+- The `ai-agents.invocations.agentCore` and `ai-agents.invocations.kagent`
+  config keys are no longer declared by this package; the AgentCore and kagent
+  modules declare their own (update the modules together with this package).
+- `RouterOptions` is exported.
+- New README for the npm page: configuration, permissions, routes and the
+  extension point.
+
 ## [0.9.4] - 2026-10-03
 
 ### Security

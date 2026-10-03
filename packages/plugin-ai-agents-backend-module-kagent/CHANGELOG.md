@@ -3,6 +3,18 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.2] - 2026-10-03
+
+### Fixed
+
+- The module's config schema was never loaded because `package.json` had no
+  `configSchema`.
+
+### Changed
+
+- `KagentConfig` is exported.
+- New README for the npm page.
+
 ## [0.3.1] - 2026-10-03
 
 ### Security

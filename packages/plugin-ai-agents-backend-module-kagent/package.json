@@ -1,6 +1,6 @@
 {
   "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-kagent",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "kagent (Kubernetes-native agent runtime) invocation module for the ai-agents Backstage backend plugin.",
   "keywords": [
     "backstage",
