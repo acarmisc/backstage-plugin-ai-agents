@@ -24,12 +24,16 @@ function formatTokens(value: number): string {
  * conversation thread. Renders nothing when LiteLLM is not configured, so
  * static setups stay clean.
  */
-export const AgentSpend: React.FC<{
+export function AgentSpend({
+  entityRef,
+  threadId,
+  days = 30,
+}: {
   entityRef: string;
   /** When set, the spend is scoped to this conversation thread. */
   threadId?: string;
   days?: number;
-}> = ({ entityRef, threadId, days = 30 }) => {
+}) {
   const api = useApi(aiAgentsApiRef);
   const [summary, setSummary] = useState<SpendSummary | null>(null);
 
@@ -76,8 +80,16 @@ export const AgentSpend: React.FC<{
       {models.length > 0 && (
         <Stack spacing={0.25}>
           {models.map(([model, spend]) => (
-            <Box key={model} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Typography variant="caption" color="text.secondary" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Box
+              key={model}
+              sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                noWrap
+                sx={{ flexGrow: 1, minWidth: 0 }}
+              >
                 {model}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -89,4 +101,4 @@ export const AgentSpend: React.FC<{
       )}
     </Box>
   );
-};
+}

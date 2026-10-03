@@ -28,13 +28,18 @@ function labelStep(count: number): number {
  * Stacked bars (completed / failed) per hour. Pure CSS grid: one column per
  * bucket, so it scales to any width and window size without layout maths.
  */
-export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) => {
+export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
   const theme = useTheme();
 
   if (buckets.length === 0) {
     return (
       <Box
-        sx={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        sx={{
+          height,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
         <Typography variant="body2" color="text.disabled">
           No activity in this window
@@ -55,11 +60,24 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) 
       aria-label={`Hourly runs: ${totalRuns} total, ${totalFailed} failed`}
       sx={{ width: '100%' }}
     >
-      <Box sx={{ position: 'relative', height, borderBottom: 1, borderColor: 'divider' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          height,
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
         <Typography
           variant="caption"
           color="text.disabled"
-          sx={{ position: 'absolute', top: 0, left: 0, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}
         >
           {max}
         </Typography>
@@ -74,7 +92,8 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) 
         >
           {buckets.map(bucket => {
             const ok = Math.max(bucket.runs - bucket.failed, 0);
-            const pct = bucket.runs > 0 ? Math.max((bucket.runs / max) * 100, 2) : 0;
+            const pct =
+              bucket.runs > 0 ? Math.max((bucket.runs / max) * 100, 2) : 0;
             return (
               <Box
                 key={bucket.start}
@@ -87,7 +106,9 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) 
                   display: 'flex',
                   alignItems: 'flex-end',
                   borderRadius: '3px 3px 0 0',
-                  '&:hover': { backgroundColor: alpha(theme.palette.text.primary, 0.06) },
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.text.primary, 0.06),
+                  },
                 }}
               >
                 {bucket.runs > 0 && (
@@ -104,13 +125,22 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) 
                     {bucket.failed > 0 && (
                       <Box
                         data-segment="failed"
-                        sx={{ flex: bucket.failed, backgroundColor: theme.palette.error.main }}
+                        sx={{
+                          flex: bucket.failed,
+                          backgroundColor: theme.palette.error.main,
+                        }}
                       />
                     )}
                     {ok > 0 && (
                       <Box
                         data-segment="success"
-                        sx={{ flex: ok, backgroundColor: alpha(theme.palette.success.main, 0.85) }}
+                        sx={{
+                          flex: ok,
+                          backgroundColor: alpha(
+                            theme.palette.success.main,
+                            0.85,
+                          ),
+                        }}
                       />
                     )}
                   </Box>
@@ -126,7 +156,12 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) 
             key={bucket.start}
             variant="caption"
             color="text.secondary"
-            sx={{ whiteSpace: 'nowrap', overflow: 'visible', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}
+            sx={{
+              whiteSpace: 'nowrap',
+              overflow: 'visible',
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1.2,
+            }}
           >
             {i % step === 0 ? hourLabel(bucket.start) : ''}
           </Typography>
@@ -134,4 +169,4 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) 
       </Box>
     </Box>
   );
-};
+}

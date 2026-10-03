@@ -1,17 +1,30 @@
 import type { Config } from '@backstage/config';
-import type { AgentRun, RunEvent, TelemetryProvider, AgentInsights } from '@acarmisc/backstage-plugin-ai-agents-backend';
+import type {
+  AgentRun,
+  RunEvent,
+  TelemetryProvider,
+  AgentInsights,
+} from '@acarmisc/backstage-plugin-ai-agents-backend';
 
+/** @public */
 export interface LangfuseConfig {
   baseUrl: string;
   publicKey: string;
   secretKey: string;
   lookbackHours: number;
   runningWindowSeconds: number;
-  /** Prefix of the OTel service name, e.g. `abs_ces_agents_` → `abs_ces_agents_dinesh.DEFAULT`. */
+  /** Prepended to the telemetry id to match the agent's service name. */
   servicePrefix: string;
+  /** Observation metadata key holding the OTel service name. */
+  serviceAttribute: string;
+  /** Optional metadata key shown as the run's target. */
+  targetAttribute?: string;
+  /** Optional metadata key shown as the run's project. */
+  projectAttribute?: string;
   cacheTtlMs: number;
 }
 
+/** @public */
 export function readLangfuseConfig(config: Config): LangfuseConfig | undefined {
   const c = config.getOptionalConfig('ai-agents.telemetry.langfuse');
   if (!c) return undefined;
@@ -21,7 +34,12 @@ export function readLangfuseConfig(config: Config): LangfuseConfig | undefined {
     secretKey: c.getString('secretKey'),
     lookbackHours: c.getOptionalNumber('lookbackHours') ?? 24,
     runningWindowSeconds: c.getOptionalNumber('runningWindowSeconds') ?? 90,
-    servicePrefix: c.getOptionalString('servicePrefix') ?? 'abs_ces_agents_',
+    servicePrefix: c.getOptionalString('servicePrefix') ?? '',
+    serviceAttribute:
+      c.getOptionalString('serviceAttribute') ??
+      'resourceAttributes.service.name',
+    targetAttribute: c.getOptionalString('targetAttribute'),
+    projectAttribute: c.getOptionalString('projectAttribute'),
     cacheTtlMs: c.getOptionalNumber('cacheTtlMs') ?? 4000,
   };
 }
@@ -41,17 +59,18 @@ interface Observation {
 
 const TOOL_NAME_KEY = 'attributes.gen_ai.tool.name';
 const TOOL_STATUS_KEY = 'attributes.gen_ai.tool.status';
-const TARGET_KEY = 'attributes.ces.agent.target';
-const PROJECT_KEY = 'attributes.ces.agent.project';
-const SERVICE_KEY = 'resourceAttributes.aws.local.service';
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 3;
 const RUNNING_LOOKBACK_MS = 15 * 60_000;
 
-type FetchFn = typeof fetch;
 type Filter = Record<string, unknown>;
 
-const eq = (column: string, value: string): Filter => ({ type: 'string', column, operator: '=', value });
+const eq = (column: string, value: string): Filter => ({
+  type: 'string',
+  column,
+  operator: '=',
+  value,
+});
 
 /** Nearest-rank percentile: sorted ascending, index = ceil(p/100*n)-1 */
 export function percentile(values: number[], p: number): number {
@@ -75,7 +94,10 @@ function readQuality(meta: Record<string, unknown> | undefined): {
       risk: typeof q.risk_tier === 'string' ? q.risk_tier : undefined,
       posted: typeof q.posted === 'boolean' ? q.posted : undefined,
       completed: typeof q.completed === 'boolean' ? q.completed : undefined,
-      incomplete: typeof q.incomplete_reason === 'string' ? q.incomplete_reason : undefined,
+      incomplete:
+        typeof q.incomplete_reason === 'string'
+          ? q.incomplete_reason
+          : undefined,
     };
   }
   if (typeof raw !== 'string') return {};
@@ -84,7 +106,12 @@ function readQuality(meta: Record<string, unknown> | undefined): {
     const m = raw.match(new RegExp(`"${k}":\\s*(true|false)`))?.[1];
     return m === undefined ? undefined : m === 'true';
   };
-  return { risk: str('risk_tier'), posted: bool('posted'), completed: bool('completed'), incomplete: str('incomplete_reason') };
+  return {
+    risk: str('risk_tier'),
+    posted: bool('posted'),
+    completed: bool('completed'),
+    incomplete: str('incomplete_reason'),
+  };
 }
 
 function postedLabel(posted: boolean | undefined): string | undefined {
@@ -101,15 +128,11 @@ function verdict(q: ReturnType<typeof readQuality>): string | undefined {
   return parts.length ? parts.join(' · ') : undefined;
 }
 
-/** Numeric targets are GitLab MR iids; anything else (e.g. a Jira key) is shown as is. */
-function displayTarget(meta: Record<string, unknown> | undefined): string | undefined {
-  const t = meta?.[TARGET_KEY];
-  if (typeof t !== 'string' || !t) return undefined;
-  return /^\d+$/.test(t) ? `!${t}` : t;
-}
-
-function stringAttr(meta: Record<string, unknown> | undefined, key: string): string | undefined {
-  const v = meta?.[key];
+function stringAttr(
+  meta: Record<string, unknown> | undefined,
+  key: string | undefined,
+): string | undefined {
+  const v = key ? meta?.[key] : undefined;
   return typeof v === 'string' && v ? v : undefined;
 }
 
@@ -134,13 +157,18 @@ function toolFailed(o: Observation): boolean {
  * Only core/basic/metadata fields are requested (never `io`, which holds
  * prompts and tool arguments) and only an explicit allow-list of derived
  * values leaves the backend.
+ *
+ * @public
  */
 export class LangfuseTelemetryProvider implements TelemetryProvider {
-  private readonly cache = new Map<string, { at: number; value: Promise<Observation[]> }>();
+  private readonly cache = new Map<
+    string,
+    { at: number; value: Promise<Observation[]> }
+  >();
 
   constructor(
     private readonly cfg: LangfuseConfig,
-    private readonly doFetch: FetchFn = fetch,
+    private readonly doFetch: typeof fetch = fetch,
     private readonly now: () => number = Date.now,
   ) {}
 
@@ -154,48 +182,74 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     const runs: AgentRun[] = invokes.map(o => this.finishedRun(telemetryId, o));
 
     const live = this.groupByTrace(recentTools, finished);
-    for (const [traceId, tools] of live) runs.push(this.liveRun(telemetryId, traceId, tools));
+    for (const [traceId, tools] of live)
+      runs.push(this.liveRun(telemetryId, traceId, tools));
 
     runs.sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''));
     return runs.slice(0, limit);
   }
 
-  async getRunTimeline(telemetryId: string, runId: string): Promise<RunEvent[] | null> {
-    const obs = (await this.query([eq('traceId', runId)])).filter(o => o.traceId === runId);
-    const invoke = obs.find(o => o.type === 'AGENT' && o.name === `${telemetryId}-invoke`);
-    const tools = obs.filter(o => o.type === 'TOOL').sort((a, b) => a.startTime.localeCompare(b.startTime));
+  async getRunTimeline(
+    telemetryId: string,
+    runId: string,
+  ): Promise<RunEvent[] | null> {
+    const obs = (await this.query([eq('traceId', runId)])).filter(
+      o => o.traceId === runId,
+    );
+    const invoke = obs.find(
+      o => o.type === 'AGENT' && o.name === `${telemetryId}-invoke`,
+    );
+    const tools = obs
+      .filter(o => o.type === 'TOOL')
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
     const owned =
       invoke ||
-      tools.some(o => String(o.metadata?.[SERVICE_KEY] ?? '').startsWith(`${this.cfg.servicePrefix}${telemetryId}`));
+      tools.some(o =>
+        String(o.metadata?.[this.cfg.serviceAttribute] ?? '').startsWith(
+          `${this.cfg.servicePrefix}${telemetryId}`,
+        ),
+      );
     if (!owned) return null;
 
     const events: RunEvent[] = [
-      { seq: 0, name: `${telemetryId}:start`, event: 'start', ts: (invoke ?? tools[0]).startTime },
-      ...tools.map(
-        (t, i): RunEvent => ({
-          seq: i + 1,
-          name: `${telemetryId}:${toolName(t)}`,
-          event: 'tool',
-          tool: toolName(t),
-          outcome: toolFailed(t) ? 'error' : 'ok',
-          durationMs: typeof t.latency === 'number' ? Math.round(t.latency * 1000) : undefined,
-          ts: t.endTime ?? t.startTime,
-        }),
-      ),
+      {
+        seq: 0,
+        name: `${telemetryId}:start`,
+        event: 'start',
+        ts: (invoke ?? tools[0]).startTime,
+      },
+      ...tools.map((t, i): RunEvent => ({
+        seq: i + 1,
+        name: `${telemetryId}:${toolName(t)}`,
+        event: 'tool',
+        tool: toolName(t),
+        outcome: toolFailed(t) ? 'error' : 'ok',
+        durationMs:
+          typeof t.latency === 'number'
+            ? Math.round(t.latency * 1000)
+            : undefined,
+        ts: t.endTime ?? t.startTime,
+      })),
     ];
     if (invoke) {
       events.push({
         seq: tools.length + 1,
         name: `${telemetryId}:completed`,
         event: 'completed',
-        incomplete: invoke.level === 'ERROR' ? 'invocation_failed' : readQuality(invoke.metadata).incomplete,
+        incomplete:
+          invoke.level === 'ERROR'
+            ? 'invocation_failed'
+            : readQuality(invoke.metadata).incomplete,
         ts: invoke.endTime ?? invoke.startTime,
       });
     }
     return events;
   }
 
-  async getInsights(telemetryId: string, hours: number): Promise<AgentInsights> {
+  async getInsights(
+    telemetryId: string,
+    hours: number,
+  ): Promise<AgentInsights> {
     const clampedHours = Math.min(Math.max(hours, 1), 72);
     const withinMs = clampedHours * 3600_000;
 
@@ -205,15 +259,20 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     ]);
 
     const finishedTraces = new Set(invokes.map(o => o.traceId));
-    const finished: Array<{ traceId: string; startTime: string; endTime: string; state: 'completed' | 'failed' }> = invokes.map(o => ({
+    const finished: Array<{
+      traceId: string;
+      startTime: string;
+      endTime: string;
+      state: 'completed' | 'failed';
+    }> = invokes.map(o => ({
       traceId: o.traceId,
       startTime: o.startTime,
       endTime: o.endTime ?? o.startTime,
       state: o.level === 'ERROR' ? 'failed' : 'completed',
     }));
 
-    const live = [...this.groupByTrace(tools, finishedTraces)].map(([traceId, traceTools]) =>
-      this.liveRun(telemetryId, traceId, traceTools),
+    const live = [...this.groupByTrace(tools, finishedTraces)].map(
+      ([traceId, traceTools]) => this.liveRun(telemetryId, traceId, traceTools),
     );
 
     const totals = {
@@ -235,8 +294,11 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     const now = this.now();
     const buckets = [];
     for (let i = clampedHours - 1; i >= 0; i--) {
-      const bucketStartMs = Math.floor((now - i * 3600_000) / 3600_000) * 3600_000;
-      const bucketStart = new Date(bucketStartMs).toISOString().replace('.000Z', 'Z');
+      const bucketStartMs =
+        Math.floor((now - i * 3600_000) / 3600_000) * 3600_000;
+      const bucketStart = new Date(bucketStartMs)
+        .toISOString()
+        .replace('.000Z', 'Z');
 
       const runsInBucket = finished.filter(r => {
         const runStart = Date.parse(r.startTime);
@@ -250,10 +312,17 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       });
     }
 
-    const toolStats = new Map<string, { calls: number; errors: number; latencies: number[] }>();
+    const toolStats = new Map<
+      string,
+      { calls: number; errors: number; latencies: number[] }
+    >();
     for (const tool of tools) {
       const name = toolName(tool);
-      const stat = toolStats.get(name) ?? { calls: 0, errors: 0, latencies: [] };
+      const stat = toolStats.get(name) ?? {
+        calls: 0,
+        errors: 0,
+        latencies: [],
+      };
       stat.calls++;
       if (toolFailed(tool)) stat.errors++;
       if (typeof tool.latency === 'number') {
@@ -267,8 +336,14 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
         name,
         calls: stat.calls,
         errors: stat.errors,
-        avgMs: stat.latencies.length ? Math.round(stat.latencies.reduce((a, b) => a + b, 0) / stat.latencies.length) : 0,
-        p95Ms: stat.latencies.length ? Math.round(percentile(stat.latencies, 95)) : 0,
+        avgMs: stat.latencies.length
+          ? Math.round(
+              stat.latencies.reduce((a, b) => a + b, 0) / stat.latencies.length,
+            )
+          : 0,
+        p95Ms: stat.latencies.length
+          ? Math.round(percentile(stat.latencies, 95))
+          : 0,
       }))
       .sort((a, b) => b.calls - a.calls || a.name.localeCompare(b.name))
       .slice(0, 10);
@@ -287,8 +362,8 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     return {
       runId: o.traceId,
       agent,
-      target: displayTarget(o.metadata),
-      project: stringAttr(o.metadata, PROJECT_KEY),
+      target: stringAttr(o.metadata, this.cfg.targetAttribute),
+      project: stringAttr(o.metadata, this.cfg.projectAttribute),
       state: o.level === 'ERROR' ? 'failed' : 'completed',
       startedAt: o.startTime,
       updatedAt: o.endTime ?? o.startTime,
@@ -296,11 +371,18 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     };
   }
 
-  private liveRun(agent: string, traceId: string, tools: Observation[]): AgentRun {
-    const sorted = [...tools].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  private liveRun(
+    agent: string,
+    traceId: string,
+    tools: Observation[],
+  ): AgentRun {
+    const sorted = [...tools].sort((a, b) =>
+      a.startTime.localeCompare(b.startTime),
+    );
     const last = sorted[sorted.length - 1];
     const lastEnd = last.endTime ?? last.startTime;
-    const active = this.now() - Date.parse(lastEnd) < this.cfg.runningWindowSeconds * 1000;
+    const active =
+      this.now() - Date.parse(lastEnd) < this.cfg.runningWindowSeconds * 1000;
     return {
       runId: traceId,
       agent,
@@ -318,11 +400,20 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
   private toolFilters(telemetryId: string): Filter[] {
     return [
       eq('type', 'TOOL'),
-      { type: 'stringObject', column: 'metadata', key: SERVICE_KEY, operator: 'contains', value: `${this.cfg.servicePrefix}${telemetryId}` },
+      {
+        type: 'stringObject',
+        column: 'metadata',
+        key: this.cfg.serviceAttribute,
+        operator: 'contains',
+        value: `${this.cfg.servicePrefix}${telemetryId}`,
+      },
     ];
   }
 
-  private groupByTrace(obs: Observation[], excludeTraceIds: Set<string>): Map<string, Observation[]> {
+  private groupByTrace(
+    obs: Observation[],
+    excludeTraceIds: Set<string>,
+  ): Map<string, Observation[]> {
     const grouped = new Map<string, Observation[]>();
     for (const o of obs) {
       if (excludeTraceIds.has(o.traceId)) continue;
@@ -331,19 +422,30 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     return grouped;
   }
 
-  private query(filters: Filter[], pages = MAX_PAGES, withinMs?: number): Promise<Observation[]> {
+  private query(
+    filters: Filter[],
+    pages = MAX_PAGES,
+    withinMs?: number,
+  ): Promise<Observation[]> {
     const key = JSON.stringify([filters, pages, withinMs]);
     const hit = this.cache.get(key);
     if (hit && this.now() - hit.at < this.cfg.cacheTtlMs) return hit.value;
     const value = this.fetchAll(filters, pages, withinMs);
     this.cache.set(key, { at: this.now(), value });
     value.catch(() => this.cache.delete(key));
-    if (this.cache.size > 200) this.cache.delete(this.cache.keys().next().value as string);
+    if (this.cache.size > 200)
+      this.cache.delete(this.cache.keys().next().value as string);
     return value;
   }
 
-  private async fetchAll(filters: Filter[], pages: number, withinMs?: number): Promise<Observation[]> {
-    const from = new Date(this.now() - (withinMs ?? this.cfg.lookbackHours * 3600_000)).toISOString();
+  private async fetchAll(
+    filters: Filter[],
+    pages: number,
+    withinMs?: number,
+  ): Promise<Observation[]> {
+    const from = new Date(
+      this.now() - (withinMs ?? this.cfg.lookbackHours * 3600_000),
+    ).toISOString();
     const auth = `Basic ${Buffer.from(`${this.cfg.publicKey}:${this.cfg.secretKey}`).toString('base64')}`;
     const out: Observation[] = [];
     let cursor: string | undefined;
@@ -355,12 +457,19 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
         filter: JSON.stringify(filters),
       });
       if (cursor) qs.set('cursor', cursor);
-      const res = await this.doFetch(`${this.cfg.baseUrl}/api/public/v2/observations?${qs}`, {
-        headers: { Authorization: auth },
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) throw new Error(`Langfuse observations query failed: ${res.status}`);
-      const body = (await res.json()) as { data?: Observation[]; meta?: { cursor?: string } };
+      const res = await this.doFetch(
+        `${this.cfg.baseUrl}/api/public/v2/observations?${qs}`,
+        {
+          headers: { Authorization: auth },
+          signal: AbortSignal.timeout(15000),
+        },
+      );
+      if (!res.ok)
+        throw new Error(`Langfuse observations query failed: ${res.status}`);
+      const body = (await res.json()) as {
+        data?: Observation[];
+        meta?: { cursor?: string };
+      };
       out.push(...(body.data ?? []));
       cursor = body.meta?.cursor;
       if (!cursor || !(body.data ?? []).length) break;

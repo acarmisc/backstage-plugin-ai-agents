@@ -3,6 +3,31 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-10-03
+
+### Changed
+
+- **BREAKING** The defaults no longer assume one particular deployment.
+  `servicePrefix` defaults to `""` (was `abs_ces_agents_`), and the service
+  name is read from `resourceAttributes.service.name` (was
+  `resourceAttributes.aws.local.service`), configurable with
+  `serviceAttribute`. Run target and project are only shown when
+  `targetAttribute` / `projectAttribute` are set (they were read from
+  `attributes.ces.agent.target` / `.project`), and numeric targets are no
+  longer shown as `!<number>`. To keep the previous behaviour, set:
+
+  ```yaml
+  ai-agents:
+    telemetry:
+      langfuse:
+        servicePrefix: abs_ces_agents_
+        serviceAttribute: resourceAttributes.aws.local.service
+        targetAttribute: attributes.ces.agent.target
+        projectAttribute: attributes.ces.agent.project
+  ```
+
+- README rewritten for the npm page.
+
 ## [0.2.1] - 2026-10-03
 
 ### Changed

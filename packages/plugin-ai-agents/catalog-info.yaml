@@ -1,12 +1,19 @@
 apiVersion: backstage.io/v1alpha1
-kind: Plugin
+kind: Component
 metadata:
-  name: ai-agents
-  description: AI Agents management plugin for Backstage
+  name: backstage-plugin-ai-agents
+  title: AI Agents
+  description: Frontend of the AI Agents plugin.
+  annotations:
+    github.com/project-slug: acarmisc/backstage-plugin-ai-agents
   tags:
+    - backstage-plugin
     - ai
-    - agents
-    - catalog
+  links:
+    - url: https://www.npmjs.com/package/@acarmisc/backstage-plugin-ai-agents
+      title: npm
 spec:
+  type: backstage-frontend-plugin
   lifecycle: experimental
-  owner: platform-team
+  owner: user:acarmisc
+  system: backstage-plugin-ai-agents

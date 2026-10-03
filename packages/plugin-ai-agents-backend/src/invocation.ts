@@ -1,5 +1,8 @@
 import { Entity } from '@backstage/catalog-model';
-import { AI_AGENT_ANNOTATION_PREFIX, AI_AGENT_ANNOTATION_PREFIX_LEGACY } from './types';
+import {
+  AI_AGENT_ANNOTATION_PREFIX,
+  AI_AGENT_ANNOTATION_PREFIX_LEGACY,
+} from './types';
 import type { AgentInvocationArgs } from './types';
 
 /** Reads an `ai-agent.io/*` annotation, falling back to the legacy namespace. */
@@ -10,7 +13,11 @@ export function annotation(entity: Entity, key: string): string | undefined {
   );
 }
 
-/** Replace `{name}` placeholders in the template with `values[name]`. */
+/**
+ * Replace `{name}` placeholders in the template with `values[name]`.
+ *
+ * @public
+ */
 export function fillTemplate(
   template: string,
   values: Record<string, string>,
@@ -24,8 +31,13 @@ export function fillTemplate(
  * Build the invocation prompt for an entity: fill the
  * `ai-agent.io/prompt-template` annotation with the submitted
  * form values, or fall back to a JSON dump of the values.
+ *
+ * @public
  */
-export function buildPrompt(entity: Entity, values: Record<string, string>): string {
+export function buildPrompt(
+  entity: Entity,
+  values: Record<string, string>,
+): string {
   const template = annotation(entity, 'prompt-template');
   if (template) return fillTemplate(template, values);
   return JSON.stringify(values, null, 2);
@@ -37,6 +49,8 @@ export function buildPrompt(entity: Entity, values: Record<string, string>): str
  * suffix keeps the mapping deterministic and injective in practice. Mirrors
  * the MCP gateway's normalization so the same thread maps to the same
  * AgentCore session whether invoked via Backstage or via MCP.
+ *
+ * @public
  */
 export function normalizeSessionId(threadId: string): string {
   const sid = threadId.toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -48,8 +62,15 @@ export function normalizeSessionId(threadId: string): string {
   return (sid.slice(0, 33 - suffix.length) + suffix).padEnd(33, '-');
 }
 
-/** A stable, human-readable thread id for a new conversation. */
-export function makeThreadId(entityName: string, random: () => string = defaultRandom): string {
+/**
+ * A stable, human-readable thread id for a new conversation.
+ *
+ * @public
+ */
+export function makeThreadId(
+  entityName: string,
+  random: () => string = defaultRandom,
+): string {
   return `${entityName}-${Date.now().toString(36)}-${random()}`;
 }
 
@@ -59,6 +80,8 @@ export function makeThreadId(entityName: string, random: () => string = defaultR
  * boolean (their entrypoint defaults an omitted `post` to true). The
  * `action: dry-run|post` select shipped in their hire schema is the
  * source for that boolean; an explicit request-level override wins.
+ *
+ * @public
  */
 export function buildInvocationArgs(
   values: Record<string, string>,
@@ -81,6 +104,8 @@ export function buildInvocationArgs(
  * Base cost-attribution / tracing tags. `session:<thread>` preserves the
  * conversation code so spend can be grouped per thread in LiteLLM, and
  * matches the tag vocabulary the MCP gateway already writes.
+ *
+ * @public
  */
 export function buildInvocationTags(opts: {
   threadId: string;

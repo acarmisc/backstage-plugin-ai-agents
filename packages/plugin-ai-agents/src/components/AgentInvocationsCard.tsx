@@ -10,7 +10,7 @@ import { InvocationHistory } from './InvocationHistory';
  * Entity-page card listing recent invocations for an ai-agent Component.
  * Hidden entirely when the agent has no recorded invocations yet.
  */
-export const AgentInvocationsCard: React.FC = () => {
+export function AgentInvocationsCard() {
   const { entity } = useEntity();
   const agent = entityToAgent(entity);
   if (!agent) return null;
@@ -28,4 +28,4 @@ export const AgentInvocationsCard: React.FC = () => {
       />
     </Box>
   );
-};
+}

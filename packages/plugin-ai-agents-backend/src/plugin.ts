@@ -1,5 +1,11 @@
-import { coreServices, createBackendPlugin } from '@backstage/backend-plugin-api';
-import { aiAgentsExtensionPoint, AiAgentsExtensionPoint } from './extensionPoint';
+import {
+  coreServices,
+  createBackendPlugin,
+} from '@backstage/backend-plugin-api';
+import {
+  aiAgentsExtensionPoint,
+  AiAgentsExtensionPoint,
+} from './extensionPoint';
 import { createRouter } from './router';
 import { AgentInvoker, TelemetryProvider } from './types';
 import { aiAgentsPermissions } from './permissions';
@@ -7,6 +13,7 @@ import { aiAgentsPermissions } from './permissions';
 export { aiAgentsExtensionPoint };
 export type { AiAgentsExtensionPoint };
 
+/** @public */
 export const aiAgentsPlugin = createBackendPlugin({
   pluginId: 'ai-agents',
   register(reg) {

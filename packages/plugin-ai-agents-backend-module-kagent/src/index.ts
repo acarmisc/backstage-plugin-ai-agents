@@ -1,6 +1,10 @@
-export { aiAgentsModuleKagent, aiAgentsModuleKagent as default } from './module';
+export {
+  aiAgentsModuleKagent,
+  aiAgentsModuleKagent as default,
+} from './module';
 export {
   KagentInvoker,
   readKagentConfig,
   extractResponseText,
 } from './invoker';
+export type { KagentConfig } from './invoker';

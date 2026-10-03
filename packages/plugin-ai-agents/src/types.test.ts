@@ -3,19 +3,27 @@ import assert from 'node:assert/strict';
 import { entityToAgent, AI_AGENT_TYPE, isSafeUrl } from './types';
 import type { Entity } from '@backstage/catalog-model';
 
-const baseEntity = (overrides: Partial<Entity> = {}): Entity => ({
-  apiVersion: 'backstage.io/v1alpha1',
-  kind: 'Component',
-  metadata: {
-    name: 'test-agent',
-    ...overrides.metadata,
-  },
-  spec: { type: 'ai-agent', lifecycle: 'production', owner: 'team-a', ...overrides.spec },
-  ...overrides,
-} as Entity);
+const baseEntity = (overrides: Partial<Entity> = {}): Entity =>
+  ({
+    apiVersion: 'backstage.io/v1alpha1',
+    kind: 'Component',
+    metadata: {
+      name: 'test-agent',
+      ...overrides.metadata,
+    },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'production',
+      owner: 'team-a',
+      ...overrides.spec,
+    },
+    ...overrides,
+  }) as Entity;
 
 test('entityToAgent returns undefined for non ai-agent components', () => {
-  const e = baseEntity({ spec: { type: 'service', lifecycle: 'production', owner: 'x' } });
+  const e = baseEntity({
+    spec: { type: 'service', lifecycle: 'production', owner: 'x' },
+  });
   assert.equal(entityToAgent(e), undefined);
 });
 
@@ -50,7 +58,11 @@ test('entityToAgent parses annotations for runtime, billing, capabilities, versi
       },
       tags: ['ai-agent', 'llm'],
       links: [
-        { url: 'https://grafana.example.com', title: 'Metrics', icon: 'dashboard' },
+        {
+          url: 'https://grafana.example.com',
+          title: 'Metrics',
+          icon: 'dashboard',
+        },
       ],
     },
   });
@@ -59,14 +71,18 @@ test('entityToAgent parses annotations for runtime, billing, capabilities, versi
   assert.equal(a.runtime.runtimeHandle, 'arn:aws:bedrock:us-east-1:1:agent/T');
   assert.equal(a.runtime.endpoint, 'https://api.example.com/invoke');
   assert.equal(a.billing.model, 'per-token');
-  assert.equal(a.billing.unitCost, 2.40);
+  assert.equal(a.billing.unitCost, 2.4);
   assert.equal(a.billing.budget, 100);
   assert.equal(a.version, '1.2.3');
   assert.equal(a.avatarUrl, 'https://example.com/a.png');
   assert.equal(a.capabilities.length, 3);
   assert.deepEqual(
     a.capabilities.map(c => [c.label, c.category ?? null]),
-    [['tool-use', 'tools'], ['rag', 'retrieval'], ['reasoning', null]],
+    [
+      ['tool-use', 'tools'],
+      ['rag', 'retrieval'],
+      ['reasoning', null],
+    ],
   );
   assert.equal(a.links.length, 1);
   assert.equal(a.tags.length, 2);
@@ -78,7 +94,9 @@ test('entityToAgent uses namespace in entity ref', () => {
 });
 
 test('entityToAgent falls back to description for purpose', () => {
-  const e = baseEntity({ metadata: { name: 'x', description: 'Does a thing.' } });
+  const e = baseEntity({
+    metadata: { name: 'x', description: 'Does a thing.' },
+  });
   assert.equal(entityToAgent(e)!.purpose, 'Does a thing.');
 });
 
@@ -103,7 +121,10 @@ test('entityToAgent ignores invalid capability categories', () => {
   const caps = entityToAgent(e)!.capabilities;
   assert.deepEqual(
     caps.map(c => [c.label, c.category ?? null]),
-    [['foo', null], ['bar', 'tools']],
+    [
+      ['foo', null],
+      ['bar', 'tools'],
+    ],
   );
 });
 
@@ -155,8 +176,7 @@ test('entityToAgent coerces unknown hire field types to text', () => {
     metadata: {
       name: 'x',
       annotations: {
-        'ai-agent.io/hire-schema':
-          '[{"name":"f","label":"F","type":"bogus"}]',
+        'ai-agent.io/hire-schema': '[{"name":"f","label":"F","type":"bogus"}]',
       },
     },
   });
@@ -217,14 +237,18 @@ test('entityToAgent falls back to legacy ai-agent.acarmisc.org prefix when new p
       name: 'legacy-agent',
       annotations: {
         'ai-agent.acarmisc.org/runtime': 'bedrock-agentcore',
-        'ai-agent.acarmisc.org/runtime-handle': 'arn:aws:bedrock:us-east-1:1:agent/LEGACY',
+        'ai-agent.acarmisc.org/runtime-handle':
+          'arn:aws:bedrock:us-east-1:1:agent/LEGACY',
         'ai-agent.acarmisc.org/version': '1.0.0',
       },
     },
   });
   const a = entityToAgent(e)!;
   assert.equal(a.runtime.runtime, 'bedrock-agentcore');
-  assert.equal(a.runtime.runtimeHandle, 'arn:aws:bedrock:us-east-1:1:agent/LEGACY');
+  assert.equal(
+    a.runtime.runtimeHandle,
+    'arn:aws:bedrock:us-east-1:1:agent/LEGACY',
+  );
   assert.equal(a.version, '1.0.0');
 });
 
@@ -258,7 +282,9 @@ test('isSafeUrl accepts blob: URLs minted for proxied avatars', () => {
 test('isSafeUrl accepts image data: URIs', () => {
   assert.equal(isSafeUrl('data:image/png;base64,iVBORw0KGgo='), true);
   assert.equal(
-    isSafeUrl('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E'),
+    isSafeUrl(
+      'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E',
+    ),
     true,
   );
 });

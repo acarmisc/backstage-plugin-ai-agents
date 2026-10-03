@@ -14,7 +14,7 @@ export interface StatusDotProps {
  * A small colored dot indicating run state.
  * When state==='running', includes a pulse animation (respects prefers-reduced-motion).
  */
-export const StatusDot: React.FC<StatusDotProps> = ({ state, size = 10 }) => {
+export function StatusDot({ state, size = 10 }: StatusDotProps) {
   const theme = useTheme();
   const color = stateColor(theme, state);
 
@@ -50,7 +50,7 @@ export const StatusDot: React.FC<StatusDotProps> = ({ state, size = 10 }) => {
       }}
     />
   );
-};
+}
 
 export interface StatusPillProps {
   state: RunState;
@@ -61,10 +61,7 @@ export interface StatusPillProps {
  * A status indicator combining a colored dot and a label.
  * Supports pulse animation for running state (enabled by default unless pulse === false).
  */
-export const StatusPill: React.FC<StatusPillProps> = ({
-  state,
-  size = 'medium',
-}) => {
+export function StatusPill({ state, size = 'medium' }: StatusPillProps) {
   const theme = useTheme();
   const label = stateLabel(state);
   const dotSize = size === 'small' ? 8 : 10;
@@ -79,9 +76,10 @@ export const StatusPill: React.FC<StatusPillProps> = ({
         paddingX: size === 'small' ? '8px' : '12px',
         paddingY: size === 'small' ? '4px' : '6px',
         borderRadius: '16px',
-        backgroundColor: theme.palette.mode === 'dark'
-          ? theme.palette.divider
-          : theme.palette.action.hover,
+        backgroundColor:
+          theme.palette.mode === 'dark'
+            ? theme.palette.divider
+            : theme.palette.action.hover,
         fontSize: size === 'small' ? '12px' : '14px',
       }}
     >
@@ -97,4 +95,4 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       </Typography>
     </Box>
   );
-};
+}

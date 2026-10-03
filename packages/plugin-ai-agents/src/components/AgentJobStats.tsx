@@ -18,7 +18,7 @@ interface JobStats {
  * succeeded/failed balance bar. Renders nothing when the backend has no
  * invocation history (or is disabled), so static setups stay clean.
  */
-export const AgentJobStats: React.FC<{ entityRef: string }> = ({ entityRef }) => {
+export function AgentJobStats({ entityRef }: { entityRef: string }) {
   const api = useApi(aiAgentsApiRef);
   const [stats, setStats] = useState<JobStats | null>(null);
 
@@ -62,10 +62,14 @@ export const AgentJobStats: React.FC<{ entityRef: string }> = ({ entityRef }) =>
             bgcolor: 'success.main',
           }}
         >
-          {stats.failed > 0 && <Box sx={{ width: `${okPct}%`, bgcolor: 'success.main' }} />}
-          {stats.failed > 0 && <Box sx={{ flexGrow: 1, bgcolor: 'error.main' }} />}
+          {stats.failed > 0 && (
+            <Box sx={{ width: `${okPct}%`, bgcolor: 'success.main' }} />
+          )}
+          {stats.failed > 0 && (
+            <Box sx={{ flexGrow: 1, bgcolor: 'error.main' }} />
+          )}
         </Box>
       </Tooltip>
     </Box>
   );
-};
+}

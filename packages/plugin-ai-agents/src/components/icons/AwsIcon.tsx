@@ -6,7 +6,7 @@ import { useTheme } from '@mui/material/styles';
  * swaps to a light neutral in dark mode so it stays legible against dark
  * card backgrounds; the orange arrow is brand-fixed in both themes.
  */
-export const AwsIcon: React.FC = () => {
+export function AwsIcon() {
   const theme = useTheme();
   const wordmarkColor = theme.palette.mode === 'dark' ? '#e8e8e8' : '#252f3e';
 
@@ -31,4 +31,4 @@ export const AwsIcon: React.FC = () => {
       </g>
     </svg>
   );
-};
+}

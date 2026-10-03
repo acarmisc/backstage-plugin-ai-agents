@@ -18,14 +18,16 @@ import { ActivityWorkspace } from './activity/ActivityWorkspace';
 
 const POLL_INTERVAL_MS = 30_000;
 
-export const AgentsPage: React.FC = () => {
+/** @public */
+export function AgentsPage() {
   const api = useApi(aiAgentsApiRef);
   const [searchParams, setSearchParams] = useSearchParams();
   const { agents, allAgents, loading, error, retry, filters, update, reset } =
     useAgents();
 
   const tabParam = searchParams.get('tab') || 'agents';
-  const tab = (tabParam === 'activity' ? 'activity' : 'agents') as 'agents' | 'activity';
+  const tab = (tabParam === 'activity' ? 'activity' : 'agents') as
+    'agents' | 'activity';
 
   const [selected, setSelected] = useState<AiAgent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -99,7 +101,12 @@ export const AgentsPage: React.FC = () => {
 
   if (loading && !allAgents.length) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="40vh"
+      >
         <CircularProgress />
       </Box>
     );
@@ -192,7 +199,11 @@ export const AgentsPage: React.FC = () => {
             open={hireOpen}
             onClose={() => setHireOpen(false)}
             onInvoke={async (values, opts) => {
-              const result = await api.invokeAgent(hireAgent!.entityRef, values, opts);
+              const result = await api.invokeAgent(
+                hireAgent!.entityRef,
+                values,
+                opts,
+              );
               setInvocationNonce(n => n + 1);
               return result;
             }}
@@ -203,4 +214,4 @@ export const AgentsPage: React.FC = () => {
       {tab === 'activity' && <ActivityWorkspace />}
     </Box>
   );
-};
+}

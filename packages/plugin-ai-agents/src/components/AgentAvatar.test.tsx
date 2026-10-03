@@ -42,7 +42,10 @@ test('supports relative paths and image data: URIs', () => {
   assert.ok(withPath.querySelector('img'), 'relative path should render');
 
   const { container: withData } = render(
-    <AgentAvatar name="triage" avatarUrl="data:image/png;base64,iVBORw0KGgo=" />,
+    <AgentAvatar
+      name="triage"
+      avatarUrl="data:image/png;base64,iVBORw0KGgo="
+    />,
   );
   assert.ok(withData.querySelector('img'), 'data: URI should render');
 });

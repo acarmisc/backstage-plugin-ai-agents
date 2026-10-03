@@ -16,8 +16,8 @@ export interface Config {
          */
         namespace?: string;
         /**
-         * Static Authorization header injected into every A2A request, if
-         * the controller sits behind something that requires one.
+         * Authorization header sent with A2A requests to `baseUrl`'s origin.
+         * Never sent to an agent's `endpoint` annotation on another origin.
          * @visibility secret
          */
         authHeader?: string;

@@ -43,11 +43,13 @@ function toRecord(row: DbRow): InvocationRecord {
   };
 }
 
+/** @public */
 export class InvocationStore {
   private constructor(private readonly db: Knex) {}
 
   static async create(knex: Knex): Promise<InvocationStore> {
-    if (!knex) throw new Error('Knex instance is required to create InvocationStore');
+    if (!knex)
+      throw new Error('Knex instance is required to create InvocationStore');
     await runMigrations(knex);
     return new InvocationStore(knex);
   }
@@ -71,7 +73,10 @@ export class InvocationStore {
     return typeof id === 'object' ? id.id : id;
   }
 
-  async listForEntity(entityRef: string, limit = 20): Promise<InvocationRecord[]> {
+  async listForEntity(
+    entityRef: string,
+    limit = 20,
+  ): Promise<InvocationRecord[]> {
     const rows: DbRow[] = await this.db('invocations')
       .where({ entity_ref: entityRef })
       .orderBy('created_at', 'desc')
@@ -100,11 +105,13 @@ function toReview(row: ReviewRow): ReviewRecord {
   };
 }
 
+/** @public */
 export class ReviewStore {
   private constructor(private readonly db: Knex) {}
 
   static async create(knex: Knex): Promise<ReviewStore> {
-    if (!knex) throw new Error('Knex instance is required to create ReviewStore');
+    if (!knex)
+      throw new Error('Knex instance is required to create ReviewStore');
     await runMigrations(knex);
     return new ReviewStore(knex);
   }
@@ -126,7 +133,10 @@ export class ReviewStore {
     const [agg] = (await this.db('agent_reviews')
       .where({ entity_ref: entityRef })
       .count('rating as count')
-      .avg('rating as average')) as { count: number | string; average: number | string | null }[];
+      .avg('rating as average')) as {
+      count: number | string;
+      average: number | string | null;
+    }[];
     const rows: ReviewRow[] = await this.db('agent_reviews')
       .where({ entity_ref: entityRef })
       .orderBy('created_at', 'desc')

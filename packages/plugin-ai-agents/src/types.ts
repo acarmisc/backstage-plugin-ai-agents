@@ -1,22 +1,31 @@
 import { Entity } from '@backstage/catalog-model';
 
-/** Value of `spec.type` that marks a catalog Component as an AI agent. */
+/**
+ * Value of `spec.type` that marks a catalog Component as an AI agent.
+ *
+ * @public
+ */
 export const AI_AGENT_TYPE = 'ai-agent';
 
-/** Annotation namespace for agent-specific fields on a catalog entity. */
+/**
+ * Annotation namespace for agent-specific fields on a catalog entity.
+ *
+ * @public
+ */
 export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
 
-/** Legacy annotation namespace, kept for backward compatibility. */
+/**
+ * Legacy annotation namespace, kept for backward compatibility.
+ *
+ * @public
+ */
 export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
+/** @public */
 export type AgentRuntimeName =
-  | 'bedrock-agentcore'
-  | 'kagent'
-  | 'litellm'
-  | 'lambda'
-  | 'custom'
-  | string;
+  'bedrock-agentcore' | 'kagent' | 'litellm' | 'lambda' | 'custom' | string;
 
+/** @public */
 export interface AgentRuntimeInfo {
   /** Runtime identifier, e.g. "bedrock-agentcore", "kagent", "litellm", "lambda", "custom". */
   runtime: AgentRuntimeName;
@@ -32,13 +41,11 @@ export interface AgentRuntimeInfo {
   telemetryId?: string;
 }
 
+/** @public */
 export type AgentBillingModel =
-  | 'per-invocation'
-  | 'per-token'
-  | 'subscription'
-  | 'free'
-  | string;
+  'per-invocation' | 'per-token' | 'subscription' | 'free' | string;
 
+/** @public */
 export interface AgentBilling {
   model: AgentBillingModel;
   /** Cost per 1000 invocations (per-invocation) or per 1M tokens (per-token). */
@@ -47,15 +54,11 @@ export interface AgentBilling {
   budget?: number;
 }
 
+/** @public */
 export type AgentCapabilityCategory =
-  | 'reasoning'
-  | 'retrieval'
-  | 'tools'
-  | 'vision'
-  | 'voice'
-  | 'data'
-  | 'safety';
+  'reasoning' | 'retrieval' | 'tools' | 'vision' | 'voice' | 'data' | 'safety';
 
+/** @public */
 export interface AgentCapability {
   label: string;
   category?: AgentCapabilityCategory;
@@ -66,9 +69,12 @@ export interface AgentCapability {
  * entity via the `ai-agent.io/hire-schema` annotation (a JSON
  * array of these objects). Drives the dynamic form rendered by
  * `HireAgentDialog`.
+ *
+ * @public
  */
 export type HireFieldType = 'text' | 'url' | 'textarea' | 'select' | 'number';
 
+/** @public */
 export interface HireField {
   /** Machine key for the field; used as the form-state key. */
   name: string;
@@ -86,8 +92,10 @@ export interface HireField {
   help?: string;
 }
 
+/** @public */
 export type AgentStatusState = 'healthy' | 'degraded' | 'down' | 'unknown';
 
+/** @public */
 export interface AgentStatus {
   state: AgentStatusState;
   lastChecked?: string;
@@ -95,8 +103,10 @@ export interface AgentStatus {
   message?: string;
 }
 
+/** @public */
 export type RunState = 'running' | 'completed' | 'failed' | 'unknown';
 
+/** @public */
 export interface RunEvent {
   seq: number;
   name: string;
@@ -112,6 +122,7 @@ export interface RunEvent {
   ts?: string;
 }
 
+/** @public */
 export interface AgentRun {
   runId: string;
   agent: string;
@@ -127,7 +138,11 @@ export interface AgentRun {
   events?: RunEvent[];
 }
 
-/** A persisted agent invocation, as returned by the backend history API. */
+/**
+ * A persisted agent invocation, as returned by the backend history API.
+ *
+ * @public
+ */
 export interface InvocationRecord {
   id?: number;
   entityRef: string;
@@ -145,7 +160,11 @@ export interface InvocationRecord {
   createdAt?: string;
 }
 
-/** A persisted agent review, as returned by the backend reviews API. */
+/**
+ * A persisted agent review, as returned by the backend reviews API.
+ *
+ * @public
+ */
 export interface AgentReview {
   id?: number;
   entityRef: string;
@@ -156,6 +175,7 @@ export interface AgentReview {
   createdAt?: string;
 }
 
+/** @public */
 export interface ReviewsSummary {
   reviews: AgentReview[];
   count: number;
@@ -163,7 +183,11 @@ export interface ReviewsSummary {
 }
 
 /** Activity data for an agent, including recent runs and real-time telemetry. */
-/** Per-tool aggregate over the insights window. */
+/**
+ * Per-tool aggregate over the insights window.
+ *
+ * @public
+ */
 export interface ToolStat {
   name: string;
   calls: number;
@@ -172,17 +196,31 @@ export interface ToolStat {
   p95Ms: number;
 }
 
-/** One hour of run counts (UTC hour start, ISO). */
+/**
+ * One hour of run counts (UTC hour start, ISO).
+ *
+ * @public
+ */
 export interface HourBucket {
   start: string;
   runs: number;
   failed: number;
 }
 
-/** Aggregates for one agent over the last `windowHours`. */
+/**
+ * Aggregates for one agent over the last `windowHours`.
+ *
+ * @public
+ */
 export interface AgentInsights {
   windowHours: number;
-  totals: { runs: number; running: number; completed: number; failed: number; unknown: number };
+  totals: {
+    runs: number;
+    running: number;
+    completed: number;
+    failed: number;
+    unknown: number;
+  };
   /** Over finished runs (completed/failed); 0 when there are none. */
   durationMs: { p50: number; p95: number };
   /** Exactly `windowHours` buckets, oldest first. */
@@ -191,6 +229,7 @@ export interface AgentInsights {
   tools: ToolStat[];
 }
 
+/** @public */
 export interface AgentActivity {
   entityRef: string;
   telemetryId: string;
@@ -199,6 +238,7 @@ export interface AgentActivity {
   error?: string;
 }
 
+/** @public */
 export interface AiAgent {
   /** Backstage entity ref, e.g. "component:default/support-triage-agent". */
   entityRef: string;
@@ -305,8 +345,7 @@ function parseHireSchema(raw: string | undefined): HireField[] | undefined {
         options: Array.isArray(f.options)
           ? f.options.map((o: unknown) => String(o))
           : undefined,
-        help:
-          typeof f.help === 'string' && f.help ? f.help : undefined,
+        help: typeof f.help === 'string' && f.help ? f.help : undefined,
       }))
       .filter(f => f.name.length > 0);
   } catch {
@@ -327,6 +366,8 @@ const SAFE_DATA_IMAGE_RE =
  * for proxied avatars — same-origin memory references, inert as `<img>`
  * sources). Rejects everything else, e.g. `javascript:` and
  * protocol-relative `//host` URLs.
+ *
+ * @public
  */
 export function isSafeUrl(url: string | undefined): url is string {
   if (!url) return false;
@@ -354,7 +395,11 @@ function purpose(entity: Entity): string {
   return (explicit ?? entity.metadata.description ?? '').trim();
 }
 
-/** Map a Backstage catalog Component entity to the plugin's AiAgent shape. */
+/**
+ * Map a Backstage catalog Component entity to the plugin's AiAgent shape.
+ *
+ * @public
+ */
 export function entityToAgent(
   entity: Entity,
   status?: AgentStatus,
@@ -374,14 +419,11 @@ export function entityToAgent(
     description: entity.metadata.description,
     avatarUrl: annotation(entity, 'avatar'),
     owner: (entity.spec as Record<string, unknown> | undefined)?.owner as
-      | string
-      | undefined,
+      string | undefined,
     system: (entity.spec as Record<string, unknown> | undefined)?.system as
-      | string
-      | undefined,
-    lifecycle: (entity.spec as Record<string, unknown> | undefined)?.lifecycle as
-      | string
-      | undefined,
+      string | undefined,
+    lifecycle: (entity.spec as Record<string, unknown> | undefined)
+      ?.lifecycle as string | undefined,
     version: annotation(entity, 'version'),
     purpose: purpose(entity),
     runtime: {

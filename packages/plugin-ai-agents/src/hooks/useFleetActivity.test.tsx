@@ -4,7 +4,12 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { render, cleanup, waitFor } from '@testing-library/react';
 import { useFleetActivity } from './useFleetActivity';
-import { installApi, resetApi, setVisibility, sleep } from '../__fixtures__/testApi';
+import {
+  installApi,
+  resetApi,
+  setVisibility,
+  sleep,
+} from '../__fixtures__/testApi';
 
 afterEach(() => {
   cleanup();
@@ -37,7 +42,10 @@ test('polls repeatedly at the configured interval', async () => {
   const calls = stub(async () => [{}]);
   const { getByTestId } = render(<Probe pollMs={30} />);
   await waitFor(() => assert.equal(getByTestId('out').textContent, 'n=1'));
-  await waitFor(() => assert.ok(calls.n >= 3, `expected >=3 fetches, got ${calls.n}`), { timeout: 1000 });
+  await waitFor(
+    () => assert.ok(calls.n >= 3, `expected >=3 fetches, got ${calls.n}`),
+    { timeout: 1000 },
+  );
 });
 
 test('does not fetch while the tab is hidden and refetches immediately when visible', async () => {
@@ -58,7 +66,9 @@ test('backs off to 4x the interval after an error and surfaces it', async () => 
     throw new Error('boom');
   });
   const { getByTestId } = render(<Probe pollMs={60} />);
-  await waitFor(() => assert.equal(getByTestId('out').textContent, 'error:boom'));
+  await waitFor(() =>
+    assert.equal(getByTestId('out').textContent, 'error:boom'),
+  );
   assert.equal(calls.n, 1);
   await sleep(150); // > 2x, < 4x the interval
   assert.equal(calls.n, 1, 'next attempt must wait ~4x the interval');

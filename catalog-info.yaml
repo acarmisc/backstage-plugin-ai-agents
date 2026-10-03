@@ -2,8 +2,11 @@ apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
   name: backstage-plugin-ai-agents
-  description: Root catalog location for the ai-agents plugin packages.
+  description: Packages of the AI Agents Backstage plugin.
 spec:
   targets:
     - ./packages/plugin-ai-agents/catalog-info.yaml
     - ./packages/plugin-ai-agents-backend/catalog-info.yaml
+    - ./packages/plugin-ai-agents-backend-module-agentcore/catalog-info.yaml
+    - ./packages/plugin-ai-agents-backend-module-kagent/catalog-info.yaml
+    - ./packages/plugin-ai-agents-backend-module-langfuse/catalog-info.yaml

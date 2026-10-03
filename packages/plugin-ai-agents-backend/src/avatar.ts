@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
-import type { CacheService, LoggerService, UrlReaderService } from '@backstage/backend-plugin-api';
+import type {
+  CacheService,
+  LoggerService,
+  UrlReaderService,
+} from '@backstage/backend-plugin-api';
 import { NotModifiedError } from '@backstage/errors';
 
 export interface AvatarProxyConfig {
@@ -15,7 +19,9 @@ export interface AvatarProxyConfig {
   maxBytes: number;
 }
 
-export function readAvatarProxyConfig(config: import('@backstage/config').Config): AvatarProxyConfig {
+export function readAvatarProxyConfig(
+  config: import('@backstage/config').Config,
+): AvatarProxyConfig {
   const cfg = config.getOptionalConfig('ai-agents');
   const proxy = cfg?.getOptionalConfig('avatarProxy');
   return {
@@ -80,22 +86,41 @@ export function createLocalStore(): AvatarStore {
 
 /** Best-effort content sniffing; a non-image answer must never be proxied. */
 export function sniffImageType(buf: Buffer): string | undefined {
-  if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+  if (
+    buf.length >= 8 &&
+    buf
+      .subarray(0, 8)
+      .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
     return 'image/png';
   }
-  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+  if (
+    buf.length >= 3 &&
+    buf[0] === 0xff &&
+    buf[1] === 0xd8 &&
+    buf[2] === 0xff
+  ) {
     return 'image/jpeg';
   }
   if (buf.length >= 6 && buf.subarray(0, 3).toString('ascii') === 'GIF') {
     return 'image/gif';
   }
-  if (buf.length >= 12 && buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') {
+  if (
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buf.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
     return 'image/webp';
   }
   if (buf.length >= 2 && buf.subarray(0, 2).toString('ascii') === 'BM') {
     return 'image/bmp';
   }
-  const head = buf.subarray(0, 256).toString('utf8').replace(/^\uFEFF/, '').trimStart().toLowerCase();
+  const head = buf
+    .subarray(0, 256)
+    .toString('utf8')
+    .replace(/^\uFEFF/, '')
+    .trimStart()
+    .toLowerCase();
   if (head.startsWith('<?xml') || head.startsWith('<svg')) {
     return 'image/svg+xml';
   }
@@ -117,7 +142,13 @@ export function normalizeAvatarUrl(url: string): string {
   return stripCredentialParams(url.replace(/\/-\/raw\//, '/-/blob/'));
 }
 
-const CREDENTIAL_PARAMS = ['token', 'private_token', 'job_token', 'access_token', 'auth_token'];
+const CREDENTIAL_PARAMS = [
+  'token',
+  'private_token',
+  'job_token',
+  'access_token',
+  'auth_token',
+];
 
 /**
  * Catalog authors often paste GitLab links carrying a personal `?token=`
@@ -171,7 +202,11 @@ export async function resolveAvatar(
   const cached = await store.get(key).catch(() => undefined);
   if (cached && cached.expiresAt > now) {
     if (cached.failed) {
-      return { kind: 'redirect', location: url, maxAgeSec: Math.round((cached.expiresAt - now) / 1000) };
+      return {
+        kind: 'redirect',
+        location: url,
+        maxAgeSec: Math.round((cached.expiresAt - now) / 1000),
+      };
     }
     return {
       kind: 'ok',
@@ -189,7 +224,9 @@ export async function resolveAvatar(
     const response = await urlReader.readUrl(fetchUrl, { etag: cached?.etag });
     const buf = await response.buffer();
     if (buf.length === 0 || buf.length > config.maxBytes) {
-      throw new Error(`avatar size ${buf.length} exceeds limit ${config.maxBytes}`);
+      throw new Error(
+        `avatar size ${buf.length} exceeds limit ${config.maxBytes}`,
+      );
     }
     const contentType = sniffImageType(buf);
     if (!contentType) {
@@ -204,11 +241,19 @@ export async function resolveAvatar(
     await store.set(key, entry, config.ttlMs).catch(err => {
       logger.warn(`avatar cache write failed: ${(err as any)?.message ?? err}`);
     });
-    return { kind: 'ok', contentType, data: buf, maxAgeSec: Math.round(config.ttlMs / 1000) };
+    return {
+      kind: 'ok',
+      contentType,
+      data: buf,
+      maxAgeSec: Math.round(config.ttlMs / 1000),
+    };
   } catch (err) {
     // Conditional revalidation hit: the cached copy is still current.
     if (err instanceof NotModifiedError && cached && !cached.failed) {
-      const refreshed: CachedAvatar = { ...cached, expiresAt: now + config.ttlMs };
+      const refreshed: CachedAvatar = {
+        ...cached,
+        expiresAt: now + config.ttlMs,
+      };
       await store.set(key, refreshed, config.ttlMs).catch(() => {});
       return {
         kind: 'ok',
@@ -217,8 +262,15 @@ export async function resolveAvatar(
         maxAgeSec: Math.round(config.ttlMs / 1000),
       };
     }
-    logger.warn(`avatar fetch failed for ${fetchUrl}: ${(err as any)?.message ?? err}`);
-    const entry: CachedAvatar = { failed: true, contentType: '', data: '', expiresAt: now + config.negativeTtlMs };
+    logger.warn(
+      `avatar fetch failed for ${fetchUrl}: ${(err as any)?.message ?? err}`,
+    );
+    const entry: CachedAvatar = {
+      failed: true,
+      contentType: '',
+      data: '',
+      expiresAt: now + config.negativeTtlMs,
+    };
     await store.set(key, entry, config.negativeTtlMs).catch(() => {});
     return { kind: 'redirect', location: url, maxAgeSec: 0 };
   }

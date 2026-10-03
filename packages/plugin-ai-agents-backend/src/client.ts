@@ -1,6 +1,9 @@
 import type { ProbeConfig, ProbeFn, ProbeResult } from './types';
 
-export function readProbeConfig(config: import('@backstage/config').Config): ProbeConfig {
+/** @public */
+export function readProbeConfig(
+  config: import('@backstage/config').Config,
+): ProbeConfig {
   const cfg = config.getOptionalConfig('ai-agents');
   return {
     enabled: cfg?.getOptionalBoolean('enabled') ?? true,
@@ -23,6 +26,7 @@ function originPattern(pattern: string): string {
   return pathIdx === -1 ? pattern : pattern.slice(0, pathIdx);
 }
 
+/** @public */
 export function isAllowed(url: string, allowlist: string[]): boolean {
   if (!allowlist.length) return false;
   try {
@@ -42,6 +46,7 @@ export function isAllowed(url: string, allowlist: string[]): boolean {
   }
 }
 
+/** @public */
 export function buildProbeFn(globalFetch: typeof fetch): ProbeFn {
   return async (url, opts): Promise<ProbeResult> => {
     const start = Date.now();
@@ -66,6 +71,7 @@ export function buildProbeFn(globalFetch: typeof fetch): ProbeFn {
   };
 }
 
+/** @public */
 export function mapProbeResult(
   result: ProbeResult | { error: string },
 ): import('./types').AgentStatus {

@@ -5,10 +5,7 @@ import React from 'react';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import {
-  StatusPill,
-  StatusDot,
-} from './StatusPill';
+import { StatusPill, StatusDot } from './StatusPill';
 import { KpiTile } from './KpiTile';
 import { HourlyBars } from './HourlyBars';
 import { ToolBars } from './ToolBars';
@@ -25,7 +22,7 @@ function renderWithTheme(element: React.ReactElement) {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       {element}
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -87,7 +84,11 @@ test('StatusPill: small and medium sizes render differently and keep the label',
   const smallHtml = small.container.innerHTML;
   cleanup();
   const medium = renderWithTheme(<StatusPill state="running" size="medium" />);
-  assert.notStrictEqual(medium.container.innerHTML, smallHtml, 'size must change the rendered output');
+  assert.notStrictEqual(
+    medium.container.innerHTML,
+    smallHtml,
+    'size must change the rendered output',
+  );
   assert.ok(medium.container.textContent?.includes('Running'));
 });
 
@@ -97,7 +98,7 @@ test('StatusPill: small and medium sizes render differently and keep the label',
 
 test('KpiTile: renders label and value', () => {
   const { container } = renderWithTheme(
-    <KpiTile label="Total Runs" value={42} />
+    <KpiTile label="Total Runs" value={42} />,
   );
   assert.ok(container.textContent?.includes('Total Runs'));
   assert.ok(container.textContent?.includes('42'));
@@ -105,14 +106,14 @@ test('KpiTile: renders label and value', () => {
 
 test('KpiTile: renders hint text when provided', () => {
   const { container } = renderWithTheme(
-    <KpiTile label="Runs" value={10} hint="Last hour" />
+    <KpiTile label="Runs" value={10} hint="Last hour" />,
   );
   assert.ok(container.textContent?.includes('Last hour'));
 });
 
 test('KpiTile: renders sparkline when trend provided', () => {
   const { container } = renderWithTheme(
-    <KpiTile label="Trend" value={5} trend={[1, 2, 3, 4, 5]} />
+    <KpiTile label="Trend" value={5} trend={[1, 2, 3, 4, 5]} />,
   );
   const svg = container.querySelector('svg');
   assert.ok(svg, 'Should render SVG for sparkline');
@@ -128,7 +129,7 @@ test('KpiTile: does not render sparkline when trend not provided', () => {
 
 test('KpiTile: shows loading skeleton when loading=true', () => {
   const { container } = renderWithTheme(
-    <KpiTile label="Loading" value={42} loading />
+    <KpiTile label="Loading" value={42} loading />,
   );
   const skeleton = container.querySelector('[class*="MuiSkeleton"]');
   assert.ok(skeleton);
@@ -152,7 +153,10 @@ test('HourlyBars: one bar per bucket, heights proportional to the busiest hour',
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
   const bars = [...container.querySelectorAll('[data-testid="hour-bar"]')];
   assert.strictEqual(bars.length, 3);
-  assert.deepEqual(bars.map(b => b.getAttribute('data-height-pct')), ['100', '50', '0']);
+  assert.deepEqual(
+    bars.map(b => b.getAttribute('data-height-pct')),
+    ['100', '50', '0'],
+  );
   // an empty hour draws no stacked segment at all
   assert.strictEqual(bars[2].querySelectorAll('[data-segment]').length, 0);
 });
@@ -163,7 +167,10 @@ test('HourlyBars: aria-label contains total runs and failed', () => {
     { start: '2024-01-01T01:00:00Z', runs: 3, failed: 0 },
   ];
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  assert.strictEqual(container.querySelector('[role="img"]')?.getAttribute('aria-label'), 'Hourly runs: 8 total, 1 failed');
+  assert.strictEqual(
+    container.querySelector('[role="img"]')?.getAttribute('aria-label'),
+    'Hourly runs: 8 total, 1 failed',
+  );
 });
 
 test('HourlyBars: failed segment only on buckets with failures, sized by failure count', () => {
@@ -172,10 +179,21 @@ test('HourlyBars: failed segment only on buckets with failures, sized by failure
     { start: '2024-01-01T01:00:00Z', runs: 4, failed: 0 },
   ];
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  const [withFail, clean] = [...container.querySelectorAll('[data-testid="hour-bar"]')];
-  assert.strictEqual(withFail.querySelectorAll('[data-segment="failed"]').length, 1);
-  assert.strictEqual(withFail.querySelectorAll('[data-segment="success"]').length, 1);
-  assert.strictEqual(clean.querySelectorAll('[data-segment="failed"]').length, 0);
+  const [withFail, clean] = [
+    ...container.querySelectorAll('[data-testid="hour-bar"]'),
+  ];
+  assert.strictEqual(
+    withFail.querySelectorAll('[data-segment="failed"]').length,
+    1,
+  );
+  assert.strictEqual(
+    withFail.querySelectorAll('[data-segment="success"]').length,
+    1,
+  );
+  assert.strictEqual(
+    clean.querySelectorAll('[data-segment="failed"]').length,
+    0,
+  );
   assert.match(withFail.getAttribute('title') ?? '', /4 runs · 1 failed/);
 });
 
@@ -186,7 +204,9 @@ test('HourlyBars: x labels are thinned for long windows', () => {
     failed: 0,
   }));
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  const labels = [...container.querySelectorAll('span.MuiTypography-caption')].filter(n => /^\d\d:00$/.test(n.textContent ?? ''));
+  const labels = [
+    ...container.querySelectorAll('span.MuiTypography-caption'),
+  ].filter(n => /^\d\d:00$/.test(n.textContent ?? ''));
   assert.strictEqual(labels.length, 6, '72 buckets -> a label every 12 hours');
 });
 
@@ -217,8 +237,14 @@ test('ToolBars: bar widths are proportional to calls and carry the error share',
   ];
   const { container } = renderWithTheme(<ToolBars tools={tools} />);
   const bars = [...container.querySelectorAll('[data-testid="tool-bar"]')];
-  assert.deepEqual(bars.map(b => b.getAttribute('data-calls-pct')), ['100', '25']);
-  assert.deepEqual(bars.map(b => b.getAttribute('data-error-pct')), ['25', '0']);
+  assert.deepEqual(
+    bars.map(b => b.getAttribute('data-calls-pct')),
+    ['100', '25'],
+  );
+  assert.deepEqual(
+    bars.map(b => b.getAttribute('data-error-pct')),
+    ['25', '0'],
+  );
 });
 
 test('ToolBars: error pill only on tools with errors and shows the count', () => {
@@ -241,7 +267,7 @@ test('ToolBars: clicking a row calls onSelect', () => {
   const handleSelect = (name: string) => selections.push(name);
 
   const { container } = renderWithTheme(
-    <ToolBars tools={tools} onSelect={handleSelect} />
+    <ToolBars tools={tools} onSelect={handleSelect} />,
   );
   const button = container.querySelector('button');
   assert.ok(button);
@@ -250,8 +276,12 @@ test('ToolBars: clicking a row calls onSelect', () => {
 });
 
 test('ToolBars: rows are native buttons so Enter/Space activate them in browsers', () => {
-  const tools: ToolStat[] = [{ name: 'test-tool', calls: 5, errors: 0, avgMs: 100, p95Ms: 200 }];
-  const { container } = renderWithTheme(<ToolBars tools={tools} onSelect={() => undefined} />);
+  const tools: ToolStat[] = [
+    { name: 'test-tool', calls: 5, errors: 0, avgMs: 100, p95Ms: 200 },
+  ];
+  const { container } = renderWithTheme(
+    <ToolBars tools={tools} onSelect={() => undefined} />,
+  );
   const button = container.querySelector('button') as HTMLButtonElement;
   assert.strictEqual(button.tagName, 'BUTTON');
   assert.strictEqual(button.type, 'button');
@@ -366,7 +396,7 @@ test('Waterfall: selected row has aria-current=true', () => {
     },
   ];
   const { container } = renderWithTheme(
-    <Waterfall events={events} selectedSeq={2} />
+    <Waterfall events={events} selectedSeq={2} />,
   );
   const selectedRow = container.querySelector('button[aria-current="true"]');
   assert.ok(selectedRow, 'Selected row should have aria-current="true"');
@@ -392,7 +422,7 @@ test('Waterfall: clicking tool row calls onSelect with seq', () => {
   const handleSelect = (seq: number) => selections.push(seq);
 
   const { container } = renderWithTheme(
-    <Waterfall events={events} onSelect={handleSelect} />
+    <Waterfall events={events} onSelect={handleSelect} />,
   );
   const toolRows = container.querySelectorAll('button[data-left]');
   assert.ok(toolRows.length > 0, 'Should have tool rows');

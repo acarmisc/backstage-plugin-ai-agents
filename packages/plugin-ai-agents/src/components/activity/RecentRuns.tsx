@@ -27,12 +27,12 @@ export interface RecentRunsProps {
  * Displays recent runs in a filterable MUI Table.
  * Supports filtering by status and text search on target/project/verdict.
  */
-export const RecentRuns: React.FC<RecentRunsProps> = ({
+export function RecentRuns({
   runs,
   selectedRunId,
   onSelect,
   loading = false,
-}) => {
+}: RecentRunsProps) {
   const theme = useTheme();
   const [filterState, setFilterState] = useState<RunState | 'all'>('all');
   const [searchText, setSearchText] = useState('');
@@ -80,7 +80,12 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
         <Skeleton variant="text" width={100} height={24} />
         <Box sx={{ mt: 2 }}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} variant="rectangular" height={44} sx={{ my: 0.5 }} />
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={44}
+              sx={{ my: 0.5 }}
+            />
           ))}
         </Box>
       </Box>
@@ -90,7 +95,15 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
   return (
     <Box>
       {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 1, p: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          p: 1.5,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
         {['all', 'running', 'completed', 'failed'].map(state => (
           <Chip
             key={state}
@@ -130,10 +143,26 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
 
       {/* Table */}
       {displayedRuns.length > 0 ? (
-        <TableContainer sx={{ borderTop: `1px solid ${theme.palette.divider}`, maxHeight: 560 }}>
+        <TableContainer
+          sx={{
+            borderTop: `1px solid ${theme.palette.divider}`,
+            maxHeight: 560,
+          }}
+        >
           <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ '& th': { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4, color: 'text.secondary', backgroundColor: theme.palette.background.paper } }}>
+              <TableRow
+                sx={{
+                  '& th': {
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                    color: 'text.secondary',
+                    backgroundColor: theme.palette.background.paper,
+                  },
+                }}
+              >
                 <TableCell sx={{ width: 120 }}>Status</TableCell>
                 <TableCell>Target</TableCell>
                 <TableCell sx={{ width: 100 }}>Started</TableCell>
@@ -144,7 +173,9 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
             <TableBody>
               {displayedRuns.map(run => {
                 const isSelected = run.runId === selectedRunId;
-                const startedTime = run.startedAt ? new Date(run.startedAt) : null;
+                const startedTime = run.startedAt
+                  ? new Date(run.startedAt)
+                  : null;
                 const absoluteTime = startedTime?.toLocaleString() ?? '';
 
                 return (
@@ -152,7 +183,7 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
                     key={run.runId}
                     tabIndex={0}
                     onClick={() => onSelect?.(run.runId)}
-                    onKeyDown={(e) => {
+                    onKeyDown={e => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         onSelect?.(run.runId);
@@ -179,29 +210,61 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
                     </TableCell>
                     <TableCell sx={{ maxWidth: 240 }}>
                       <Box sx={{ minWidth: 0 }}>
-                        <Typography noWrap sx={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '13px', fontWeight: 600 }}>
+                        <Typography
+                          noWrap
+                          sx={{
+                            fontFamily:
+                              'ui-monospace, SFMono-Regular, Menlo, monospace',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                          }}
+                        >
                           {run.target || '—'}
                         </Typography>
                         {run.project && (
-                          <Typography noWrap title={run.project} sx={{ fontSize: '12px', color: theme.palette.text.secondary }}>
+                          <Typography
+                            noWrap
+                            title={run.project}
+                            sx={{
+                              fontSize: '12px',
+                              color: theme.palette.text.secondary,
+                            }}
+                          >
                             {run.project}
                           </Typography>
                         )}
                       </Box>
                     </TableCell>
                     <TableCell title={absoluteTime}>
-                      <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>
+                      <Typography
+                        sx={{ fontSize: '13px', color: 'text.secondary' }}
+                      >
                         {relativeTime(run.startedAt)}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography sx={{ fontSize: '13px', fontVariantNumeric: 'tabular-nums', color: run.state === 'running' ? 'info.main' : 'text.primary' }}>
-                        {run.state === 'running' ? 'running…' : formatRunDuration(run)}
+                      <Typography
+                        sx={{
+                          fontSize: '13px',
+                          fontVariantNumeric: 'tabular-nums',
+                          color:
+                            run.state === 'running'
+                              ? 'info.main'
+                              : 'text.primary',
+                        }}
+                      >
+                        {run.state === 'running'
+                          ? 'running…'
+                          : formatRunDuration(run)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       {run.verdict && (
-                        <Chip label={run.verdict} size="small" variant="outlined" />
+                        <Chip
+                          label={run.verdict}
+                          size="small"
+                          variant="outlined"
+                        />
                       )}
                     </TableCell>
                   </TableRow>
@@ -211,7 +274,13 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
           </Table>
         </TableContainer>
       ) : (
-        <Typography sx={{ py: 3, color: theme.palette.text.secondary, textAlign: 'center' }}>
+        <Typography
+          sx={{
+            py: 3,
+            color: theme.palette.text.secondary,
+            textAlign: 'center',
+          }}
+        >
           No runs found
         </Typography>
       )}
@@ -229,4 +298,4 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
       )}
     </Box>
   );
-};
+}

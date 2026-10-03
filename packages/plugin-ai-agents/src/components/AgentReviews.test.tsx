@@ -11,7 +11,9 @@ test('StarRating simple variant renders read-only stars', () => {
 });
 
 test('StarRating fancy variant renders label and interactive input', () => {
-  const html = renderToString(<StarRating value={3} variant="fancy" onChange={() => {}} />);
+  const html = renderToString(
+    <StarRating value={3} variant="fancy" onChange={() => {}} />,
+  );
   assert.match(html, /Good/);
   assert.match(html, /type="radio"/);
 });

@@ -22,29 +22,65 @@ export interface RunDetailProps {
   onClose?: () => void;
 }
 
-const Fact: React.FC<{ label: string; children: React.ReactNode; title?: string }> = ({ label, children, title }) => (
-  <Box sx={{ minWidth: 0 }} title={title}>
-    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textTransform: 'uppercase', letterSpacing: 0.4, fontSize: 10.5 }}>
-      {label}
-    </Typography>
-    <Typography noWrap sx={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-      {children}
-    </Typography>
-  </Box>
-);
+function Fact({
+  label,
+  children,
+  title,
+}: {
+  label: string;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <Box sx={{ minWidth: 0 }} title={title}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: 'block',
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+          fontSize: 10.5,
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        noWrap
+        sx={{
+          fontSize: 14,
+          fontWeight: 600,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {children}
+      </Typography>
+    </Box>
+  );
+}
 
 /** One run: facts, parallelism, and the waterfall of its tool calls. */
-export const RunDetail: React.FC<RunDetailProps> = ({ entityRef, run, onClose }) => {
+export function RunDetail({ entityRef, run, onClose }: RunDetailProps) {
   const ref = useRef<HTMLDivElement>(null);
   const running = run.state === 'running';
   const now = useNow(1000, running);
   const [selectedSeq, setSelectedSeq] = useState<number | undefined>();
-  const { data: events, loading, error, refresh } = useRunTimeline(entityRef, run.runId, running);
+  const {
+    data: events,
+    loading,
+    error,
+    refresh,
+  } = useRunTimeline(entityRef, run.runId, running);
 
   useEffect(() => {
     setSelectedSeq(undefined);
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    ref.current?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+    const reduce = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    ref.current?.scrollIntoView?.({
+      behavior: reduce ? 'auto' : 'smooth',
+      block: 'nearest',
+    });
   }, [run.runId]);
 
   const stats = useMemo(() => {
@@ -53,7 +89,8 @@ export const RunDetail: React.FC<RunDetailProps> = ({ entityRef, run, onClose })
       calls: tools.length,
       errors: tools.filter(e => e.outcome && e.outcome !== 'ok').length,
       parallel: events ? maxConcurrency(events) : 0,
-      incomplete: events?.find(e => e.event === 'completed' && e.incomplete)?.incomplete,
+      incomplete: events?.find(e => e.event === 'completed' && e.incomplete)
+        ?.incomplete,
       selected: events?.find(e => e.seq === selectedSeq && e.tool),
     };
   }, [events, selectedSeq]);
@@ -65,7 +102,12 @@ export const RunDetail: React.FC<RunDetailProps> = ({ entityRef, run, onClose })
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
             <StatusPill state={run.state} size="small" />
-            <Box component="span" sx={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+            <Box
+              component="span"
+              sx={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              }}
+            >
               {run.target ?? run.runId.slice(0, 8)}
             </Box>
           </Box>
@@ -73,25 +115,47 @@ export const RunDetail: React.FC<RunDetailProps> = ({ entityRef, run, onClose })
         subtitle={run.project}
         action={
           onClose && (
-            <IconButton size="small" onClick={onClose} aria-label="Close run details">
+            <IconButton
+              size="small"
+              onClick={onClose}
+              aria-label="Close run details"
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           )
         }
       >
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))', gap: 2, mb: 2 }}>
-          <Fact label="Started" title={run.startedAt}>{relativeTime(run.startedAt)}</Fact>
-          <Fact label={running ? 'Elapsed' : 'Duration'}>{formatMs(runDuration(run, now))}</Fact>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))',
+            gap: 2,
+            mb: 2,
+          }}
+        >
+          <Fact label="Started" title={run.startedAt}>
+            {relativeTime(run.startedAt)}
+          </Fact>
+          <Fact label={running ? 'Elapsed' : 'Duration'}>
+            {formatMs(runDuration(run, now))}
+          </Fact>
           <Fact label="Tool calls">{events ? stats.calls : '—'}</Fact>
           <Fact label="Errors">
-            <Box component="span" sx={{ color: stats.errors > 0 ? 'error.main' : undefined }}>{events ? stats.errors : '—'}</Box>
+            <Box
+              component="span"
+              sx={{ color: stats.errors > 0 ? 'error.main' : undefined }}
+            >
+              {events ? stats.errors : '—'}
+            </Box>
           </Fact>
           <Fact label="Max parallel">{events ? stats.parallel : '—'}</Fact>
         </Box>
 
         {run.verdict && (
           <Typography variant="body2" sx={{ mb: 1.5 }}>
-            <Box component="span" sx={{ color: 'text.secondary' }}>Verdict · </Box>
+            <Box component="span" sx={{ color: 'text.secondary' }}>
+              Verdict ·{' '}
+            </Box>
             {run.verdict}
           </Typography>
         )}
@@ -103,26 +167,54 @@ export const RunDetail: React.FC<RunDetailProps> = ({ entityRef, run, onClose })
 
         {loading && !events && <Skeleton variant="rounded" height={160} />}
         {error && !events && (
-          <Alert severity="error" action={<Button size="small" onClick={refresh}>Retry</Button>}>
+          <Alert
+            severity="error"
+            action={
+              <Button size="small" onClick={refresh}>
+                Retry
+              </Button>
+            }
+          >
             Could not load the timeline
           </Alert>
         )}
         {events && events.length === 0 && (
-          <Typography variant="body2" color="text.secondary">No events recorded for this run</Typography>
+          <Typography variant="body2" color="text.secondary">
+            No events recorded for this run
+          </Typography>
         )}
         {events && events.length > 0 && (
           <>
-            <Waterfall events={events} selectedSeq={selectedSeq} onSelect={setSelectedSeq} />
+            <Waterfall
+              events={events}
+              selectedSeq={selectedSeq}
+              onSelect={setSelectedSeq}
+            />
             {stats.selected && (
               <Box
                 data-testid="tool-detail"
-                sx={{ mt: 1.5, px: 1.5, py: 1, borderRadius: 1.5, backgroundColor: 'action.hover', fontSize: 13 }}
+                sx={{
+                  mt: 1.5,
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: 1.5,
+                  backgroundColor: 'action.hover',
+                  fontSize: 13,
+                }}
               >
                 <strong>{stats.selected.tool}</strong>
                 {' · '}
                 {formatMs(stats.selected.durationMs ?? 0)}
                 {' · '}
-                <Box component="span" sx={{ color: stats.selected.outcome === 'ok' ? 'success.main' : 'error.main' }}>
+                <Box
+                  component="span"
+                  sx={{
+                    color:
+                      stats.selected.outcome === 'ok'
+                        ? 'success.main'
+                        : 'error.main',
+                  }}
+                >
                   {stats.selected.outcome ?? 'ok'}
                 </Box>
               </Box>
@@ -132,4 +224,4 @@ export const RunDetail: React.FC<RunDetailProps> = ({ entityRef, run, onClose })
       </SectionCard>
     </Box>
   );
-};
+}

@@ -9,7 +9,10 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import type { AgentBilling } from '../types';
 
-const BILLING_COLOR: Record<string, 'primary' | 'secondary' | 'success' | 'default'> = {
+const BILLING_COLOR: Record<
+  string,
+  'primary' | 'secondary' | 'success' | 'default'
+> = {
   'per-invocation': 'primary',
   'per-token': 'secondary',
   subscription: 'success',
@@ -53,11 +56,11 @@ export interface BillingBadgeProps {
   variant?: 'chip' | 'text';
 }
 
-export const BillingBadge: React.FC<BillingBadgeProps> = ({
+export function BillingBadge({
   billing,
   compact = false,
   variant = 'chip',
-}) => {
+}: BillingBadgeProps) {
   const color = BILLING_COLOR[billing.model] ?? 'default';
   const lines = costSummary(billing);
 
@@ -78,7 +81,11 @@ export const BillingBadge: React.FC<BillingBadgeProps> = ({
         </Typography>
       </Box>
     );
-    return lines.length ? <Tooltip title={lines.join(' · ')}>{content}</Tooltip> : content;
+    return lines.length ? (
+      <Tooltip title={lines.join(' · ')}>{content}</Tooltip>
+    ) : (
+      content
+    );
   }
 
   const chip = (
@@ -92,11 +99,22 @@ export const BillingBadge: React.FC<BillingBadgeProps> = ({
   );
 
   if (compact) {
-    return lines.length ? <Tooltip title={lines.join(' · ')}>{chip}</Tooltip> : chip;
+    return lines.length ? (
+      <Tooltip title={lines.join(' · ')}>{chip}</Tooltip>
+    ) : (
+      chip
+    );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 0.25,
+      }}
+    >
       {chip}
       {lines.map(line => (
         <Typography key={line} variant="caption" color="text.secondary">
@@ -105,4 +123,4 @@ export const BillingBadge: React.FC<BillingBadgeProps> = ({
       ))}
     </Box>
   );
-};
+}

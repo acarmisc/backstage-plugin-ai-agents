@@ -13,6 +13,7 @@ import {
   RunEvent,
 } from './types';
 
+/** @public */
 export interface AiAgentsApiInterface {
   listAgents(): Promise<AiAgent[]>;
   getAgent(entityRef: string): Promise<AiAgent | undefined>;
@@ -29,7 +30,10 @@ export interface AiAgentsApiInterface {
     opts?: { threadId?: string; post?: boolean },
   ): Promise<InvocationResult>;
   /** Recent invocations for an agent, latest first. */
-  getInvocations(entityRef: string, limit?: number): Promise<InvocationRecord[]>;
+  getInvocations(
+    entityRef: string,
+    limit?: number,
+  ): Promise<InvocationRecord[]>;
   /** Recent OTel runs; empty when the telemetry adapter is not configured. */
   getRuns(entityRef: string, limit?: number): Promise<AgentRun[]>;
   /** Ordered activity events for one OTel run. */
@@ -62,7 +66,11 @@ export interface AiAgentsApiInterface {
   getAvatar(entityRef: string): Promise<Blob | undefined>;
 }
 
-/** Aggregated LLM spend for an agent or one conversation thread. */
+/**
+ * Aggregated LLM spend for an agent or one conversation thread.
+ *
+ * @public
+ */
 export interface SpendSummary {
   spend: number;
   totalTokens: number;
@@ -70,6 +78,7 @@ export interface SpendSummary {
   byModel: Record<string, number>;
 }
 
+/** @public */
 export interface InvocationResult {
   sessionId: string;
   /** Thread the invocation belongs to; pass it back to continue the chat. */
@@ -80,10 +89,12 @@ export interface InvocationResult {
   latencyMs?: number;
 }
 
+/** @public */
 export const aiAgentsApiRef = createApiRef<AiAgentsApiInterface>({
   id: 'plugin.ai-agents.api',
 });
 
+/** @public */
 export class AiAgentsApi implements AiAgentsApiInterface {
   constructor(
     private readonly opts: {
@@ -107,7 +118,9 @@ export class AiAgentsApi implements AiAgentsApiInterface {
     return entity ? entityToAgent(entity) : undefined;
   }
 
-  async getStatuses(entityRefs: string[]): Promise<Record<string, AgentStatus>> {
+  async getStatuses(
+    entityRefs: string[],
+  ): Promise<Record<string, AgentStatus>> {
     if (!entityRefs.length) return {};
     try {
       const res = await this.opts.fetchApi.fetch(
@@ -144,7 +157,10 @@ export class AiAgentsApi implements AiAgentsApiInterface {
     return body;
   }
 
-  async getInvocations(entityRef: string, limit = 20): Promise<InvocationRecord[]> {
+  async getInvocations(
+    entityRef: string,
+    limit = 20,
+  ): Promise<InvocationRecord[]> {
     try {
       const res = await this.opts.fetchApi.fetch(
         `${this.basePath}/invocations/${encodeURIComponent(entityRef)}?limit=${limit}`,

@@ -24,38 +24,51 @@ function formatWhen(iso?: string): string {
       });
 }
 
-const ReviewRow: React.FC<{ review: AgentReview }> = ({ review }) => (
-  <Box
-    sx={{
-      py: 0.75,
-      borderBottom: '1px solid',
-      borderColor: 'divider',
-      '&:last-child': { borderBottom: 'none' },
-    }}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <StarRating value={review.rating} />
-      <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }} whiteSpace="nowrap">
-        {review.userRef?.split('/').pop() ?? 'anonymous'} · {formatWhen(review.createdAt)}
-      </Typography>
+function ReviewRow({ review }: { review: AgentReview }) {
+  return (
+    <Box
+      sx={{
+        py: 0.75,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        '&:last-child': { borderBottom: 'none' },
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <StarRating value={review.rating} />
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ ml: 'auto' }}
+          whiteSpace="nowrap"
+        >
+          {review.userRef?.split('/').pop() ?? 'anonymous'} ·{' '}
+          {formatWhen(review.createdAt)}
+        </Typography>
+      </Box>
+      {review.comment && (
+        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+          {review.comment}
+        </Typography>
+      )}
     </Box>
-    {review.comment && (
-      <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-        {review.comment}
-      </Typography>
-    )}
-  </Box>
-);
+  );
+}
 
 /**
  * Agent reviews: average rating, review list and a "Rate this agent" form
  * with the fancy star widget. Renders nothing while there is nothing yet
  * and no database behind it.
+ *
+ * @public
  */
-export const AgentReviews: React.FC<{
+export function AgentReviews({
+  entityRef,
+  limit = 50,
+}: {
   entityRef: string;
   limit?: number;
-}> = ({ entityRef, limit = 50 }) => {
+}) {
   const api = useApi(aiAgentsApiRef);
   const [summary, setSummary] = useState<ReviewsSummary | null>(null);
   const [rating, setRating] = useState(0);
@@ -85,11 +98,17 @@ export const AgentReviews: React.FC<{
     setSubmitting(true);
     setError(null);
     try {
-      await api.addReview(entityRef, { rating, comment: comment.trim() || undefined });
+      await api.addReview(entityRef, {
+        rating,
+        comment: comment.trim() || undefined,
+      });
       setRating(0);
       setComment('');
       setSubmitted(true);
-      api.getReviews(entityRef, limit).then(setSummary).catch(() => {});
+      api
+        .getReviews(entityRef, limit)
+        .then(setSummary)
+        .catch(() => {});
     } catch (e: any) {
       setError(e?.message ?? 'Failed to submit review');
     } finally {
@@ -117,7 +136,15 @@ export const AgentReviews: React.FC<{
       </Stack>
 
       {!submitted ? (
-        <Box sx={{ mt: 2, p: 1.5, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
+        <Box
+          sx={{
+            mt: 2,
+            p: 1.5,
+            border: '1px dashed',
+            borderColor: 'divider',
+            borderRadius: 1,
+          }}
+        >
           <Typography variant="body2" sx={{ mb: 1 }}>
             Rate this agent
           </Typography>
@@ -134,7 +161,12 @@ export const AgentReviews: React.FC<{
             sx={{ mt: 1 }}
           />
           {error && (
-            <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+            <Typography
+              variant="caption"
+              color="error"
+              display="block"
+              sx={{ mt: 0.5 }}
+            >
               {error}
             </Typography>
           )}
@@ -142,7 +174,11 @@ export const AgentReviews: React.FC<{
             size="small"
             variant="contained"
             startIcon={
-              submitting ? <CircularProgress size={14} color="inherit" /> : <SendIcon />
+              submitting ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : (
+                <SendIcon />
+              )
             }
             disabled={rating < 1 || submitting}
             onClick={submit}
@@ -158,4 +194,4 @@ export const AgentReviews: React.FC<{
       )}
     </Box>
   );
-};
+}

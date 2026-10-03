@@ -110,7 +110,10 @@ test('fetches http(s) avatars through the proxy and shares the blob', async () =
   // not hit the upstream host directly.
   assert.equal(srcOf(first.container), '(none)');
   await waitFor(() =>
-    assert.match(srcOf(first.container) ?? '', /^blob:http:\/\/localhost\/mock-/),
+    assert.match(
+      srcOf(first.container) ?? '',
+      /^blob:http:\/\/localhost\/mock-/,
+    ),
   );
   assert.equal(calls.length, 1);
 
@@ -120,7 +123,10 @@ test('fetches http(s) avatars through the proxy and shares the blob', async () =
     'component:default/hook-share',
     'https://git.example.com/a.png',
   );
-  assert.match(srcOf(second.container) ?? '', /^blob:http:\/\/localhost\/mock-/);
+  assert.match(
+    srcOf(second.container) ?? '',
+    /^blob:http:\/\/localhost\/mock-/,
+  );
   assert.equal(calls.length, 1, 'cached blob must be reused');
   assert.equal(createObjectURLCalls, 1, 'object URL minted once');
 });
@@ -137,7 +143,10 @@ test('switching agents clears the stale blob instead of flashing it', async () =
     'https://git.example.com/old.png',
   );
   await waitFor(() =>
-    assert.match(srcOf(rendered.container) ?? '', /^blob:http:\/\/localhost\/mock-/),
+    assert.match(
+      srcOf(rendered.container) ?? '',
+      /^blob:http:\/\/localhost\/mock-/,
+    ),
   );
   const oldSrc = srcOf(rendered.container);
 
@@ -156,7 +165,10 @@ test('switching agents clears the stale blob instead of flashing it', async () =
     'stale blob of the previous agent must be cleared',
   );
   await waitFor(() =>
-    assert.match(srcOf(rendered.container) ?? '', /^blob:http:\/\/localhost\/mock-/),
+    assert.match(
+      srcOf(rendered.container) ?? '',
+      /^blob:http:\/\/localhost\/mock-/,
+    ),
   );
   assert.notEqual(srcOf(rendered.container), oldSrc);
   assert.deepEqual(calls, [
@@ -171,9 +183,7 @@ test('proxy failure falls back to the direct URL', async () => {
     'component:default/hook-fail',
     'https://git.example.com/missing.png',
   );
-  await waitFor(() =>
-    assert.equal(calls.length, 1, 'proxy attempted once'),
-  );
+  await waitFor(() => assert.equal(calls.length, 1, 'proxy attempted once'));
   assert.equal(
     srcOf(container),
     'https://git.example.com/missing.png',

@@ -3,6 +3,22 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.2] - 2026-10-03
+
+### Changed
+
+- Components are plain functions instead of `React.FC` (Backstage ADR006).
+- `AgentCardProps`, `HireAgentDialogProps`, `StarRatingProps`,
+  `AgentWorkspacePanelProps`, `RunState`, `InvocationResult`, `SpendSummary`
+  and `InvocationRecord` are exported, so every public signature can be typed.
+- `@types/react` is an optional peer dependency.
+- New README for the npm page, with screenshots.
+
+### Fixed
+
+- `npm start` (the standalone dev app) failed with
+  `plugin.getId is not a function`.
+
 ## [0.16.1] - 2026-10-03
 
 ### Removed
@@ -154,12 +170,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   region/runtime-handle" warning chip) rendered unconditionally,
   regardless of the entity's `ai-agent.io/runtime` — a kagent, litellm,
   or custom-runtime agent showed a fabricated `aws bedrock-agentcore
-  invoke-agent-runtime` command that has nothing to do with how it's
+invoke-agent-runtime` command that has nothing to do with how it's
   actually invoked. Both the preview block and the "Copy CLI"/"Copy CLI
   command" buttons now only appear for `bedrock-agentcore` agents.
 - `setupTests.ts` didn't expose a `DocumentFragment` global, so any
   jsdom test rendering a MUI `Dialog`/`Modal` (which checks `instanceof
-  DocumentFragment` when mounting its portal) crashed instead of
+DocumentFragment` when mounting its portal) crashed instead of
   rendering. Added it alongside the other manually-shimmed DOM globals.
 
 ## [0.9.0] - 2026-08-24
@@ -203,7 +219,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and vulnerable to the same class of copy-paste command injection via a
   malicious `region`/`runtime-handle` annotation.
 - `HireAgentDialog`: closing the dialog mid-invocation and reopening it for
-  a *different* agent could let the first agent's still-in-flight response
+  a _different_ agent could let the first agent's still-in-flight response
   land in the second agent's dialog once it resolved (no cancellation/
   staleness guard on the async `run()` call). Added a request-token check
   so a stale response is dropped instead of applied.

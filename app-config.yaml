@@ -1,0 +1,6 @@
+# Configuration for the frontend dev app (`npm start` in packages/plugin-ai-agents).
+app:
+  title: AI Agents (dev)
+  baseUrl: http://localhost:3000
+backend:
+  baseUrl: http://localhost:7007

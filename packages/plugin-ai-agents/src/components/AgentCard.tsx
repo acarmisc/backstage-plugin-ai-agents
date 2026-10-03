@@ -19,6 +19,7 @@ import { BillingBadge } from './BillingBadge';
 import { AgentJobStats } from './AgentJobStats';
 import { getLinkIcon } from './linkIcon';
 
+/** @public */
 export interface AgentCardProps {
   agent: AiAgent;
   onClick?: (agent: AiAgent) => void;
@@ -26,16 +27,21 @@ export interface AgentCardProps {
   onHire?: (agent: AiAgent) => void;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({
+/** @public */
+export function AgentCard({
   agent,
   onClick,
   onRuntimeClick,
   onHire,
-}) => {
+}: AgentCardProps) {
   const title = agent.title ?? agent.name;
   const avatarSrc = useAvatarSrc(agent.entityRef, agent.avatarUrl);
   const owner = agent.owner?.replace(/^group:/, '');
-  const footer = [owner, agent.lifecycle, agent.version ? `v${agent.version}` : undefined]
+  const footer = [
+    owner,
+    agent.lifecycle,
+    agent.version ? `v${agent.version}` : undefined,
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -59,7 +65,12 @@ export const AgentCard: React.FC<AgentCardProps> = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
             <AgentAvatar name={agent.name} avatarUrl={avatarSrc} />
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="subtitle1" fontWeight={700} noWrap title={title}>
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                noWrap
+                title={title}
+              >
                 {title}
               </Typography>
             </Box>
@@ -88,7 +99,15 @@ export const AgentCard: React.FC<AgentCardProps> = ({
           </Typography>
 
           {/* Billing: quiet icon+text note, styled like the footer */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              flexWrap: 'wrap',
+              mb: 1.5,
+            }}
+          >
             <BillingBadge billing={agent.billing} compact variant="text" />
           </Box>
 
@@ -142,34 +161,37 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             borderColor: 'divider',
           }}
         >
-          {agent.links.filter(l => isSafeUrl(l.url)).slice(0, 4).map((l, i) => (
-            <Chip
-              key={i}
-              size="small"
-              variant="outlined"
-              clickable
-              component="a"
-              href={l.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              icon={getLinkIcon(l.icon)}
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <span>{l.title}</span>
-                  <OpenInNewIcon sx={{ fontSize: 12 }} />
-                </Box>
-              }
-              sx={{
-                maxWidth: 160,
-                [`& .${chipClasses.icon}`]: { fontSize: 14 },
-                [`& .${chipClasses.label}`]: {
-                  fontSize: '0.7rem',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                },
-              }}
-            />
-          ))}
+          {agent.links
+            .filter(l => isSafeUrl(l.url))
+            .slice(0, 4)
+            .map((l, i) => (
+              <Chip
+                key={i}
+                size="small"
+                variant="outlined"
+                clickable
+                component="a"
+                href={l.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                icon={getLinkIcon(l.icon)}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <span>{l.title}</span>
+                    <OpenInNewIcon sx={{ fontSize: 12 }} />
+                  </Box>
+                }
+                sx={{
+                  maxWidth: 160,
+                  [`& .${chipClasses.icon}`]: { fontSize: 14 },
+                  [`& .${chipClasses.label}`]: {
+                    fontSize: '0.7rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  },
+                }}
+              />
+            ))}
         </Box>
       )}
 
@@ -199,4 +221,4 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       )}
     </Card>
   );
-};
+}

@@ -16,9 +16,9 @@ metadata:
     ai-agent.io/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
     ai-agent.io/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
     ai-agent.io/billing-model: per-invocation
-    ai-agent.io/cost-per-1k: "0.012"
-    ai-agent.io/capabilities: "tool-use:tools,rag:retrieval,reasoning:reasoning"
-    ai-agent.io/version: "1.4.2"
+    ai-agent.io/cost-per-1k: '0.012'
+    ai-agent.io/capabilities: 'tool-use:tools,rag:retrieval,reasoning:reasoning'
+    ai-agent.io/version: '1.4.2'
     ai-agent.io/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true,"help":"GitLab project path, e.g. my-org/my-project"},{"name":"target","label":"MR IID","type":"text","required":true,"help":"Merge Request IID, e.g. 42"},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run","help":"dry-run = present only; post = post inline comments"}]'
     ai-agent.io/prompt-template: "Review merge request !{target} in project '{project}'. Action: {action}."
   links:
@@ -46,8 +46,8 @@ metadata:
     ai-agent.io/runtime-handle: litellm/invoice-reader
     ai-agent.io/region: eu-west-1
     ai-agent.io/billing-model: per-token
-    ai-agent.io/cost-per-1k: "2.40"
-    ai-agent.io/capabilities: "vision:vision,ocr:vision,tools:tools"
+    ai-agent.io/cost-per-1k: '2.40'
+    ai-agent.io/capabilities: 'vision:vision,ocr:vision,tools:tools'
     ai-agent.io/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"documentBucket","label":"Document bucket URL","type":"url","required":true},{"name":"outputFormat","label":"Output format","type":"select","options":["json","csv","xlsx"],"default":"json"}]'
     ai-agent.io/prompt-template: "Extract structured data from documents at {documentBucket} for project '{project}'. Output format: {outputFormat}."
 spec:
@@ -70,7 +70,7 @@ metadata:
     ai-agent.io/endpoint: https://api.example.com/kb-search
     ai-agent.io/health: https://api.example.com/kb-search/health
     ai-agent.io/billing-model: free
-    ai-agent.io/capabilities: "rag:retrieval,reasoning:reasoning"
+    ai-agent.io/capabilities: 'rag:retrieval,reasoning:reasoning'
     ai-agent.io/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"kbIndex","label":"Knowledge base index","type":"text","required":true},{"name":"topK","label":"Top K results","type":"number","default":"5"}]'
     ai-agent.io/prompt-template: "Answer questions about project '{project}' using knowledge base '{kbIndex}', returning the top {topK} results."
 spec:
@@ -92,7 +92,7 @@ metadata:
     ai-agent.io/region: eu-west-1
     ai-agent.io/endpoint: https://relnote.example.com/invoke
     ai-agent.io/billing-model: subscription
-    ai-agent.io/capabilities: "codegen:tools,reasoning:reasoning"
+    ai-agent.io/capabilities: 'codegen:tools,reasoning:reasoning'
     ai-agent.io/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"repoUrl","label":"Repository URL","type":"url","required":true},{"name":"branch","label":"Branch","type":"text","default":"main"},{"name":"sinceTag","label":"Since tag","type":"text","help":"Optional: only include commits after this tag"}]'
     ai-agent.io/prompt-template: "Draft release notes for project '{project}' from {repoUrl} (branch: {branch}, since tag: {sinceTag})."
 spec:
@@ -111,7 +111,7 @@ metadata:
   annotations:
     ai-agent.io/runtime: custom
     ai-agent.io/billing-model: per-invocation
-    ai-agent.io/capabilities: "reasoning:reasoning"
+    ai-agent.io/capabilities: 'reasoning:reasoning'
 spec:
   type: ai-agent
   lifecycle: deprecated
@@ -130,8 +130,8 @@ metadata:
     ai-agent.io/runtime-handle: voice-ivr-agent-runtime
     ai-agent.io/region: eu-west-1
     ai-agent.io/billing-model: per-invocation
-    ai-agent.io/cost-per-1k: "0.040"
-    ai-agent.io/capabilities: "voice:voice,reasoning:reasoning,tools:tools"
+    ai-agent.io/cost-per-1k: '0.040'
+    ai-agent.io/capabilities: 'voice:voice,reasoning:reasoning,tools:tools'
     ai-agent.io/hire-schema: '[{"name":"project","label":"Project","type":"text","required":true},{"name":"phoneNumberSid","label":"Phone number SID","type":"text","required":true},{"name":"language","label":"Language","type":"select","options":["en","it","es"],"default":"en"}]'
     ai-agent.io/prompt-template: "Handle inbound voice call for project '{project}' on phone number SID {phoneNumberSid} in language {language}."
 spec:

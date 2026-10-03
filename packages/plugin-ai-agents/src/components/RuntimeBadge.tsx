@@ -42,12 +42,12 @@ export interface RuntimeBadgeProps {
   variant?: 'chip' | 'text' | 'icon';
 }
 
-export const RuntimeBadge: React.FC<RuntimeBadgeProps> = ({
+export function RuntimeBadge({
   runtime,
   size = 'small',
   onClick,
   variant = 'chip',
-}) => {
+}: RuntimeBadgeProps) {
   const meta = getRuntimeMeta(runtime);
 
   if (variant === 'icon') {
@@ -115,4 +115,4 @@ export const RuntimeBadge: React.FC<RuntimeBadgeProps> = ({
       clickable={Boolean(onClick)}
     />
   );
-};
+}

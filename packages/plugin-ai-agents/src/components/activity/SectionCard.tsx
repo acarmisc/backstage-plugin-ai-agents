@@ -13,51 +13,56 @@ export interface SectionCardProps {
 }
 
 /** Shared surface for every block of the workspace: header + 1px border + 8px radius. */
-export const SectionCard: React.FC<SectionCardProps> = ({
+export function SectionCard({
   title,
   subtitle,
   action,
   flush,
   children,
   ...rest
-}) => (
-  <Box
-    component="section"
-    data-testid={rest['data-testid']}
-    sx={{
-      border: 1,
-      borderColor: 'divider',
-      borderRadius: 2,
-      backgroundColor: 'background.paper',
-      minWidth: 0,
-      overflow: 'hidden',
-    }}
-  >
+}: SectionCardProps) {
+  return (
     <Box
+      component="section"
+      data-testid={rest['data-testid']}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 2,
-        px: 2,
-        py: 1.25,
-        borderBottom: 1,
+        border: 1,
         borderColor: 'divider',
-        minHeight: 48,
+        borderRadius: 2,
+        backgroundColor: 'background.paper',
+        minWidth: 0,
+        overflow: 'hidden',
       }}
     >
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-          {title}
-        </Typography>
-        {subtitle && (
-          <Typography variant="caption" color="text.secondary">
-            {subtitle}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          px: 2,
+          py: 1.25,
+          borderBottom: 1,
+          borderColor: 'divider',
+          minHeight: 48,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{ fontWeight: 600, lineHeight: 1.3 }}
+          >
+            {title}
           </Typography>
-        )}
+          {subtitle && (
+            <Typography variant="caption" color="text.secondary">
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
+        {action}
       </Box>
-      {action}
+      <Box sx={flush ? undefined : { p: 2 }}>{children}</Box>
     </Box>
-    <Box sx={flush ? undefined : { p: 2 }}>{children}</Box>
-  </Box>
-);
+  );
+}

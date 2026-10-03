@@ -5,11 +5,13 @@ import Rating from '@mui/material/Rating';
 import Typography from '@mui/material/Typography';
 import StarIcon from '@mui/icons-material/Star';
 
+/** @public */
 export type StarVariant = 'simple' | 'fancy';
 
 const LABELS = ['Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
-interface StarRatingProps {
+/** @public */
+export interface StarRatingProps {
   value: number;
   /** Controlled change handler; omit for read-only display. */
   onChange?: (value: number) => void;
@@ -21,12 +23,14 @@ interface StarRatingProps {
  * - `simple`: compact read-mostly stars (cards, rows).
  * - `fancy`: interactive large stars with hover animation and labels
  *   (review forms).
+ *
+ * @public
  */
-export const StarRating: React.FC<StarRatingProps> = ({
+export function StarRating({
   value,
   onChange,
   variant = 'simple',
-}) => {
+}: StarRatingProps) {
   if (variant === 'simple') {
     return (
       <Rating
@@ -75,4 +79,4 @@ export const StarRating: React.FC<StarRatingProps> = ({
       </Fade>
     </Box>
   );
-};
+}

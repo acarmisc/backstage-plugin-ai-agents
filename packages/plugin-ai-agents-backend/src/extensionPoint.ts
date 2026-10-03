@@ -1,6 +1,7 @@
 import { createExtensionPoint } from '@backstage/backend-plugin-api';
 import { AgentInvoker, TelemetryProvider } from './types';
 
+/** @public */
 export interface AiAgentsExtensionPoint {
   /**
    * Register the invocation transport for a given runtime, matched against
@@ -17,6 +18,8 @@ export interface AiAgentsExtensionPoint {
   registerTelemetryProvider(provider: TelemetryProvider): void;
 }
 
-export const aiAgentsExtensionPoint = createExtensionPoint<AiAgentsExtensionPoint>({
-  id: 'ai-agents.invoker',
-});
+/** @public */
+export const aiAgentsExtensionPoint =
+  createExtensionPoint<AiAgentsExtensionPoint>({
+    id: 'ai-agents.invoker',
+  });

@@ -21,8 +21,10 @@ const ALL = '__all__';
  * fleet overview) in the body. Selection lives in the URL so views can be
  * shared and the back button works: `agent` (telemetry id), `run`, `hours`.
  * Below the `md` breakpoint the rail becomes a select.
+ *
+ * @public
  */
-export const ActivityWorkspace: React.FC = () => {
+export function ActivityWorkspace() {
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down('md'));
   const [params, setParams] = useSearchParams();
@@ -34,7 +36,8 @@ export const ActivityWorkspace: React.FC = () => {
   const hours = HOURS.includes(requestedHours) ? requestedHours : 24;
 
   const selected = useMemo(
-    () => (agentParam ? fleet?.find(a => a.telemetryId === agentParam) : undefined),
+    () =>
+      agentParam ? fleet?.find(a => a.telemetryId === agentParam) : undefined,
     [fleet, agentParam],
   );
 
@@ -59,11 +62,19 @@ export const ActivityWorkspace: React.FC = () => {
       next.set('agent', telemetryId);
       next.set('run', runId);
     });
-  const changeHours = (h: number) => update(next => next.set('hours', String(h)));
+  const changeHours = (h: number) =>
+    update(next => next.set('hours', String(h)));
 
   if (!fleet && loading) {
     return (
-      <Box sx={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '300px 1fr', gap: 3 }} aria-busy="true">
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: compact ? '1fr' : '300px 1fr',
+          gap: 3,
+        }}
+        aria-busy="true"
+      >
         {!compact && <Skeleton variant="rounded" height={420} />}
         <Box sx={{ display: 'grid', gap: 2 }}>
           <Skeleton variant="rounded" height={96} />
@@ -78,7 +89,11 @@ export const ActivityWorkspace: React.FC = () => {
     return (
       <Alert
         severity="error"
-        action={<Button color="inherit" size="small" onClick={refresh}>Retry</Button>}
+        action={
+          <Button color="inherit" size="small" onClick={refresh}>
+            Retry
+          </Button>
+        }
       >
         Failed to load fleet activity{error ? `: ${error.message}` : ''}
       </Alert>
@@ -103,20 +118,25 @@ export const ActivityWorkspace: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {error && (
-        <Alert severity="warning">Showing last known data — the latest refresh failed</Alert>
+        <Alert severity="warning">
+          Showing last known data — the latest refresh failed
+        </Alert>
       )}
       {fleet.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
           <Box sx={{ typography: 'h6', mb: 1 }}>No fleet activity</Box>
           <Box sx={{ typography: 'body2', color: 'text.secondary' }}>
-            Agents need the ai-agent.io/telemetry-id annotation and a telemetry module to show activity.
+            Agents need the ai-agent.io/telemetry-id annotation and a telemetry
+            module to show activity.
           </Box>
         </Box>
       ) : (
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: compact ? 'minmax(0, 1fr)' : '300px minmax(0, 1fr)',
+            gridTemplateColumns: compact
+              ? 'minmax(0, 1fr)'
+              : '300px minmax(0, 1fr)',
             gap: compact ? 2 : 3,
             alignItems: 'start',
           }}
@@ -126,12 +146,20 @@ export const ActivityWorkspace: React.FC = () => {
               size="small"
               fullWidth
               value={selected?.telemetryId ?? ALL}
-              onChange={e => selectAgent(e.target.value === ALL ? undefined : String(e.target.value))}
+              onChange={e =>
+                selectAgent(
+                  e.target.value === ALL ? undefined : String(e.target.value),
+                )
+              }
               inputProps={{ 'aria-label': 'Agent' }}
             >
               <MenuItem value={ALL}>All agents</MenuItem>
               {[...fleet]
-                .sort((a, b) => (a.title ?? a.telemetryId).localeCompare(b.title ?? b.telemetryId))
+                .sort((a, b) =>
+                  (a.title ?? a.telemetryId).localeCompare(
+                    b.title ?? b.telemetryId,
+                  ),
+                )
                 .map(a => (
                   <MenuItem key={a.telemetryId} value={a.telemetryId}>
                     {a.title ?? a.telemetryId}
@@ -151,7 +179,11 @@ export const ActivityWorkspace: React.FC = () => {
                 overflow: 'hidden',
               }}
             >
-              <AgentRail fleet={fleet} selectedTelemetryId={selected?.telemetryId} onSelectAgent={selectAgent} />
+              <AgentRail
+                fleet={fleet}
+                selectedTelemetryId={selected?.telemetryId}
+                onSelectAgent={selectAgent}
+              />
             </Box>
           )}
           <Box sx={{ minWidth: 0 }}>{body}</Box>
@@ -159,4 +191,4 @@ export const ActivityWorkspace: React.FC = () => {
       )}
     </Box>
   );
-};
+}

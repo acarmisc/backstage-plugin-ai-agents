@@ -19,6 +19,7 @@ import PublishIcon from '@mui/icons-material/Publish';
 import type { InvocationResult } from '../api';
 import type { AiAgent, HireField } from '../types';
 
+/** @public */
 export interface HireAgentDialogProps {
   agent: AiAgent | null;
   open: boolean;
@@ -96,14 +97,21 @@ function makeSessionId(): string {
   return raw.padEnd(33, '0').slice(0, 80);
 }
 
-const PreviewBlock: React.FC<{
+function PreviewBlock({
+  title,
+  language,
+  content,
+  onCopy,
+  missingChip,
+  collapsible,
+}: {
   title: string;
   language: string;
   content: string;
   onCopy: () => void;
   missingChip?: React.ReactNode;
   collapsible?: boolean;
-}> = ({ title, language, content, onCopy, missingChip, collapsible }) => {
+}) {
   const [openPreview, setOpenPreview] = useState(!collapsible);
   return (
     <Box>
@@ -112,7 +120,11 @@ const PreviewBlock: React.FC<{
           {title}
         </Typography>
         {collapsible && (
-          <Button size="small" onClick={() => setOpenPreview(o => !o)} sx={{ ml: 1, minWidth: 0 }}>
+          <Button
+            size="small"
+            onClick={() => setOpenPreview(o => !o)}
+            sx={{ ml: 1, minWidth: 0 }}
+          >
             {openPreview ? 'hide' : 'show'}
           </Button>
         )}
@@ -155,14 +167,15 @@ const PreviewBlock: React.FC<{
       )}
     </Box>
   );
-};
+}
 
-export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
+/** @public */
+export function HireAgentDialog({
   agent,
   open,
   onClose,
   onInvoke,
-}) => {
+}: HireAgentDialogProps) {
   const fields = useMemo(() => agent?.hireSchema ?? [], [agent]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -217,7 +230,10 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
     [agent, payload, sessionId],
   );
 
-  const payloadJson = useMemo(() => JSON.stringify(payload, null, 2), [payload]);
+  const payloadJson = useMemo(
+    () => JSON.stringify(payload, null, 2),
+    [payload],
+  );
 
   const copy = (text: string) => {
     navigator.clipboard?.writeText(text).catch(() => {});
@@ -249,14 +265,18 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
       if (requestTokenRef.current === token) {
         if (res.threadId) setThreadId(res.threadId);
         setTurns(prev =>
-          prev.map(t => (t.id === id ? { ...t, result: res, post: res.post ?? t.post } : t)),
+          prev.map(t =>
+            t.id === id ? { ...t, result: res, post: res.post ?? t.post } : t,
+          ),
         );
       }
     } catch (err: any) {
       const message = err?.message ?? 'invocation failed';
       if (requestTokenRef.current === token) {
         setError(message);
-        setTurns(prev => prev.map(t => (t.id === id ? { ...t, error: message } : t)));
+        setTurns(prev =>
+          prev.map(t => (t.id === id ? { ...t, error: message } : t)),
+        );
       }
     } finally {
       if (requestTokenRef.current === token) setRunning(false);
@@ -307,7 +327,8 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                     required: f.required,
                     error: fieldError,
                     helperText:
-                      f.help ?? (fieldError ? 'This field is required' : undefined),
+                      f.help ??
+                      (fieldError ? 'This field is required' : undefined),
                     value,
                     size: 'small' as const,
                     fullWidth: true,
@@ -355,7 +376,11 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                   );
                 })}
               </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mt: 1 }}
+              >
                 Runs in dry-run by default — the agent reports back without
                 posting anything. You confirm afterwards.
               </Typography>
@@ -383,18 +408,21 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                 </Box>
                 {t.result && (
                   <Box sx={{ mt: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}
+                    >
                       <Typography variant="caption" color="text.secondary">
                         {agent.title ?? agent.name}
                         {t.post ? ' · published' : ' · dry-run'}
                       </Typography>
-                      {t.result.latencyMs !== undefined && t.result.latencyMs !== null && (
-                        <Chip
-                          size="small"
-                          label={`${(t.result.latencyMs / 1000).toFixed(1)}s`}
-                          sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-                        />
-                      )}
+                      {t.result.latencyMs !== undefined &&
+                        t.result.latencyMs !== null && (
+                          <Chip
+                            size="small"
+                            label={`${(t.result.latencyMs / 1000).toFixed(1)}s`}
+                            sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
+                          />
+                        )}
                       <IconButton
                         size="small"
                         onClick={() => copy(t.result!.responseText)}
@@ -413,12 +441,23 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                   </Box>
                 )}
                 {t.error && (
-                  <Typography variant="body2" color="error" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                  <Typography
+                    variant="body2"
+                    color="error"
+                    sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}
+                  >
                     {t.error}
                   </Typography>
                 )}
                 {running && turns[turns.length - 1]?.id === t.id && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mt: 1,
+                    }}
+                  >
                     <CircularProgress size={16} />
                     <Typography variant="caption" color="text.secondary">
                       Running — reviews can take a few minutes…
@@ -430,14 +469,25 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
           </Stack>
 
           {error && !turns.length && (
-            <Typography variant="body2" color="error" sx={{ whiteSpace: 'pre-wrap' }}>
+            <Typography
+              variant="body2"
+              color="error"
+              sx={{ whiteSpace: 'pre-wrap' }}
+            >
               {error}
             </Typography>
           )}
 
           {/* Confirm and publish — second, explicit step after a dry run. */}
           {canPublish && (
-            <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'warning.main', borderRadius: 1 }}>
+            <Box
+              sx={{
+                p: 1.5,
+                border: '1px solid',
+                borderColor: 'warning.main',
+                borderRadius: 1,
+              }}
+            >
               <Typography variant="body2" sx={{ mb: 1 }}>
                 The result above is a dry-run and has not been posted. Publish
                 it to write the feedback to the target system.
@@ -445,7 +495,13 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
               <Button
                 variant="contained"
                 color="warning"
-                startIcon={publishing ? <CircularProgress size={16} color="inherit" /> : <PublishIcon />}
+                startIcon={
+                  publishing ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <PublishIcon />
+                  )
+                }
                 disabled={busy}
                 onClick={confirmAndPublish}
               >
@@ -474,7 +530,9 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
           {!turns.length && (
             <Box>
               <Button size="small" onClick={() => setShowPreview(s => !s)}>
-                {showPreview ? 'Hide invocation preview' : 'Show invocation preview'}
+                {showPreview
+                  ? 'Hide invocation preview'
+                  : 'Show invocation preview'}
               </Button>
               {showPreview && (
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
@@ -497,7 +555,8 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                       content={cliCommand}
                       onCopy={() => copy(cliCommand)}
                       missingChip={
-                        !agent.runtime.region || !agent.runtime.runtimeHandle ? (
+                        !agent.runtime.region ||
+                        !agent.runtime.runtimeHandle ? (
                           <Chip
                             size="small"
                             color="warning"
@@ -529,7 +588,10 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
         {onInvoke && (
           <>
             {!turns.length && isAgentCoreRuntime && (
-              <Button onClick={() => copy(cliCommand)} startIcon={<ContentCopyIcon />}>
+              <Button
+                onClick={() => copy(cliCommand)}
+                startIcon={<ContentCopyIcon />}
+              >
                 Copy CLI
               </Button>
             )}
@@ -539,7 +601,11 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                 disabled={missing || busy}
                 onClick={() => run()}
                 startIcon={
-                  running ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />
+                  running ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <PlayArrowIcon />
+                  )
                 }
               >
                 Run agent
@@ -551,7 +617,11 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
                 disabled={busy || !followUp.trim()}
                 onClick={sendFollowUp}
                 startIcon={
-                  running ? <CircularProgress size={16} color="inherit" /> : <SendIcon />
+                  running ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SendIcon />
+                  )
                 }
               >
                 Send
@@ -562,4 +632,4 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
       </DialogActions>
     </Dialog>
   );
-};
+}

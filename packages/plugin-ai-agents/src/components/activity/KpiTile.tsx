@@ -13,7 +13,7 @@ interface SparklineProps {
   data: number[];
 }
 
-const Sparkline: React.FC<SparklineProps> = ({ data }) => {
+function Sparkline({ data }: SparklineProps) {
   const theme = useTheme();
 
   if (data.length === 0) return null;
@@ -54,7 +54,7 @@ const Sparkline: React.FC<SparklineProps> = ({ data }) => {
       />
     </svg>
   );
-};
+}
 
 export interface KpiTileProps {
   label: string;
@@ -70,14 +70,14 @@ export interface KpiTileProps {
  * Features a 3px left accent in the specified tone color.
  * Value uses tabular-nums for alignment.
  */
-export const KpiTile: React.FC<KpiTileProps> = ({
+export function KpiTile({
   label,
   value,
   hint,
   tone = 'default',
   trend,
   loading = false,
-}) => {
+}: KpiTileProps) {
   const theme = useTheme();
 
   // Map tone to theme palette colors
@@ -157,9 +157,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
         )}
 
         {/* Trend Sparkline */}
-        {trend && trend.length > 0 && !loading && (
-          <Sparkline data={trend} />
-        )}
+        {trend && trend.length > 0 && !loading && <Sparkline data={trend} />}
       </Box>
 
       {/* Hint */}
@@ -176,4 +174,4 @@ export const KpiTile: React.FC<KpiTileProps> = ({
       )}
     </Box>
   );
-};
+}

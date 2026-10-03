@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: backstage-plugin-ai-agents-backend-module-kagent
+  title: AI Agents kagent module
+  description: Runs agents hosted on kagent.
+  annotations:
+    github.com/project-slug: acarmisc/backstage-plugin-ai-agents
+  tags:
+    - backstage-plugin
+    - ai
+  links:
+    - url: https://www.npmjs.com/package/@acarmisc/backstage-plugin-ai-agents-backend-module-kagent
+      title: npm
+spec:
+  type: backstage-backend-plugin-module
+  lifecycle: experimental
+  owner: user:acarmisc
+  system: backstage-plugin-ai-agents

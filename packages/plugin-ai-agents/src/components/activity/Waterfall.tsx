@@ -32,13 +32,13 @@ interface WaterfallRowProps {
   theme: Theme;
 }
 
-const WaterfallRow: React.FC<WaterfallRowProps> = ({
+function WaterfallRow({
   isMarker,
   label,
   pct,
   incomplete,
   theme,
-}) => {
+}: WaterfallRowProps) {
   return (
     <Box
       sx={{
@@ -98,7 +98,7 @@ const WaterfallRow: React.FC<WaterfallRowProps> = ({
       </Box>
     </Box>
   );
-};
+}
 
 interface WaterfallToolRowProps {
   event: RunEvent;
@@ -108,13 +108,13 @@ interface WaterfallToolRowProps {
   theme: Theme;
 }
 
-const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
+function WaterfallToolRow({
   event,
   timeline,
   isSelected,
   onSelect,
   theme,
-}) => {
+}: WaterfallToolRowProps) {
   const handleClick = useCallback(() => {
     onSelect?.(event.seq);
   }, [event.seq, onSelect]);
@@ -145,7 +145,10 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
     eventEndMs !== undefined &&
     timeline.endMs > timeline.startMs
   ) {
-    barLeft = ((eventStartMs - timeline.startMs) / (timeline.endMs - timeline.startMs)) * 100;
+    barLeft =
+      ((eventStartMs - timeline.startMs) /
+        (timeline.endMs - timeline.startMs)) *
+      100;
     barWidth = Math.max(
       0.5,
       ((eventEndMs - eventStartMs) / (timeline.endMs - timeline.startMs)) * 100,
@@ -197,7 +200,9 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
           textAlign: 'left',
-          color: isFailed ? theme.palette.error.main : theme.palette.text.primary,
+          color: isFailed
+            ? theme.palette.error.main
+            : theme.palette.text.primary,
         }}
         title={toolName}
       >
@@ -214,11 +219,15 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
             top: '50%',
             height: '14px',
             transform: 'translateY(-50%)',
-            backgroundColor: isFailed ? theme.palette.error.main : theme.palette.primary.main,
+            backgroundColor: isFailed
+              ? theme.palette.error.main
+              : theme.palette.primary.main,
             borderRadius: '7px',
             minWidth: '5px',
             opacity: isSelected ? 1 : 0.8,
-            boxShadow: isSelected ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.35)}` : 'none',
+            boxShadow: isSelected
+              ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.35)}`
+              : 'none',
           }}
         />
         {/* Duration, placed beside the bar (left of it when the bar is near the right edge) */}
@@ -231,7 +240,9 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
             whiteSpace: 'nowrap',
             fontSize: '11px',
             fontVariantNumeric: 'tabular-nums',
-            color: isFailed ? theme.palette.error.main : theme.palette.text.secondary,
+            color: isFailed
+              ? theme.palette.error.main
+              : theme.palette.text.secondary,
             ...(barLeft + barWidth < 85
               ? { left: `calc(${barLeft + barWidth}% + 8px)` }
               : { right: `calc(${100 - barLeft}% + 8px)` }),
@@ -243,7 +254,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
       </Box>
     </Box>
   );
-};
+}
 
 // ============================================================================
 // Main export component
@@ -254,11 +265,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
  * Shows overlapping tool calls as independent lanes to visualize parallelism.
  * Supports selection and displays run markers (start, completed).
  */
-export const Waterfall: React.FC<WaterfallProps> = ({
-  events,
-  selectedSeq,
-  onSelect,
-}) => {
+export function Waterfall({ events, selectedSeq, onSelect }: WaterfallProps) {
   const theme = useTheme();
 
   // Compute timeline metrics
@@ -273,12 +280,19 @@ export const Waterfall: React.FC<WaterfallProps> = ({
 
     // Separate tool events from start/completed
     const toolEvents = events.filter(
-      e => e.event !== 'start' && e.event !== 'completed' && e.durationMs !== undefined,
+      e =>
+        e.event !== 'start' &&
+        e.event !== 'completed' &&
+        e.durationMs !== undefined,
     );
 
     // Compute run bounds
-    const startTs = startEvent?.ts ? new Date(startEvent.ts).getTime() : undefined;
-    const completedTs = completedEvent?.ts ? new Date(completedEvent.ts).getTime() : undefined;
+    const startTs = startEvent?.ts
+      ? new Date(startEvent.ts).getTime()
+      : undefined;
+    const completedTs = completedEvent?.ts
+      ? new Date(completedEvent.ts).getTime()
+      : undefined;
 
     let runStartMs: number;
     let runEndMs: number;
@@ -317,7 +331,9 @@ export const Waterfall: React.FC<WaterfallProps> = ({
       .map(e => {
         const ts = e.ts ? new Date(e.ts).getTime() : undefined;
         const start =
-          ts !== undefined && e.durationMs !== undefined ? ts - e.durationMs : undefined;
+          ts !== undefined && e.durationMs !== undefined
+            ? ts - e.durationMs
+            : undefined;
         return { event: e, start };
       })
       .sort((a, b) => {
@@ -379,12 +395,7 @@ export const Waterfall: React.FC<WaterfallProps> = ({
       {/* Waterfall rows */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {/* Start marker */}
-        <WaterfallRow
-          isMarker
-          label="start"
-          pct={0}
-          theme={theme}
-        />
+        <WaterfallRow isMarker label="start" pct={0} theme={theme} />
 
         {/* Tool events */}
         {timeline.toolEvents.map(event => (
@@ -403,7 +414,9 @@ export const Waterfall: React.FC<WaterfallProps> = ({
           const completedEvent = events.find(e => e.event === 'completed');
           if (!completedEvent?.ts) return null;
           const completedMs = new Date(completedEvent.ts).getTime();
-          const pct = (completedMs - timeline.startMs) / (timeline.endMs - timeline.startMs);
+          const pct =
+            (completedMs - timeline.startMs) /
+            (timeline.endMs - timeline.startMs);
           return (
             <WaterfallRow
               isMarker
@@ -417,4 +430,4 @@ export const Waterfall: React.FC<WaterfallProps> = ({
       </Box>
     </Box>
   );
-};
+}

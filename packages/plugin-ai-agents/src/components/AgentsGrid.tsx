@@ -10,12 +10,12 @@ export interface AgentsGridProps {
   onHire?: (agent: AiAgent) => void;
 }
 
-export const AgentsGrid: React.FC<AgentsGridProps> = ({
+export function AgentsGrid({
   agents,
   onAgentClick,
   onRuntimeClick,
   onHire,
-}) => {
+}: AgentsGridProps) {
   return (
     <Box
       sx={{
@@ -35,4 +35,4 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
       ))}
     </Box>
   );
-};
+}

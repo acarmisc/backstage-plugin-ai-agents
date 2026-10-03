@@ -25,11 +25,11 @@ export interface AgentCapabilitiesProps {
   size?: 'small' | 'medium';
 }
 
-export const AgentCapabilities: React.FC<AgentCapabilitiesProps> = ({
+export function AgentCapabilities({
   capabilities,
   max = MAX_VISIBLE,
   size = 'small',
-}) => {
+}: AgentCapabilitiesProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   if (!capabilities.length) return null;
@@ -64,7 +64,15 @@ export const AgentCapabilities: React.FC<AgentCapabilitiesProps> = ({
             onClose={() => setAnchor(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           >
-            <Box sx={{ p: 1, maxWidth: 280, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            <Box
+              sx={{
+                p: 1,
+                maxWidth: 280,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 0.5,
+              }}
+            >
               {capabilities.map((c, i) => (
                 <Chip
                   key={`${c.label}-${i}`}
@@ -80,4 +88,4 @@ export const AgentCapabilities: React.FC<AgentCapabilitiesProps> = ({
       )}
     </Box>
   );
-};
+}

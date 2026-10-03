@@ -46,40 +46,52 @@ export interface AgentDetailDrawerProps {
   historyReloadKey?: number;
 }
 
-const Row: React.FC<{ label: string; children: React.ReactNode }> = ({
+function Row({
   label,
   children,
-}) => (
-  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 110, flexShrink: 0 }}>
-      {label}
-    </Typography>
-    <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-);
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ minWidth: 110, flexShrink: 0 }}
+      >
+        {label}
+      </Typography>
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
+    </Box>
+  );
+}
 
-const SafeLink: React.FC<{ text: string }> = ({ text }) => {
+function SafeLink({ text }: { text: string }) {
   const [kind, rest] = text.split(':');
   const [ns, name] = (rest ?? 'default/').split('/');
   return (
     <Link href={`/catalog/${ns ?? 'default'}/${kind}/${name}`}>
-      Open in catalog <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
+      Open in catalog{' '}
+      <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
     </Link>
   );
-};
+}
 
-export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
+export function AgentDetailDrawer({
   agent,
   open,
   onClose,
   onRefreshStatus,
   onHire,
   historyReloadKey = 0,
-}) => {
+}: AgentDetailDrawerProps) {
   const navigate = useNavigate();
   const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({});
 
   if (!agent) return null;
   const title = agent.title ?? agent.name;
@@ -91,7 +103,9 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
   const handleActivityClick = () => {
     const telemetryId = agent.runtime.telemetryId;
     if (telemetryId) {
-      navigate(`/ai-agents?tab=activity&agent=${encodeURIComponent(telemetryId)}`);
+      navigate(
+        `/ai-agents?tab=activity&agent=${encodeURIComponent(telemetryId)}`,
+      );
       onClose();
     }
   };
@@ -103,8 +117,10 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
     }));
   };
 
-  const descriptionText = agent.purpose || agent.description || 'No description provided.';
-  const isDescriptionLong = descriptionText.split('\n').length > 3 || descriptionText.length > 150;
+  const descriptionText =
+    agent.purpose || agent.description || 'No description provided.';
+  const isDescriptionLong =
+    descriptionText.split('\n').length > 3 || descriptionText.length > 150;
 
   const safeLinks = agent.links.filter(l => isSafeUrl(l.url));
 
@@ -113,11 +129,22 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 480 }, overflowX: 'hidden' } }}
+      PaperProps={{
+        sx: { width: { xs: '100%', sm: 480 }, overflowX: 'hidden' },
+      }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Compact header (always visible) */}
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'flex-start', gap: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            p: 2,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 1.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={56} />
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography variant="h6">{title}</Typography>
@@ -140,9 +167,7 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
               {agent.runtime && (
                 <RuntimeBadge runtime={agent.runtime.runtime} />
               )}
-              {agent.billing && (
-                <BillingBadge billing={agent.billing} />
-              )}
+              {agent.billing && <BillingBadge billing={agent.billing} />}
             </Box>
           </Box>
           <IconButton size="small" onClick={onClose} aria-label="Close">
@@ -152,7 +177,9 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
 
         {/* Refresh button (always visible) */}
         {onRefreshStatus && (
-          <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box
+            sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'flex-end' }}
+          >
             <IconButton
               size="small"
               title="Refresh status"
@@ -237,19 +264,29 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
                 <Row label="Runtime">
                   <Stack direction="row" spacing={1} alignItems="center">
                     <RuntimeBadge runtime={agent.runtime.runtime} />
-                    {agent.runtime.endpoint && isSafeUrl(agent.runtime.endpoint) && (
-                      <Link
-                        href={agent.runtime.endpoint}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
-                      >
-                        endpoint <OpenInNewIcon sx={{ fontSize: 12 }} />
-                      </Link>
-                    )}
+                    {agent.runtime.endpoint &&
+                      isSafeUrl(agent.runtime.endpoint) && (
+                        <Link
+                          href={agent.runtime.endpoint}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                          }}
+                        >
+                          endpoint <OpenInNewIcon sx={{ fontSize: 12 }} />
+                        </Link>
+                      )}
                   </Stack>
                   {agent.runtime.runtimeHandle && (
-                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5, wordBreak: 'break-all' }}>
+                    <Typography
+                      variant="caption"
+                      display="block"
+                      color="text.secondary"
+                      sx={{ mt: 0.5, wordBreak: 'break-all' }}
+                    >
                       {agent.runtime.runtimeHandle}
                     </Typography>
                   )}
@@ -284,7 +321,11 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
             >
               <Typography variant="subtitle2">Capabilities</Typography>
               {agent.capabilities.length > 0 && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 'auto' }}
+                >
                   {agent.capabilities.length}
                 </Typography>
               )}
@@ -316,7 +357,11 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
                 id="links-header"
               >
                 <Typography variant="subtitle2">Links</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 'auto' }}
+                >
                   {safeLinks.length}
                 </Typography>
               </AccordionSummary>
@@ -329,7 +374,11 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
                       href={l.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      sx={{ color: 'text.primary', borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}
+                      sx={{
+                        color: 'text.primary',
+                        borderRadius: 1,
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
                     >
                       <ListItemIcon sx={{ minWidth: 28 }}>
                         {getLinkIcon(l.icon)}
@@ -337,7 +386,10 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
                       <ListItemText
                         primary={l.title}
                         secondary={l.url}
-                        secondaryTypographyProps={{ sx: { fontSize: '0.7rem' } as const, noWrap: true }}
+                        secondaryTypographyProps={{
+                          sx: { fontSize: '0.7rem' } as const,
+                          noWrap: true,
+                        }}
                       />
                     </ListItem>
                   ))}
@@ -362,7 +414,11 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
                 id="tags-header"
               >
                 <Typography variant="subtitle2">Tags</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 'auto' }}
+                >
                   {agent.tags.length}
                 </Typography>
               </AccordionSummary>
@@ -449,4 +505,4 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
       </Box>
     </Drawer>
   );
-};
+}
