@@ -14,18 +14,18 @@ name: Publish to npm
 on:
   push:
     tags:
-      - "ai-agents@*"
-      - "ai-agents-backend@*"
-      - "ai-agents-backend-module-agentcore@*"
-      - "ai-agents-backend-module-kagent@*"
-      - "ai-agents-backend-module-langfuse@*"
+      - 'ai-agents@*'
+      - 'ai-agents-backend@*'
+      - 'ai-agents-backend-module-agentcore@*'
+      - 'ai-agents-backend-module-kagent@*'
+      - 'ai-agents-backend-module-langfuse@*'
   # Manual fallback when a tag can't be pushed: run the workflow on the commit
   # to release, passing the tag name (e.g. ai-agents@0.14.1). The GitHub
   # Release step then creates that tag on this commit.
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish, e.g. ai-agents@0.14.1"
+        description: 'Release tag to publish, e.g. ai-agents@0.14.1'
         required: true
         type: string
 
@@ -43,8 +43,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Resolve package from tag
         id: pkg

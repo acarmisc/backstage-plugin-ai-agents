@@ -21,7 +21,10 @@ export const aiAgentsModuleAgentcore = createBackendModule({
         invokers: aiAgentsExtensionPoint,
       },
       async init({ config, invokers }) {
-        invokers.registerInvoker('bedrock-agentcore', new AgentCoreInvoker(config));
+        invokers.registerInvoker(
+          'bedrock-agentcore',
+          new AgentCoreInvoker(config),
+        );
       },
     });
   },

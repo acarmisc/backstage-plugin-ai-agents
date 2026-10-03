@@ -3,8 +3,14 @@ import Box from '@mui/material/Box';
 import { isSafeUrl } from '../types';
 
 const PALETTE = [
-  '#1976d2', '#388e3c', '#f57c00', '#7b1fa2',
-  '#c62828', '#0097a7', '#5d4037', '#455a64',
+  '#1976d2',
+  '#388e3c',
+  '#f57c00',
+  '#7b1fa2',
+  '#c62828',
+  '#0097a7',
+  '#5d4037',
+  '#455a64',
 ];
 
 /**
@@ -32,7 +38,8 @@ function initialsOf(name: string): string {
 
 function colorFor(name: string): string {
   let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  for (let i = 0; i < name.length; i++)
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
   return PALETTE[Math.abs(hash) % PALETTE.length];
 }
 

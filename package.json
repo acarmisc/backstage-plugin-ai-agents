@@ -2,7 +2,7 @@
   "name": "@acarmisc/backstage-plugin-ai-agents-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "AI Agents management plugin for Backstage — agents as catalog Components with a dedicated card view.",
+  "description": "AI Agents management plugin for Backstage \u2014 agents as catalog Components with a dedicated card view.",
   "workspaces": [
     "packages/*"
   ],
@@ -14,10 +14,14 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prettier:check": "prettier --check .",
+    "prettier:fix": "prettier --write ."
   },
   "devDependencies": {
     "husky": "^9.1.7",
-    "typescript": "^5.9.3"
-  }
+    "typescript": "^5.9.3",
+    "prettier": "^3.9.9"
+  },
+  "prettier": "@backstage/cli/config/prettier"
 }

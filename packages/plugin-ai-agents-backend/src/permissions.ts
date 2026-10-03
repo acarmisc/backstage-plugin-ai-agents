@@ -12,4 +12,7 @@ export const aiAgentHistoryReadPermission = createPermission({
   attributes: { action: 'read' },
 });
 
-export const aiAgentsPermissions = [aiAgentInvokePermission, aiAgentHistoryReadPermission];
+export const aiAgentsPermissions = [
+  aiAgentInvokePermission,
+  aiAgentHistoryReadPermission,
+];

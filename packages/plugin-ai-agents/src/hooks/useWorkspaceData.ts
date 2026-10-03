@@ -18,17 +18,19 @@ export function useAgentRuns(
 } {
   const api = useApi(aiAgentsApiRef);
 
-  const { data: runs, error, loading, refresh } = usePolling(
-    () => api.getRuns(entityRef, limit),
-    {
-      intervalMs: (data) => {
-        // Poll more frequently if any run is running
-        const hasRunning = data?.some(r => r.state === 'running') ?? false;
-        return hasRunning ? 3000 : 10000;
-      },
-      deps: [entityRef, limit],
+  const {
+    data: runs,
+    error,
+    loading,
+    refresh,
+  } = usePolling(() => api.getRuns(entityRef, limit), {
+    intervalMs: data => {
+      // Poll more frequently if any run is running
+      const hasRunning = data?.some(r => r.state === 'running') ?? false;
+      return hasRunning ? 3000 : 10000;
     },
-  );
+    deps: [entityRef, limit],
+  });
 
   return { data: runs, error, loading, refresh };
 }
@@ -48,13 +50,15 @@ export function useAgentInsights(
 } {
   const api = useApi(aiAgentsApiRef);
 
-  const { data: insights, error, loading, refresh } = usePolling(
-    () => api.getInsights(entityRef, hours),
-    {
-      intervalMs: 30000,
-      deps: [entityRef, hours],
-    },
-  );
+  const {
+    data: insights,
+    error,
+    loading,
+    refresh,
+  } = usePolling(() => api.getInsights(entityRef, hours), {
+    intervalMs: 30000,
+    deps: [entityRef, hours],
+  });
 
   return { data: insights, error, loading, refresh };
 }
@@ -76,7 +80,12 @@ export function useRunTimeline(
 } {
   const api = useApi(aiAgentsApiRef);
 
-  const { data: events, error, loading, refresh } = usePolling(
+  const {
+    data: events,
+    error,
+    loading,
+    refresh,
+  } = usePolling(
     () => {
       if (!runId) return Promise.resolve(null);
       return api.getRunTimeline(entityRef, runId);

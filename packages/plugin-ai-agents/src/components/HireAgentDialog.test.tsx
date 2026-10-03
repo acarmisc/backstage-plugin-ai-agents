@@ -27,9 +27,20 @@ const mk = (over: Partial<AiAgent>): AiAgent =>
 // container, so assertions query `baseElement` rather than `container`.
 
 test('HireAgentDialog shows the AWS CLI preview for bedrock-agentcore agents', () => {
-  const agent = mk({ runtime: { runtime: 'bedrock-agentcore', region: 'eu-west-1', runtimeHandle: 'h' } });
+  const agent = mk({
+    runtime: {
+      runtime: 'bedrock-agentcore',
+      region: 'eu-west-1',
+      runtimeHandle: 'h',
+    },
+  });
   const { baseElement, getByText } = render(
-    <HireAgentDialog agent={agent} open onClose={() => {}} onInvoke={async () => ({ sessionId: 's', responseText: '' })} />,
+    <HireAgentDialog
+      agent={agent}
+      open
+      onClose={() => {}}
+      onInvoke={async () => ({ sessionId: 's', responseText: '' })}
+    />,
   );
   // The preview is collapsed behind a toggle to keep the dialog focused.
   fireEvent.click(getByText('Show invocation preview'));
@@ -37,9 +48,20 @@ test('HireAgentDialog shows the AWS CLI preview for bedrock-agentcore agents', (
 });
 
 test('HireAgentDialog hides the AWS CLI preview for kagent agents', () => {
-  const agent = mk({ runtime: { runtime: 'kagent', runtimeHandle: 'commit-auditor', namespace: 'kagent' } as any });
+  const agent = mk({
+    runtime: {
+      runtime: 'kagent',
+      runtimeHandle: 'commit-auditor',
+      namespace: 'kagent',
+    } as any,
+  });
   const { baseElement, getByText } = render(
-    <HireAgentDialog agent={agent} open onClose={() => {}} onInvoke={async () => ({ sessionId: 's', responseText: '' })} />,
+    <HireAgentDialog
+      agent={agent}
+      open
+      onClose={() => {}}
+      onInvoke={async () => ({ sessionId: 's', responseText: '' })}
+    />,
   );
   fireEvent.click(getByText('Show invocation preview'));
   const text = baseElement.textContent ?? '';
@@ -50,11 +72,27 @@ test('HireAgentDialog hides the AWS CLI preview for kagent agents', () => {
 
 test('HireAgentDialog defaults to dry-run and does not offer publishing before a run', () => {
   const agent = mk({
-    runtime: { runtime: 'bedrock-agentcore', region: 'eu-west-1', runtimeHandle: 'h' },
-    hireSchema: [{ name: 'action', label: 'Action', type: 'select', options: ['dry-run', 'post'] }],
+    runtime: {
+      runtime: 'bedrock-agentcore',
+      region: 'eu-west-1',
+      runtimeHandle: 'h',
+    },
+    hireSchema: [
+      {
+        name: 'action',
+        label: 'Action',
+        type: 'select',
+        options: ['dry-run', 'post'],
+      },
+    ],
   });
   const { baseElement } = render(
-    <HireAgentDialog agent={agent} open onClose={() => {}} onInvoke={async () => ({ sessionId: 's', responseText: 'r' })} />,
+    <HireAgentDialog
+      agent={agent}
+      open
+      onClose={() => {}}
+      onInvoke={async () => ({ sessionId: 's', responseText: 'r' })}
+    />,
   );
   const text = baseElement.textContent ?? '';
   assert.match(text, /Runs in dry-run by default/);
@@ -63,23 +101,44 @@ test('HireAgentDialog defaults to dry-run and does not offer publishing before a
 
 test('HireAgentDialog dry-runs first, then publishes on confirmation', async () => {
   const agent = mk({
-    runtime: { runtime: 'bedrock-agentcore', region: 'eu-west-1', runtimeHandle: 'h' },
+    runtime: {
+      runtime: 'bedrock-agentcore',
+      region: 'eu-west-1',
+      runtimeHandle: 'h',
+    },
     promptTemplate: 'Review {repo}',
     hireSchema: [
       { name: 'repo', label: 'Repo', type: 'text', required: true },
-      { name: 'action', label: 'Action', type: 'select', options: ['dry-run', 'post'] },
+      {
+        name: 'action',
+        label: 'Action',
+        type: 'select',
+        options: ['dry-run', 'post'],
+      },
     ],
   });
   const calls: Array<{ post?: boolean; threadId?: string }> = [];
   const onInvoke = async (_values: Record<string, string>, opts?: any) => {
     calls.push({ post: opts?.post, threadId: opts?.threadId });
-    return { sessionId: 's'.repeat(33), threadId: 't1', post: opts?.post, responseText: 'report' };
+    return {
+      sessionId: 's'.repeat(33),
+      threadId: 't1',
+      post: opts?.post,
+      responseText: 'report',
+    };
   };
   const { getByText, getByLabelText, findByText } = render(
-    <HireAgentDialog agent={agent} open onClose={() => {}} onInvoke={onInvoke} />,
+    <HireAgentDialog
+      agent={agent}
+      open
+      onClose={() => {}}
+      onInvoke={onInvoke}
+    />,
   );
 
-  fireEvent.change(getByLabelText(/Repo/), { target: { value: 'innovation/x' } });
+  fireEvent.change(getByLabelText(/Repo/), {
+    target: { value: 'innovation/x' },
+  });
   fireEvent.click(getByText('Run agent'));
   await findByText('Confirm and publish');
   // First call is a dry run carrying no explicit post.

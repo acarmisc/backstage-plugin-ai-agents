@@ -8,7 +8,10 @@ import {
   fetchApiRef,
 } from '@backstage/frontend-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
-import { EntityCardBlueprint, EntityContentBlueprint } from '@backstage/plugin-catalog-react/alpha';
+import {
+  EntityCardBlueprint,
+  EntityContentBlueprint,
+} from '@backstage/plugin-catalog-react/alpha';
 import { aiAgentsApiRef, AiAgentsApi } from './api';
 
 const aiAgentsApi = ApiBlueprint.make({
@@ -44,7 +47,8 @@ const aiAgentOverviewCard = EntityCardBlueprint.make({
       'spec.type': 'ai-agent',
     },
     loader: async () => {
-      const { AgentOverviewCard } = await import('./components/AgentOverviewCard');
+      const { AgentOverviewCard } =
+        await import('./components/AgentOverviewCard');
       return <AgentOverviewCard />;
     },
   },
@@ -59,7 +63,8 @@ const aiAgentInvocationsCard = EntityCardBlueprint.make({
       'spec.type': 'ai-agent',
     },
     loader: async () => {
-      const { AgentInvocationsCard } = await import('./components/AgentInvocationsCard');
+      const { AgentInvocationsCard } =
+        await import('./components/AgentInvocationsCard');
       return <AgentInvocationsCard />;
     },
   },
@@ -74,7 +79,8 @@ const aiAgentActivityTab = EntityContentBlueprint.make({
     title: 'Activity',
     filter: { 'spec.type': 'ai-agent' },
     loader: async () => {
-      const { AgentActivityTab } = await import('./components/AgentActivityTab');
+      const { AgentActivityTab } =
+        await import('./components/AgentActivityTab');
       return <AgentActivityTab />;
     },
   },
@@ -84,5 +90,11 @@ const aiAgentActivityTab = EntityContentBlueprint.make({
 // node_modules layouts nest a second copy of frontend-plugin-api.
 export const aiAgentsPlugin: FrontendPlugin = createFrontendPlugin({
   pluginId: 'ai-agents',
-  extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard, aiAgentInvocationsCard, aiAgentActivityTab],
+  extensions: [
+    aiAgentsApi,
+    aiAgentsPage,
+    aiAgentOverviewCard,
+    aiAgentInvocationsCard,
+    aiAgentActivityTab,
+  ],
 });

@@ -31,7 +31,9 @@ export function formatMs(ms: number): string {
   if (totalSeconds < 60) {
     const seconds = totalSeconds.toFixed(1);
     // Remove trailing .0
-    return seconds.endsWith('.0') ? `${Math.round(totalSeconds)}s` : `${seconds}s`;
+    return seconds.endsWith('.0')
+      ? `${Math.round(totalSeconds)}s`
+      : `${seconds}s`;
   }
 
   const totalMinutes = totalSeconds / 60;

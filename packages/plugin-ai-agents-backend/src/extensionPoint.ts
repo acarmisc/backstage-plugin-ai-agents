@@ -17,6 +17,7 @@ export interface AiAgentsExtensionPoint {
   registerTelemetryProvider(provider: TelemetryProvider): void;
 }
 
-export const aiAgentsExtensionPoint = createExtensionPoint<AiAgentsExtensionPoint>({
-  id: 'ai-agents.invoker',
-});
+export const aiAgentsExtensionPoint =
+  createExtensionPoint<AiAgentsExtensionPoint>({
+    id: 'ai-agents.invoker',
+  });

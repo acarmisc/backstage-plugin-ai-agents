@@ -81,7 +81,7 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   by implementing `AgentInvoker` and adding a `-backend-module-*` package, not
   by editing the router.
 - **`post` is always explicit and defaults to false (dry-run).** The CES
-  agents' entrypoint (`deploy/app.py`) reads `post` and defaults an *omitted*
+  agents' entrypoint (`deploy/app.py`) reads `post` and defaults an _omitted_
   value to true, so never drop the field — `buildInvocationArgs` in
   `invocation.ts` is the single place that derives it (`action: post` → true).
   The UI's "Confirm and publish" is the only caller that passes `post: true`.

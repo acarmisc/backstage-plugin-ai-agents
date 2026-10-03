@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
-import { KagentInvoker, extractResponseText, readKagentConfig } from './invoker';
+import {
+  KagentInvoker,
+  extractResponseText,
+  readKagentConfig,
+} from './invoker';
 
 test('extractResponseText reads Task artifacts', () => {
   const body = JSON.stringify({
@@ -9,27 +13,39 @@ test('extractResponseText reads Task artifacts', () => {
     id: '1',
     result: {
       status: { state: 'completed' },
-      artifacts: [{ name: 'Task Result', parts: [{ kind: 'text', text: 'pods: 3 running' }] }],
+      artifacts: [
+        {
+          name: 'Task Result',
+          parts: [{ kind: 'text', text: 'pods: 3 running' }],
+        },
+      ],
     },
   });
   assert.equal(extractResponseText(body), 'pods: 3 running');
 });
 
 test('extractResponseText reads a plain Message result', () => {
-  const body = JSON.stringify({ result: { role: 'agent', parts: [{ kind: 'text', text: 'hello' }] } });
+  const body = JSON.stringify({
+    result: { role: 'agent', parts: [{ kind: 'text', text: 'hello' }] },
+  });
   assert.equal(extractResponseText(body), 'hello');
 });
 
 test('extractResponseText throws on JSON-RPC error payloads', () => {
   assert.throws(
-    () => extractResponseText('{"jsonrpc":"2.0","error":{"code":-32001,"message":"agent not found"}}'),
+    () =>
+      extractResponseText(
+        '{"jsonrpc":"2.0","error":{"code":-32001,"message":"agent not found"}}',
+      ),
     /agent not found/,
   );
 });
 
 test('readKagentConfig reads full config with defaults', () => {
   const config = new ConfigReader({
-    'ai-agents': { invocations: { kagent: { baseUrl: 'http://kagent-controller:8083' } } },
+    'ai-agents': {
+      invocations: { kagent: { baseUrl: 'http://kagent-controller:8083' } },
+    },
   });
   const cfg = readKagentConfig(config);
   assert.equal(cfg?.baseUrl, 'http://kagent-controller:8083');
@@ -44,7 +60,12 @@ test('readKagentConfig returns undefined when unconfigured', () => {
 test('KagentInvoker posts a message/send JSON-RPC request to the namespaced A2A endpoint', async () => {
   const config = new ConfigReader({
     'ai-agents': {
-      invocations: { kagent: { baseUrl: 'http://kagent-controller:8083', namespace: 'default' } },
+      invocations: {
+        kagent: {
+          baseUrl: 'http://kagent-controller:8083',
+          namespace: 'default',
+        },
+      },
     },
   });
   const calls: any[] = [];
@@ -71,7 +92,10 @@ test('KagentInvoker posts a message/send JSON-RPC request to the namespaced A2A 
 
   assert.equal(result.responseText, 'done');
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'http://kagent-controller:8083/api/a2a/default/helm-agent/');
+  assert.equal(
+    calls[0].url,
+    'http://kagent-controller:8083/api/a2a/default/helm-agent/',
+  );
   const body = JSON.parse(calls[0].init.body);
   assert.equal(body.method, 'message/send');
   assert.equal(body.params.message.parts[0].text, 'list pods');
@@ -82,7 +106,10 @@ test('KagentInvoker throws when no runtime-handle annotation is set', async () =
   const config = new ConfigReader({
     'ai-agents': { invocations: { kagent: { baseUrl: 'http://x:8083' } } },
   });
-  const invoker = new KagentInvoker(config, (async () => ({}) as Response) as typeof fetch);
+  const invoker = new KagentInvoker(
+    config,
+    (async () => ({}) as Response) as typeof fetch,
+  );
   await assert.rejects(
     invoker.invoke({
       entityRef: 'component:default/x',
@@ -101,13 +128,22 @@ test('KagentInvoker throws when no runtime-handle annotation is set', async () =
 test('KagentInvoker does not forward authHeader to an endpoint override on another origin', async () => {
   const config = new ConfigReader({
     'ai-agents': {
-      invocations: { kagent: { baseUrl: 'http://kagent-controller:8083', authHeader: 'Bearer secret' } },
+      invocations: {
+        kagent: {
+          baseUrl: 'http://kagent-controller:8083',
+          authHeader: 'Bearer secret',
+        },
+      },
     },
   });
   const calls: any[] = [];
   const fetchImpl = (async (url: string, init: any) => {
     calls.push({ url, init });
-    return { ok: true, text: async () => JSON.stringify({ result: { parts: [{ kind: 'text', text: 'ok' }] } }) } as Response;
+    return {
+      ok: true,
+      text: async () =>
+        JSON.stringify({ result: { parts: [{ kind: 'text', text: 'ok' }] } }),
+    } as Response;
   }) as typeof fetch;
   const invoker = new KagentInvoker(config, fetchImpl);
   const req = {
@@ -119,7 +155,10 @@ test('KagentInvoker does not forward authHeader to an endpoint override on anoth
     args: { post: false },
     tags: [],
   };
-  await invoker.invoke({ ...req, target: { runtimeHandle: 'a', endpoint: 'https://elsewhere.example' } });
+  await invoker.invoke({
+    ...req,
+    target: { runtimeHandle: 'a', endpoint: 'https://elsewhere.example' },
+  });
   await invoker.invoke({ ...req, target: { runtimeHandle: 'a' } });
   assert.equal(calls[0].init.headers.Authorization, undefined);
   assert.equal(calls[1].init.headers.Authorization, 'Bearer secret');

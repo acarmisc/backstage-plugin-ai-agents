@@ -76,8 +76,16 @@ export const AgentSpend: React.FC<{
       {models.length > 0 && (
         <Stack spacing={0.25}>
           {models.map(([model, spend]) => (
-            <Box key={model} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Typography variant="caption" color="text.secondary" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Box
+              key={model}
+              sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                noWrap
+                sx={{ flexGrow: 1, minWidth: 0 }}
+              >
                 {model}
               </Typography>
               <Typography variant="caption" color="text.secondary">

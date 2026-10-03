@@ -17,7 +17,10 @@ test('extractResponseText handles common payload shapes', () => {
 
 test('extractResponseText throws on AgentCore error payloads', () => {
   assert.throws(
-    () => extractResponseText('{"jsonrpc":"2.0","error":{"code":-32001,"message":"aud mismatch"}}'),
+    () =>
+      extractResponseText(
+        '{"jsonrpc":"2.0","error":{"code":-32001,"message":"aud mismatch"}}',
+      ),
     /aud mismatch/,
   );
 });
@@ -52,7 +55,12 @@ test('buildPayload sends structured fields and always includes post', () => {
     threadId: 't1',
     prompt: 'Review MR !42',
     fields: {},
-    args: { post: false, target: '42', project: 'innovation/x', model: 'sonnet-5' },
+    args: {
+      post: false,
+      target: '42',
+      project: 'innovation/x',
+      model: 'sonnet-5',
+    },
     tags: ['channel:backstage', 'session:t1'],
     traceUserId: 'user:default/jane',
     target: {},
@@ -91,14 +99,23 @@ test('AgentCoreInvoker refuses a region that would redirect the bearer token', a
   const config = new ConfigReader({
     'ai-agents': {
       invocations: {
-        agentCore: { tokenUrl: 'https://auth/token', clientId: 'c', clientSecret: 's', region: 'eu-west-1' },
+        agentCore: {
+          tokenUrl: 'https://auth/token',
+          clientId: 'c',
+          clientSecret: 's',
+          region: 'eu-west-1',
+        },
       },
     },
   });
   const urls: string[] = [];
   const fetchImpl = (async (url: string) => {
     urls.push(url);
-    return { ok: true, json: async () => ({ access_token: 't' }), text: async () => '{}' } as Response;
+    return {
+      ok: true,
+      json: async () => ({ access_token: 't' }),
+      text: async () => '{}',
+    } as Response;
   }) as typeof fetch;
   const invoker = new AgentCoreInvoker(config, fetchImpl);
   await assert.rejects(
@@ -110,7 +127,10 @@ test('AgentCoreInvoker refuses a region that would redirect the bearer token', a
       fields: {},
       args: { post: false },
       tags: [],
-      target: { region: 'evil.example/x#', runtimeHandle: 'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/a' },
+      target: {
+        region: 'evil.example/x#',
+        runtimeHandle: 'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/a',
+      },
     }),
     /invalid AWS region/,
   );

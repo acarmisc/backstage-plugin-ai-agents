@@ -15,7 +15,9 @@ export interface AgentStatusBadgeProps {
   status?: AgentStatus;
 }
 
-export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({ status }) => {
+export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({
+  status,
+}) => {
   const state = status?.state ?? 'unknown';
   const color = STATE_COLOR[state];
   const ring = state === 'unknown' ? `1px dashed ${color}` : 'none';
@@ -23,8 +25,12 @@ export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({ status }) =>
   const title = status
     ? [
         `Status: ${state}`,
-        status.lastChecked ? `Last checked: ${new Date(status.lastChecked).toLocaleString()}` : null,
-        status.latencyMs !== undefined && status.latencyMs !== null ? `Latency: ${status.latencyMs}ms` : null,
+        status.lastChecked
+          ? `Last checked: ${new Date(status.lastChecked).toLocaleString()}`
+          : null,
+        status.latencyMs !== undefined && status.latencyMs !== null
+          ? `Latency: ${status.latencyMs}ms`
+          : null,
         status.message ? status.message : null,
       ]
         .filter(Boolean)
@@ -52,11 +58,13 @@ export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({ status }) =>
             flexShrink: 0,
           }}
         />
-        {status && status.latencyMs !== undefined && status.latencyMs !== null && (
-          <Typography variant="caption" color="text.secondary">
-            {status.latencyMs}ms
-          </Typography>
-        )}
+        {status &&
+          status.latencyMs !== undefined &&
+          status.latencyMs !== null && (
+            <Typography variant="caption" color="text.secondary">
+              {status.latencyMs}ms
+            </Typography>
+          )}
       </Box>
     </Tooltip>
   );

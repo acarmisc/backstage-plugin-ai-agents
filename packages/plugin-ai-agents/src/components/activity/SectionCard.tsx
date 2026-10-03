@@ -47,7 +47,10 @@ export const SectionCard: React.FC<SectionCardProps> = ({
       }}
     >
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ fontWeight: 600, lineHeight: 1.3 }}
+        >
           {title}
         </Typography>
         {subtitle && (

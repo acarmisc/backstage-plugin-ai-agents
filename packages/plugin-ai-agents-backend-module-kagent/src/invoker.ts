@@ -34,7 +34,11 @@ function sameOrigin(a: string, b: string): boolean {
 function textFromParts(parts: unknown): string | undefined {
   if (!Array.isArray(parts)) return undefined;
   const text = parts
-    .map(p => (p && typeof p === 'object' && typeof (p as any).text === 'string' ? (p as any).text : undefined))
+    .map(p =>
+      p && typeof p === 'object' && typeof (p as any).text === 'string'
+        ? (p as any).text
+        : undefined,
+    )
     .filter((t): t is string => !!t)
     .join('\n');
   return text || undefined;
@@ -55,13 +59,16 @@ export function extractResponseText(body: string): string {
   if (parsed?.error) {
     const message =
       typeof parsed.error === 'object'
-        ? parsed.error.message ?? JSON.stringify(parsed.error)
+        ? (parsed.error.message ?? JSON.stringify(parsed.error))
         : String(parsed.error);
     throw new Error(`kagent A2A error: ${message}`);
   }
   const result = parsed?.result ?? parsed;
   const fromArtifacts = Array.isArray(result?.artifacts)
-    ? result.artifacts.map((a: any) => textFromParts(a?.parts)).filter(Boolean).join('\n')
+    ? result.artifacts
+        .map((a: any) => textFromParts(a?.parts))
+        .filter(Boolean)
+        .join('\n')
     : undefined;
   return (
     fromArtifacts ||
@@ -79,13 +86,18 @@ export function extractResponseText(body: string): string {
 export class KagentInvoker {
   private readonly config: KagentConfig | undefined;
 
-  constructor(config: Config, private readonly fetchImpl: typeof fetch = fetch) {
+  constructor(
+    config: Config,
+    private readonly fetchImpl: typeof fetch = fetch,
+  ) {
     this.config = readKagentConfig(config);
   }
 
   async invoke(req: AgentInvocationRequest): Promise<AgentInvocationResponse> {
     if (!this.config) {
-      throw new Error('ai-agents.invocations.kagent is not configured — cannot invoke agent');
+      throw new Error(
+        'ai-agents.invocations.kagent is not configured — cannot invoke agent',
+      );
     }
     const namespace = req.target?.namespace ?? this.config.namespace;
     const agentName = req.target?.runtimeHandle;
@@ -97,7 +109,9 @@ export class KagentInvoker {
     const base = req.target?.endpoint ?? this.config.baseUrl;
     const url = `${base.replace(/\/$/, '')}/api/a2a/${encodeURIComponent(namespace)}/${encodeURIComponent(agentName)}/`;
 
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
     // The endpoint annotation is catalog-authored: only send the configured
     // credential to the configured controller, never to another origin.
     if (this.config.authHeader && sameOrigin(base, this.config.baseUrl)) {
@@ -133,7 +147,9 @@ export class KagentInvoker {
       const latencyMs = Date.now() - start;
       const bodyText = await res.text();
       if (!res.ok) {
-        throw new Error(`kagent returned HTTP ${res.status}: ${bodyText.slice(0, 200)}`);
+        throw new Error(
+          `kagent returned HTTP ${res.status}: ${bodyText.slice(0, 200)}`,
+        );
       }
       return { responseText: extractResponseText(bodyText), latencyMs };
     } finally {

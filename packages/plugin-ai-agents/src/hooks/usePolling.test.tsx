@@ -13,7 +13,6 @@ afterEach(() => {
 
 beforeEach(() => setVisibility('visible'));
 
-
 test('polls repeatedly at the configured interval', async () => {
   let callCount = 0;
   const fetcher = async () => {
@@ -129,12 +128,9 @@ test('respects dynamic interval function based on data', async () => {
   };
 
   function Component() {
-    const { data } = usePolling(
-      fetcher,
-      {
-        intervalMs: (d) => d ? 200 : 30,
-      }
-    );
+    const { data } = usePolling(fetcher, {
+      intervalMs: d => (d ? 200 : 30),
+    });
     return <span data-testid="out">{data ? 'loaded' : 'loading'}</span>;
   }
 
@@ -177,7 +173,14 @@ test('refresh() fetches once and polling keeps delivering fresh data afterwards'
   await waitFor(() => assert.notEqual(getByTestId('out').textContent, 'none'));
   api!.refresh();
   const afterRefresh = calls;
-  await waitFor(() => assert.ok(Number(getByTestId('out').textContent) > afterRefresh, 'later polls must still update the UI'), { timeout: 1000 });
+  await waitFor(
+    () =>
+      assert.ok(
+        Number(getByTestId('out').textContent) > afterRefresh,
+        'later polls must still update the UI',
+      ),
+    { timeout: 1000 },
+  );
 });
 
 test('interval function sees the latest data', async () => {
@@ -194,7 +197,11 @@ test('interval function sees the latest data', async () => {
   }
   render(<Component />);
   await waitFor(() => assert.ok(seen.length >= 3), { timeout: 1000 });
-  assert.equal(seen[0], 1, 'first evaluation already sees the first result, not undefined');
+  assert.equal(
+    seen[0],
+    1,
+    'first evaluation already sees the first result, not undefined',
+  );
   assert.ok(seen[2]! > seen[0]!, 'later evaluations see newer data');
 });
 

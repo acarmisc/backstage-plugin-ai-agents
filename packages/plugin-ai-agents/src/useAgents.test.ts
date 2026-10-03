@@ -42,7 +42,10 @@ test('applyFilters capability requires all selected caps present', () => {
     mk({ capabilities: [{ label: 'rag' }, { label: 'tools' }] }),
     mk({ capabilities: [{ label: 'rag' }] }),
   ];
-  const r = applyFilters(agents, { ...initialFilters, capability: ['rag', 'tools'] });
+  const r = applyFilters(agents, {
+    ...initialFilters,
+    capability: ['rag', 'tools'],
+  });
   assert.equal(r.length, 1);
   assert.equal(r[0].capabilities.length, 2);
 });

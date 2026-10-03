@@ -1,5 +1,8 @@
 import type { Config } from '@backstage/config';
-import { LiteLLMClient, normalizeRequestTags } from '@acarmisc/backstage-plugin-litellm-backend';
+import {
+  LiteLLMClient,
+  normalizeRequestTags,
+} from '@acarmisc/backstage-plugin-litellm-backend';
 
 /** Aggregated spend for a conversation or agent. */
 export interface SpendSummary {
@@ -56,16 +59,24 @@ export function aggregateSpend(
   rows: SpendRow[],
   matcher: (tags: string[]) => boolean,
 ): SpendSummary {
-  const summary: SpendSummary = { spend: 0, totalTokens: 0, requests: 0, byModel: {} };
+  const summary: SpendSummary = {
+    spend: 0,
+    totalTokens: 0,
+    requests: 0,
+    byModel: {},
+  };
   for (const row of rows) {
     const tags = normalizeRequestTags(row.request_tags as any);
     if (!matcher(tags)) continue;
-    const spend = typeof row.spend === 'number' ? row.spend : Number(row.spend ?? 0);
+    const spend =
+      typeof row.spend === 'number' ? row.spend : Number(row.spend ?? 0);
     summary.spend += Number.isFinite(spend) ? spend : 0;
     summary.totalTokens += row.total_tokens ?? 0;
     summary.requests += 1;
     if (row.model) {
-      summary.byModel[row.model] = (summary.byModel[row.model] ?? 0) + (Number.isFinite(spend) ? spend : 0);
+      summary.byModel[row.model] =
+        (summary.byModel[row.model] ?? 0) +
+        (Number.isFinite(spend) ? spend : 0);
     }
   }
   return summary;
@@ -78,15 +89,24 @@ export const DEFAULT_SPEND_DAYS = 30;
  * Resolve the date window for a spend query. `days` is clamped to
  * [1, 90] to keep the admin `/spend/logs` query bounded.
  */
-export function spendWindow(days?: number, now: Date = new Date()): { start_date: string; end_date: string } {
-  const clamped = Math.min(Math.max(Math.floor(days ?? DEFAULT_SPEND_DAYS), 1), 90);
+export function spendWindow(
+  days?: number,
+  now: Date = new Date(),
+): { start_date: string; end_date: string } {
+  const clamped = Math.min(
+    Math.max(Math.floor(days ?? DEFAULT_SPEND_DAYS), 1),
+    90,
+  );
   const end = now;
   const start = new Date(end.getTime() - (clamped - 1) * 24 * 60 * 60 * 1000);
   return { start_date: isoDate(start), end_date: isoDate(end) };
 }
 
 /** Filter helper: does a tag list match a thread or entity tag? */
-export function spendTagMatcher(opts: { threadId?: string; entityRef: string }): (tags: string[]) => boolean {
+export function spendTagMatcher(opts: {
+  threadId?: string;
+  entityRef: string;
+}): (tags: string[]) => boolean {
   if (opts.threadId) {
     const needle = `session:${opts.threadId}`;
     return tags => tags.includes(needle);

@@ -1,5 +1,8 @@
 import { Entity } from '@backstage/catalog-model';
-import { AI_AGENT_ANNOTATION_PREFIX, AI_AGENT_ANNOTATION_PREFIX_LEGACY } from './types';
+import {
+  AI_AGENT_ANNOTATION_PREFIX,
+  AI_AGENT_ANNOTATION_PREFIX_LEGACY,
+} from './types';
 import type { AgentInvocationArgs } from './types';
 
 /** Reads an `ai-agent.io/*` annotation, falling back to the legacy namespace. */
@@ -25,7 +28,10 @@ export function fillTemplate(
  * `ai-agent.io/prompt-template` annotation with the submitted
  * form values, or fall back to a JSON dump of the values.
  */
-export function buildPrompt(entity: Entity, values: Record<string, string>): string {
+export function buildPrompt(
+  entity: Entity,
+  values: Record<string, string>,
+): string {
   const template = annotation(entity, 'prompt-template');
   if (template) return fillTemplate(template, values);
   return JSON.stringify(values, null, 2);
@@ -49,7 +55,10 @@ export function normalizeSessionId(threadId: string): string {
 }
 
 /** A stable, human-readable thread id for a new conversation. */
-export function makeThreadId(entityName: string, random: () => string = defaultRandom): string {
+export function makeThreadId(
+  entityName: string,
+  random: () => string = defaultRandom,
+): string {
   return `${entityName}-${Date.now().toString(36)}-${random()}`;
 }
 

@@ -33,14 +33,20 @@ export function applyFilters(
         .toLowerCase();
       if (!haystack.includes(search)) return false;
     }
-    if (filters.runtime.length && !filters.runtime.includes(a.runtime.runtime)) {
+    if (
+      filters.runtime.length &&
+      !filters.runtime.includes(a.runtime.runtime)
+    ) {
       return false;
     }
     if (filters.capability.length) {
       const caps = a.capabilities.map(c => c.label);
       if (!filters.capability.every(c => caps.includes(c))) return false;
     }
-    if (filters.lifecycle.length && !filters.lifecycle.includes(a.lifecycle ?? '')) {
+    if (
+      filters.lifecycle.length &&
+      !filters.lifecycle.includes(a.lifecycle ?? '')
+    ) {
       return false;
     }
     if (filters.owner.length && !filters.owner.includes(a.owner ?? '')) {

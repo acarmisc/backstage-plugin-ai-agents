@@ -84,75 +84,94 @@ export const InvocationHistory: React.FC<{
     <Box data-testid="invocation-history">
       <SectionTitle />
       <Stack spacing={0.5}>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <IconButton size="small" title="Refresh" onClick={() => setNonce(n => n + 1)}>
-          <RefreshIcon fontSize="inherit" />
-        </IconButton>
-      </Box>
-      {records.map(r => {
-        const detail =
-          r.status === 'error'
-            ? r.errorMessage ?? 'failed'
-            : r.responseText?.trim() || '(empty response)';
-        return (
-          <Tooltip key={r.id ?? r.sessionId} title={detail.slice(0, 400)} arrow placement="left">
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                minWidth: 0,
-                '&:hover': { bgcolor: 'action.hover' },
-              }}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <IconButton
+            size="small"
+            title="Refresh"
+            onClick={() => setNonce(n => n + 1)}
+          >
+            <RefreshIcon fontSize="inherit" />
+          </IconButton>
+        </Box>
+        {records.map(r => {
+          const detail =
+            r.status === 'error'
+              ? (r.errorMessage ?? 'failed')
+              : r.responseText?.trim() || '(empty response)';
+          return (
+            <Tooltip
+              key={r.id ?? r.sessionId}
+              title={detail.slice(0, 400)}
+              arrow
+              placement="left"
             >
-              {r.status === 'ok' ? (
-                <CheckCircleIcon color="success" sx={{ fontSize: 16 }} />
-              ) : (
-                <ErrorIcon color="error" sx={{ fontSize: 16 }} />
-              )}
-              <Typography variant="caption" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
-                {r.prompt.replace(/\s+/g, ' ').slice(0, 60)}
-              </Typography>
-              {r.post ? (
-                <Chip
-                  size="small"
-                  color="warning"
-                  label="published"
-                  sx={{ height: 18, fontSize: '0.65rem' }}
-                />
-              ) : (
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  label="dry-run"
-                  sx={{ height: 18, fontSize: '0.65rem' }}
-                />
-              )}
-              {r.latencyMs !== undefined && r.latencyMs !== null && r.status === 'ok' && (
-                <Chip
-                  size="small"
-                  label={`${(r.latencyMs / 1000).toFixed(1)}s`}
-                  sx={{ height: 18, fontSize: '0.65rem' }}
-                />
-              )}
-              {r.userRef && (
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  label={r.userRef.split('/').pop()}
-                  sx={{ height: 18, fontSize: '0.65rem' }}
-                />
-              )}
-              <Typography variant="caption" color="text.secondary" whiteSpace="nowrap">
-                {formatWhen(r.createdAt)}
-              </Typography>
-            </Box>
-          </Tooltip>
-        );
-      })}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  minWidth: 0,
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                {r.status === 'ok' ? (
+                  <CheckCircleIcon color="success" sx={{ fontSize: 16 }} />
+                ) : (
+                  <ErrorIcon color="error" sx={{ fontSize: 16 }} />
+                )}
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{ flexGrow: 1, minWidth: 0 }}
+                >
+                  {r.prompt.replace(/\s+/g, ' ').slice(0, 60)}
+                </Typography>
+                {r.post ? (
+                  <Chip
+                    size="small"
+                    color="warning"
+                    label="published"
+                    sx={{ height: 18, fontSize: '0.65rem' }}
+                  />
+                ) : (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label="dry-run"
+                    sx={{ height: 18, fontSize: '0.65rem' }}
+                  />
+                )}
+                {r.latencyMs !== undefined &&
+                  r.latencyMs !== null &&
+                  r.status === 'ok' && (
+                    <Chip
+                      size="small"
+                      label={`${(r.latencyMs / 1000).toFixed(1)}s`}
+                      sx={{ height: 18, fontSize: '0.65rem' }}
+                    />
+                  )}
+                {r.userRef && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={r.userRef.split('/').pop()}
+                    sx={{ height: 18, fontSize: '0.65rem' }}
+                  />
+                )}
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  whiteSpace="nowrap"
+                >
+                  {formatWhen(r.createdAt)}
+                </Typography>
+              </Box>
+            </Tooltip>
+          );
+        })}
       </Stack>
     </Box>
   );

@@ -1,4 +1,7 @@
-import { coreServices, createBackendModule } from '@backstage/backend-plugin-api';
+import {
+  coreServices,
+  createBackendModule,
+} from '@backstage/backend-plugin-api';
 import { aiAgentsExtensionPoint } from '@acarmisc/backstage-plugin-ai-agents-backend';
 import { LangfuseTelemetryProvider, readLangfuseConfig } from './provider';
 
@@ -19,7 +22,9 @@ export const aiAgentsModuleLangfuse = createBackendModule({
       async init({ config, logger, telemetry }) {
         const cfg = readLangfuseConfig(config);
         if (!cfg) {
-          logger.info('ai-agents.telemetry.langfuse not configured; Langfuse telemetry disabled');
+          logger.info(
+            'ai-agents.telemetry.langfuse not configured; Langfuse telemetry disabled',
+          );
           return;
         }
         telemetry.registerTelemetryProvider(new LangfuseTelemetryProvider(cfg));

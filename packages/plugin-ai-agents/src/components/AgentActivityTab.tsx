@@ -9,6 +9,7 @@ import { AgentActivityTabView } from './AgentActivityTabView';
  */
 export const AgentActivityTab: React.FC = () => {
   const { entity } = useEntity();
-  const agent = entity?.spec?.type === 'ai-agent' ? entityToAgent(entity) : undefined;
+  const agent =
+    entity?.spec?.type === 'ai-agent' ? entityToAgent(entity) : undefined;
   return <AgentActivityTabView agent={agent} />;
 };

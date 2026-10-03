@@ -79,5 +79,8 @@ export function useAvatarSrc(
 
   if (!needsProxy) return direct;
   // Proxy still pending → no src; proxy failed → direct URL as a last resort.
-  return blobUrls.get(entityRef!) ?? (failedRefs.has(entityRef!) ? direct : undefined);
+  return (
+    blobUrls.get(entityRef!) ??
+    (failedRefs.has(entityRef!) ? direct : undefined)
+  );
 }

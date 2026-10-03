@@ -10,12 +10,7 @@ export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
 export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
 export type AgentRuntimeName =
-  | 'bedrock-agentcore'
-  | 'kagent'
-  | 'litellm'
-  | 'lambda'
-  | 'custom'
-  | string;
+  'bedrock-agentcore' | 'kagent' | 'litellm' | 'lambda' | 'custom' | string;
 
 export interface AgentRuntimeInfo {
   /** Runtime identifier, e.g. "bedrock-agentcore", "kagent", "litellm", "lambda", "custom". */
@@ -33,11 +28,7 @@ export interface AgentRuntimeInfo {
 }
 
 export type AgentBillingModel =
-  | 'per-invocation'
-  | 'per-token'
-  | 'subscription'
-  | 'free'
-  | string;
+  'per-invocation' | 'per-token' | 'subscription' | 'free' | string;
 
 export interface AgentBilling {
   model: AgentBillingModel;
@@ -48,13 +39,7 @@ export interface AgentBilling {
 }
 
 export type AgentCapabilityCategory =
-  | 'reasoning'
-  | 'retrieval'
-  | 'tools'
-  | 'vision'
-  | 'voice'
-  | 'data'
-  | 'safety';
+  'reasoning' | 'retrieval' | 'tools' | 'vision' | 'voice' | 'data' | 'safety';
 
 export interface AgentCapability {
   label: string;
@@ -182,7 +167,13 @@ export interface HourBucket {
 /** Aggregates for one agent over the last `windowHours`. */
 export interface AgentInsights {
   windowHours: number;
-  totals: { runs: number; running: number; completed: number; failed: number; unknown: number };
+  totals: {
+    runs: number;
+    running: number;
+    completed: number;
+    failed: number;
+    unknown: number;
+  };
   /** Over finished runs (completed/failed); 0 when there are none. */
   durationMs: { p50: number; p95: number };
   /** Exactly `windowHours` buckets, oldest first. */
@@ -305,8 +296,7 @@ function parseHireSchema(raw: string | undefined): HireField[] | undefined {
         options: Array.isArray(f.options)
           ? f.options.map((o: unknown) => String(o))
           : undefined,
-        help:
-          typeof f.help === 'string' && f.help ? f.help : undefined,
+        help: typeof f.help === 'string' && f.help ? f.help : undefined,
       }))
       .filter(f => f.name.length > 0);
   } catch {
@@ -374,14 +364,11 @@ export function entityToAgent(
     description: entity.metadata.description,
     avatarUrl: annotation(entity, 'avatar'),
     owner: (entity.spec as Record<string, unknown> | undefined)?.owner as
-      | string
-      | undefined,
+      string | undefined,
     system: (entity.spec as Record<string, unknown> | undefined)?.system as
-      | string
-      | undefined,
-    lifecycle: (entity.spec as Record<string, unknown> | undefined)?.lifecycle as
-      | string
-      | undefined,
+      string | undefined,
+    lifecycle: (entity.spec as Record<string, unknown> | undefined)
+      ?.lifecycle as string | undefined,
     version: annotation(entity, 'version'),
     purpose: purpose(entity),
     runtime: {

@@ -157,9 +157,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
         )}
 
         {/* Trend Sparkline */}
-        {trend && trend.length > 0 && !loading && (
-          <Sparkline data={trend} />
-        )}
+        {trend && trend.length > 0 && !loading && <Sparkline data={trend} />}
       </Box>
 
       {/* Hint */}

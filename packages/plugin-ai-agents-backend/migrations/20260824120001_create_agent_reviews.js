@@ -7,7 +7,11 @@ exports.up = async function up(knex) {
     table.string('user_ref', 200).nullable();
     table.integer('rating').notNullable();
     table.text('comment').nullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable().index();
+    table
+      .timestamp('created_at')
+      .defaultTo(knex.fn.now())
+      .notNullable()
+      .index();
   });
 };
 

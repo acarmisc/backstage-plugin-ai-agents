@@ -58,7 +58,9 @@ const makeAgent = (overrides: Partial<AiAgent> = {}): AiAgent => ({
 });
 
 // Route observer component to capture navigation
-const RouteObserver: React.FC<{ onNavigate?: (path: string) => void }> = ({ onNavigate }) => {
+const RouteObserver: React.FC<{ onNavigate?: (path: string) => void }> = ({
+  onNavigate,
+}) => {
   const location = useLocation();
   React.useEffect(() => {
     onNavigate?.(location.pathname + location.search);
@@ -69,7 +71,12 @@ const RouteObserver: React.FC<{ onNavigate?: (path: string) => void }> = ({ onNa
 // Helper to set up tests with API and MemoryRouter
 const defaultApiMocks = {
   getImageAssets: async () => ({}),
-  getSpend: async () => ({ spend: 0, requests: 0, totalTokens: 0, byModel: {} }),
+  getSpend: async () => ({
+    spend: 0,
+    requests: 0,
+    totalTokens: 0,
+    byModel: {},
+  }),
   getInvocations: async () => [],
   getReviews: async () => ({ reviews: [], count: 0, average: null }),
 };
@@ -89,11 +96,19 @@ test('AgentDetailDrawer renders compact header with title, status, runtime badge
   const closed: string[] = [];
   const { getByRole, getByText, container } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer agent={makeAgent()} open onClose={() => closed.push('x')} />
+      <AgentDetailDrawer
+        agent={makeAgent()}
+        open
+        onClose={() => closed.push('x')}
+      />
     </MemoryRouter>,
   );
   assert.ok(getByText('Test Agent'));
-  assert.match(container.ownerDocument.body.textContent ?? '', /agentcore/i, 'runtime badge present');
+  assert.match(
+    container.ownerDocument.body.textContent ?? '',
+    /agentcore/i,
+    'runtime badge present',
+  );
   fireEvent.click(getByRole('button', { name: 'Close' }));
   assert.deepEqual(closed, ['x']);
 });
@@ -107,9 +122,11 @@ test('AgentDetailDrawer shows status badge and refresh button', () => {
         agent={agent}
         open
         onClose={() => {}}
-        onRefreshStatus={() => { refreshCalled = true; }}
+        onRefreshStatus={() => {
+          refreshCalled = true;
+        }}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
   const refreshButton = getByRole('button', { name: /refresh status/i });
@@ -119,16 +136,13 @@ test('AgentDetailDrawer shows status badge and refresh button', () => {
 });
 
 test('AgentDetailDrawer displays description clamped to 3 lines with Show more toggle', () => {
-  const longDescription = 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5 with extra content to make it long';
+  const longDescription =
+    'Line 1\nLine 2\nLine 3\nLine 4\nLine 5 with extra content to make it long';
   const agent = makeAgent({ purpose: longDescription });
   const { getByRole: getByRoleDesc } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   const showMoreButton = getByRoleDesc('button', { name: /show more/i });
@@ -144,21 +158,21 @@ test('AgentDetailDrawer shows short description without toggle', () => {
   const agent = makeAgent({ purpose: shortDescription });
   const { queryByRole: queryByRoleShort } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
-  const showMoreButton = queryByRoleShort('button', { name: /show more|show less/i });
+  const showMoreButton = queryByRoleShort('button', {
+    name: /show more|show less/i,
+  });
   assert.equal(showMoreButton, null);
 });
 
 test('AgentDetailDrawer renders Hire button when agent has hire schema', () => {
   const agent = makeAgent({
-    hireSchema: [{ name: 'repo', label: 'Repository', type: 'text', required: true }],
+    hireSchema: [
+      { name: 'repo', label: 'Repository', type: 'text', required: true },
+    ],
   });
   let hireCalled = false;
   const { getByRole } = renderWithApi(
@@ -167,9 +181,11 @@ test('AgentDetailDrawer renders Hire button when agent has hire schema', () => {
         agent={agent}
         open
         onClose={() => {}}
-        onHire={() => { hireCalled = true; }}
+        onHire={() => {
+          hireCalled = true;
+        }}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
   const hireButton = getByRole('button', { name: /hire agent/i });
@@ -188,7 +204,7 @@ test('AgentDetailDrawer hides Hire button when agent has no hire schema', () => 
         onClose={() => {}}
         onHire={() => {}}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
   const hireButton = queryByRole('button', { name: /hire agent/i });
@@ -199,12 +215,8 @@ test('AgentDetailDrawer shows Open activity button only when telemetryId exists'
   const agent = makeAgent();
   const { getByTestId } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   assert.ok(getByTestId('open-activity-button'));
@@ -216,12 +228,8 @@ test('AgentDetailDrawer hides Open activity button when telemetryId is not set',
   });
   const { queryByTestId } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   assert.equal(queryByTestId('open-activity-button'), null);
@@ -232,13 +240,13 @@ test('AgentDetailDrawer Open activity button navigates to activity tab with tele
   let navigatedPath = '';
   const { getByTestId } = renderWithApi(
     <MemoryRouter>
-      <RouteObserver onNavigate={(path) => { navigatedPath = path; }} />
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
+      <RouteObserver
+        onNavigate={path => {
+          navigatedPath = path;
+        }}
       />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   const openActivityButton = getByTestId('open-activity-button');
@@ -255,9 +263,11 @@ test('AgentDetailDrawer Open activity button calls onClose after navigating', as
       <AgentDetailDrawer
         agent={agent}
         open
-        onClose={() => { closeCalledCount++; }}
+        onClose={() => {
+          closeCalledCount++;
+        }}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
   const openActivityButton = getByTestId('open-activity-button');
@@ -274,18 +284,26 @@ test('AgentDetailDrawer all accordion sections start collapsed with aria-expande
   });
   const { getByRole } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
-  const sections = ['runtime', 'capabilities', 'links', 'tags', 'spend', 'invocations', 'reviews'];
+  const sections = [
+    'runtime',
+    'capabilities',
+    'links',
+    'tags',
+    'spend',
+    'invocations',
+    'reviews',
+  ];
   sections.forEach(section => {
     const header = getByRole('button', { name: new RegExp(section, 'i') });
-    assert.equal(header.getAttribute('aria-expanded'), 'false', `Section ${section} should start collapsed`);
+    assert.equal(
+      header.getAttribute('aria-expanded'),
+      'false',
+      `Section ${section} should start collapsed`,
+    );
   });
 });
 
@@ -295,15 +313,13 @@ test('AgentDetailDrawer expanding one section does not collapse others', async (
   });
   const { getAllByRole } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
-  const headers = getAllByRole('button').filter(b => b.getAttribute('aria-expanded') !== null);
+  const headers = getAllByRole('button').filter(
+    b => b.getAttribute('aria-expanded') !== null,
+  );
   assert.ok(headers.length >= 2, 'Should have at least 2 expandable sections');
 
   // Expand first section
@@ -312,7 +328,11 @@ test('AgentDetailDrawer expanding one section does not collapse others', async (
 
   // Expand second section
   fireEvent.click(headers[1]);
-  assert.equal(headers[0].getAttribute('aria-expanded'), 'true', 'First section should still be expanded');
+  assert.equal(
+    headers[0].getAttribute('aria-expanded'),
+    'true',
+    'First section should still be expanded',
+  );
   assert.equal(headers[1].getAttribute('aria-expanded'), 'true');
 });
 
@@ -331,7 +351,12 @@ test('AgentDetailDrawer fetches Spend only after the Spend section is first expa
   const { getByRole, queryByTestId } = drawerWith({
     getSpend: async () => {
       calls++;
-      return { spend: 10.5, requests: 100, totalTokens: 50000, byModel: { 'gpt-4': 10.5 } };
+      return {
+        spend: 10.5,
+        requests: 100,
+        totalTokens: 50000,
+        byModel: { 'gpt-4': 10.5 },
+      };
     },
   });
   await sleep(50);
@@ -339,7 +364,9 @@ test('AgentDetailDrawer fetches Spend only after the Spend section is first expa
   assert.equal(queryByTestId('agent-spend'), null);
 
   fireEvent.click(getByRole('button', { name: /^Spend$/i }));
-  await waitFor(() => assert.ok(queryByTestId('agent-spend'), 'spend renders once expanded'));
+  await waitFor(() =>
+    assert.ok(queryByTestId('agent-spend'), 'spend renders once expanded'),
+  );
   assert.equal(calls, 1);
 });
 
@@ -354,7 +381,9 @@ test('AgentDetailDrawer fetches invocation history only after its section is exp
   await sleep(50);
   assert.equal(calls, 0, 'no history request while collapsed');
   fireEvent.click(getByRole('button', { name: /^Recent invocations$/i }));
-  await waitFor(() => assert.ok(calls >= 1, 'history requested after expanding'));
+  await waitFor(() =>
+    assert.ok(calls >= 1, 'history requested after expanding'),
+  );
 });
 
 test('AgentDetailDrawer fetches reviews only after the Reviews section is expanded', async () => {
@@ -368,20 +397,21 @@ test('AgentDetailDrawer fetches reviews only after the Reviews section is expand
   await sleep(50);
   assert.equal(calls, 0, 'no reviews request while collapsed');
   fireEvent.click(getByRole('button', { name: /^Reviews$/i }));
-  await waitFor(() => assert.ok(calls >= 1, 'reviews requested after expanding'));
-  assert.equal(getByRole('button', { name: /^Reviews$/i }).getAttribute('aria-expanded'), 'true');
+  await waitFor(() =>
+    assert.ok(calls >= 1, 'reviews requested after expanding'),
+  );
+  assert.equal(
+    getByRole('button', { name: /^Reviews$/i }).getAttribute('aria-expanded'),
+    'true',
+  );
 });
 
 test('AgentDetailDrawer does not render RunTimeline content', () => {
   const agent = makeAgent();
   const { container } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   // RunTimeline should not be present
@@ -401,24 +431,25 @@ test('AgentDetailDrawer Runtime & billing section shows all expected fields', as
   });
   const { getByRole: getByRoleRuntime } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
-  const runtimeHeader = getByRoleRuntime('button', { name: /runtime & billing/i });
+  const runtimeHeader = getByRoleRuntime('button', {
+    name: /runtime & billing/i,
+  });
   assert.ok(runtimeHeader, 'Runtime & billing header should exist');
 
   // Expand the section
   fireEvent.click(runtimeHeader);
 
   // Verify it's now expanded
-  await waitFor(() => {
-    assert.equal(runtimeHeader.getAttribute('aria-expanded'), 'true');
-  }, { timeout: 500 });
+  await waitFor(
+    () => {
+      assert.equal(runtimeHeader.getAttribute('aria-expanded'), 'true');
+    },
+    { timeout: 500 },
+  );
 });
 
 test('AgentDetailDrawer Capabilities section shows capability count hint', async () => {
@@ -431,12 +462,8 @@ test('AgentDetailDrawer Capabilities section shows capability count hint', async
   });
   const { getByText: getByTextCaps } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   assert.ok(getByTextCaps('3'), 'Should show capability count as hint');
@@ -452,12 +479,8 @@ test('AgentDetailDrawer Links section shows link count hint', async () => {
   });
   const { getByRole } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   const linksHeader = getByRole('button', { name: /^Links\b/i });
@@ -466,7 +489,10 @@ test('AgentDetailDrawer Links section shows link count hint', async () => {
   // Check that the header contains the count. The structure is:
   // <AccordionSummary><Typography>Links</Typography><Typography>3</Typography></AccordionSummary>
   const headerContent = linksHeader.textContent;
-  assert.ok(headerContent?.includes('3'), `Links header should contain count "3", got: "${headerContent}"`);
+  assert.ok(
+    headerContent?.includes('3'),
+    `Links header should contain count "3", got: "${headerContent}"`,
+  );
 });
 
 test('AgentDetailDrawer Tags section shows tag count hint', async () => {
@@ -475,12 +501,8 @@ test('AgentDetailDrawer Tags section shows tag count hint', async () => {
   });
   const { getByRole } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   const tagsHeader = getByRole('button', { name: /^Tags\b/i });
@@ -488,7 +510,10 @@ test('AgentDetailDrawer Tags section shows tag count hint', async () => {
 
   // Check that the header contains the count
   const headerContent = tagsHeader.textContent;
-  assert.ok(headerContent?.includes('4'), `Tags header should contain count "4", got: "${headerContent}"`);
+  assert.ok(
+    headerContent?.includes('4'),
+    `Tags header should contain count "4", got: "${headerContent}"`,
+  );
 });
 
 test('AgentDetailDrawer properly copies entityRef to clipboard', () => {
@@ -496,17 +521,15 @@ test('AgentDetailDrawer properly copies entityRef to clipboard', () => {
   let clipboardText = '';
   const originalClipboard = navigator.clipboard;
   (navigator as any).clipboard = {
-    writeText: async (text: string) => { clipboardText = text; },
+    writeText: async (text: string) => {
+      clipboardText = text;
+    },
   };
 
   const { getByText: getByTextClipboard } = renderWithApi(
     <MemoryRouter>
-      <AgentDetailDrawer
-        agent={agent}
-        open
-        onClose={() => {}}
-      />
-    </MemoryRouter>
+      <AgentDetailDrawer agent={agent} open onClose={() => {}} />
+    </MemoryRouter>,
   );
 
   fireEvent.click(getByTextClipboard('component:default/my-agent'));
@@ -526,12 +549,18 @@ test('AgentDetailDrawer preserves all existing props (agent, open, onClose, onRe
       <AgentDetailDrawer
         agent={agent}
         open
-        onClose={() => { closeCallCount++; }}
-        onHire={() => { hireCallCount++; }}
-        onRefreshStatus={() => { refreshCallCount++; }}
+        onClose={() => {
+          closeCallCount++;
+        }}
+        onHire={() => {
+          hireCallCount++;
+        }}
+        onRefreshStatus={() => {
+          refreshCallCount++;
+        }}
         historyReloadKey={0}
       />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
   // Verify drawer is open with no unexpected calls

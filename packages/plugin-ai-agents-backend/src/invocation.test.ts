@@ -24,15 +24,27 @@ const entity: Entity = {
 
 test('fillTemplate substitutes known placeholders and leaves unknown ones', () => {
   assert.equal(
-    fillTemplate('Review {target} in {project} ({missing})', { target: '42', project: 'x' }),
+    fillTemplate('Review {target} in {project} ({missing})', {
+      target: '42',
+      project: 'x',
+    }),
     'Review 42 in x ({missing})',
   );
 });
 
 test('buildPrompt renders the template, falling back to a JSON dump', () => {
-  assert.equal(buildPrompt(entity, { target: '42', project: 'x' }), 'Review MR !42 in x');
-  const bare: Entity = { ...entity, metadata: { ...entity.metadata, annotations: {} } };
-  assert.equal(buildPrompt(bare, { a: '1' }), JSON.stringify({ a: '1' }, null, 2));
+  assert.equal(
+    buildPrompt(entity, { target: '42', project: 'x' }),
+    'Review MR !42 in x',
+  );
+  const bare: Entity = {
+    ...entity,
+    metadata: { ...entity.metadata, annotations: {} },
+  };
+  assert.equal(
+    buildPrompt(bare, { a: '1' }),
+    JSON.stringify({ a: '1' }, null, 2),
+  );
 });
 
 test('buildInvocationArgs defaults post=false for dry-run and true for action=post', () => {
@@ -43,8 +55,14 @@ test('buildInvocationArgs defaults post=false for dry-run and true for action=po
 });
 
 test('buildInvocationArgs honors an explicit request-level override', () => {
-  assert.equal(buildInvocationArgs({ action: 'dry-run' }, { post: true }).post, true);
-  assert.equal(buildInvocationArgs({ action: 'post' }, { post: false }).post, false);
+  assert.equal(
+    buildInvocationArgs({ action: 'dry-run' }, { post: true }).post,
+    true,
+  );
+  assert.equal(
+    buildInvocationArgs({ action: 'post' }, { post: false }).post,
+    false,
+  );
 });
 
 test('buildInvocationArgs carries target/project/model/mode', () => {
@@ -89,6 +107,13 @@ test('buildInvocationTags includes channel, session, user and entity', () => {
 });
 
 test('buildInvocationTags omits the user tag when unknown', () => {
-  const tags = buildInvocationTags({ threadId: 't1', entityRef: 'component:default/x' });
-  assert.deepEqual(tags, ['channel:backstage', 'session:t1', 'backstage-entity:component:default/x']);
+  const tags = buildInvocationTags({
+    threadId: 't1',
+    entityRef: 'component:default/x',
+  });
+  assert.deepEqual(tags, [
+    'channel:backstage',
+    'session:t1',
+    'backstage-entity:component:default/x',
+  ]);
 });

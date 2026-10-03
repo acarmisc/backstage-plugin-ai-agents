@@ -14,7 +14,7 @@ test('StarRating fancy variant calls onChange when clicking a star', async () =>
   };
 
   const { container } = render(
-    <StarRating value={0} variant="fancy" onChange={handleChange} />
+    <StarRating value={0} variant="fancy" onChange={handleChange} />,
   );
 
   // Find the radio input for the 3-star rating
@@ -24,12 +24,20 @@ test('StarRating fancy variant calls onChange when clicking a star', async () =>
   // Click the 3-star rating using fireEvent
   fireEvent.click(radioInputs[2]);
 
-  assert.deepEqual(changes, [3], 'Should call onChange with value 3 after clicking 3-star');
+  assert.deepEqual(
+    changes,
+    [3],
+    'Should call onChange with value 3 after clicking 3-star',
+  );
 
   // Click the 5-star rating
   fireEvent.click(radioInputs[4]);
 
-  assert.deepEqual(changes, [3, 5], 'Should call onChange with value 5 after clicking 5-star');
+  assert.deepEqual(
+    changes,
+    [3, 5],
+    'Should call onChange with value 5 after clicking 5-star',
+  );
 });
 
 test('StarRating fancy variant displays label on value change', () => {
@@ -39,7 +47,7 @@ test('StarRating fancy variant displays label on value change', () => {
   };
 
   const { container, rerender } = render(
-    <StarRating value={0} variant="fancy" onChange={handleChange} />
+    <StarRating value={0} variant="fancy" onChange={handleChange} />,
   );
 
   const radioInputs = container.querySelectorAll('input[type="radio"]');
@@ -56,6 +64,6 @@ test('StarRating fancy variant displays label on value change', () => {
   const typography = container.querySelector('p'); // Typography renders as <p>
   assert.ok(
     typography?.textContent?.includes('Great'),
-    'Should display "Great" label for 4-star rating'
+    'Should display "Great" label for 4-star rating',
   );
 });

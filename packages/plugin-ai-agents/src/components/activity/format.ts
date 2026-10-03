@@ -4,7 +4,10 @@ import type { AgentRun } from '../../types';
 /**
  * Calculate elapsed time from a start timestamp to now (or a given timestamp).
  */
-export function elapsedSince(startedAt: string | undefined, now = Date.now()): number {
+export function elapsedSince(
+  startedAt: string | undefined,
+  now = Date.now(),
+): number {
   if (!startedAt) return 0;
   const startMs = new Date(startedAt).getTime();
   return Math.max(0, now - startMs);
@@ -19,7 +22,10 @@ export function runDuration(run: AgentRun, now = Date.now()): number {
   if (!run.startedAt) return 0;
   const startMs = new Date(run.startedAt).getTime();
   // A run in progress lasts until now; finished runs end at their last update.
-  const endMs = run.state === 'running' || !run.updatedAt ? now : new Date(run.updatedAt).getTime();
+  const endMs =
+    run.state === 'running' || !run.updatedAt
+      ? now
+      : new Date(run.updatedAt).getTime();
   return Math.max(0, endMs - startMs);
 }
 
@@ -31,7 +37,9 @@ export function formatRunDuration(run: AgentRun, now = Date.now()): string {
  * Determine the tone (color) for a metric based on thresholds.
  * For success rates: >= 95% = success, >= 80% = warning, < 80% = error.
  */
-export function toneForSuccessRate(ratio: number): 'success' | 'warning' | 'error' {
+export function toneForSuccessRate(
+  ratio: number,
+): 'success' | 'warning' | 'error' {
   if (ratio >= 0.95) return 'success';
   if (ratio >= 0.8) return 'warning';
   return 'error';

@@ -14,7 +14,10 @@ afterEach(() => {
   resetApi();
 });
 
-const entity = (type: string, annotations: Record<string, string> = {}): Entity => ({
+const entity = (
+  type: string,
+  annotations: Record<string, string> = {},
+): Entity => ({
   apiVersion: 'backstage.io/v1alpha1',
   kind: 'Component',
   metadata: { name: 'dinesh', title: 'Dinesh', annotations },
@@ -24,7 +27,9 @@ const entity = (type: string, annotations: Record<string, string> = {}): Entity 
 const mount = (e: Entity) =>
   render(
     <MemoryRouter>
-      <AgentActivityTabView agent={e.spec?.type === 'ai-agent' ? entityToAgent(e) : undefined} />
+      <AgentActivityTabView
+        agent={e.spec?.type === 'ai-agent' ? entityToAgent(e) : undefined}
+      />
     </MemoryRouter>,
   );
 
@@ -37,16 +42,27 @@ test('activity tab: explains how to enable activity when the agent has no teleme
 
 test('activity tab: renders nothing for entities that are not ai-agents', () => {
   installApi({});
-  const { container } = mount(entity('service', { 'ai-agent.io/telemetry-id': 'dinesh' }));
+  const { container } = mount(
+    entity('service', { 'ai-agent.io/telemetry-id': 'dinesh' }),
+  );
   assert.equal(container.textContent, '');
 });
 
-test('activity tab: with a telemetry-id it loads that agent\'s runs and stats', async () => {
+test("activity tab: with a telemetry-id it loads that agent's runs and stats", async () => {
   const asked: string[] = [];
   installApi({
     getRuns: async (ref: string) => {
       asked.push(ref);
-      return [{ runId: 'r1', agent: 'dinesh', state: 'running', target: '!152', startedAt: new Date().toISOString(), currentActivity: 'after get_mr_changes' }];
+      return [
+        {
+          runId: 'r1',
+          agent: 'dinesh',
+          state: 'running',
+          target: '!152',
+          startedAt: new Date().toISOString(),
+          currentActivity: 'after get_mr_changes',
+        },
+      ];
     },
     getInsights: async () => null,
     getRunTimeline: async () => [],

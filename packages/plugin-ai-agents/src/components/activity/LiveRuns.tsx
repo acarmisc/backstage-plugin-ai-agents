@@ -22,7 +22,11 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
  * Every run currently in progress, side by side. Cards have a fixed size so a
  * run starting or finishing never shifts the others; selection is an outline.
  */
-export const LiveRuns: React.FC<LiveRunsProps> = ({ runs, selectedRunId, onSelect }) => {
+export const LiveRuns: React.FC<LiveRunsProps> = ({
+  runs,
+  selectedRunId,
+  onSelect,
+}) => {
   const theme = useTheme();
   const running = runs.filter(r => r.state === 'running');
   const now = useNow(1000, running.length > 0);
@@ -35,7 +39,11 @@ export const LiveRuns: React.FC<LiveRunsProps> = ({ runs, selectedRunId, onSelec
           Running now
           <Box
             component="span"
-            sx={{ ml: 1, color: running.length ? 'info.main' : 'text.disabled', fontVariantNumeric: 'tabular-nums' }}
+            sx={{
+              ml: 1,
+              color: running.length ? 'info.main' : 'text.disabled',
+              fontVariantNumeric: 'tabular-nums',
+            }}
           >
             {running.length}
           </Box>
@@ -48,7 +56,13 @@ export const LiveRuns: React.FC<LiveRunsProps> = ({ runs, selectedRunId, onSelec
           No runs in progress
         </Typography>
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 1.5 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: 1.5,
+          }}
+        >
           {running.map(run => {
             const selected = run.runId === selectedRunId;
             return (
@@ -70,40 +84,75 @@ export const LiveRuns: React.FC<LiveRunsProps> = ({ runs, selectedRunId, onSelec
                   border: 1,
                   borderColor: alpha(theme.palette.info.main, 0.35),
                   backgroundColor: alpha(theme.palette.info.main, 0.05),
-                  outline: selected ? `2px solid ${theme.palette.primary.main}` : '2px solid transparent',
+                  outline: selected
+                    ? `2px solid ${theme.palette.primary.main}`
+                    : '2px solid transparent',
                   outlineOffset: -1,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   overflow: 'hidden',
                   position: 'relative',
-                  '&:hover': { backgroundColor: alpha(theme.palette.info.main, 0.1) },
-                  '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -1 },
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.info.main, 0.1),
+                  },
+                  '&:focus-visible': {
+                    outline: `2px solid ${theme.palette.primary.main}`,
+                    outlineOffset: -1,
+                  },
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    minWidth: 0,
+                  }}
+                >
                   <StatusDot state="running" size={10} />
                   <Typography
                     noWrap
-                    sx={{ fontFamily: MONO, fontWeight: 700, fontSize: 15, flex: 1, minWidth: 0 }}
+                    sx={{
+                      fontFamily: MONO,
+                      fontWeight: 700,
+                      fontSize: 15,
+                      flex: 1,
+                      minWidth: 0,
+                    }}
                     title={run.target}
                   >
                     {run.target || 'run'}
                   </Typography>
                   <Typography
                     data-testid="live-elapsed"
-                    sx={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'info.main' }}
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontVariantNumeric: 'tabular-nums',
+                      color: 'info.main',
+                    }}
                   >
                     {formatMs(elapsedSince(run.startedAt, now))}
                   </Typography>
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   {run.project && (
-                    <Typography noWrap variant="caption" color="text.secondary" sx={{ display: 'block' }} title={run.project}>
+                    <Typography
+                      noWrap
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block' }}
+                      title={run.project}
+                    >
                       {run.project}
                     </Typography>
                   )}
-                  <Typography noWrap variant="body2" sx={{ color: 'text.primary' }}>
+                  <Typography
+                    noWrap
+                    variant="body2"
+                    sx={{ color: 'text.primary' }}
+                  >
                     {run.currentActivity ?? 'working…'}
                   </Typography>
                 </Box>
@@ -115,7 +164,10 @@ export const LiveRuns: React.FC<LiveRunsProps> = ({ runs, selectedRunId, onSelec
                     bottom: 0,
                     height: 3,
                     '@media (prefers-reduced-motion: reduce)': {
-                      '& .MuiLinearProgress-bar': { animation: 'none', width: '35%' },
+                      '& .MuiLinearProgress-bar': {
+                        animation: 'none',
+                        width: '35%',
+                      },
                     },
                   }}
                 />

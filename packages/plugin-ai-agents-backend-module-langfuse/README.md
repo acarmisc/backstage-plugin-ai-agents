@@ -11,7 +11,9 @@ Architecture and the provider contract: [`docs/activity.md`](../../docs/activity
 
    ```ts
    backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
-   backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse'));
+   backend.add(
+     import('@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse'),
+   );
    ```
 
 2. Configure it (a no-op when the block is absent):
@@ -37,7 +39,7 @@ Architecture and the provider contract: [`docs/activity.md`](../../docs/activity
    ```yaml
    metadata:
      annotations:
-       ai-agent.io/telemetry-id: dinesh   # agent name used in the traces
+       ai-agent.io/telemetry-id: dinesh # agent name used in the traces
    ```
 
 ## What it reads

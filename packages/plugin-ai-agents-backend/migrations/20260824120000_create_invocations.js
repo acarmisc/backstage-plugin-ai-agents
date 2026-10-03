@@ -11,7 +11,11 @@ exports.up = async function up(knex) {
     table.text('response_text').nullable();
     table.text('error_message').nullable();
     table.bigInteger('latency_ms').nullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable().index();
+    table
+      .timestamp('created_at')
+      .defaultTo(knex.fn.now())
+      .notNullable()
+      .index();
   });
 };
 

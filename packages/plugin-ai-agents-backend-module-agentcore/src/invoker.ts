@@ -14,7 +14,9 @@ export interface AgentCoreConfig {
   timeoutMs: number;
 }
 
-export function readAgentCoreConfig(config: Config): AgentCoreConfig | undefined {
+export function readAgentCoreConfig(
+  config: Config,
+): AgentCoreConfig | undefined {
   const cfg = config.getOptionalConfig('ai-agents.invocations.agentCore');
   if (!cfg) return undefined;
   return {
@@ -54,7 +56,7 @@ export function extractResponseText(body: string): string {
       if (parsed.error || parsed.jsonrpc) {
         const message =
           typeof parsed.error === 'object'
-            ? parsed.error.message ?? JSON.stringify(parsed.error)
+            ? (parsed.error.message ?? JSON.stringify(parsed.error))
             : String(parsed.error ?? 'unknown error');
         throw new Error(`AgentCore error: ${message}`);
       }
@@ -79,7 +81,9 @@ export function extractResponseText(body: string): string {
  * an omitted value to true, which would silently turn a dry-run into a
  * posting run.
  */
-export function buildPayload(req: AgentInvocationRequest): Record<string, unknown> {
+export function buildPayload(
+  req: AgentInvocationRequest,
+): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     prompt: req.prompt,
     post: req.args.post,
@@ -108,7 +112,11 @@ export class TokenClient {
   private cached?: CachedToken;
 
   constructor(
-    private readonly opts: { tokenUrl: string; clientId: string; clientSecret: string },
+    private readonly opts: {
+      tokenUrl: string;
+      clientId: string;
+      clientSecret: string;
+    },
     private readonly fetchImpl: typeof fetch = fetch,
   ) {}
 
@@ -128,7 +136,10 @@ export class TokenClient {
     if (!res.ok) {
       throw new Error(`token endpoint returned ${res.status}`);
     }
-    const data = (await res.json()) as { access_token?: string; expires_in?: number };
+    const data = (await res.json()) as {
+      access_token?: string;
+      expires_in?: number;
+    };
     if (!data.access_token) {
       throw new Error('token endpoint response missing access_token');
     }
@@ -144,7 +155,10 @@ export class AgentCoreInvoker {
   private readonly config: AgentCoreConfig | undefined;
   private readonly tokens: TokenClient | undefined;
 
-  constructor(config: Config, private readonly fetchImpl: typeof fetch = fetch) {
+  constructor(
+    config: Config,
+    private readonly fetchImpl: typeof fetch = fetch,
+  ) {
     this.config = readAgentCoreConfig(config);
     if (this.config) {
       this.tokens = new TokenClient(this.config, fetchImpl);
@@ -160,7 +174,9 @@ export class AgentCoreInvoker {
     const region = req.target?.region ?? this.config.region;
     const runtimeHandle = req.target?.runtimeHandle;
     if (!region) {
-      throw new Error('no AWS region: set the ai-agent.io/region annotation or ai-agents.invocations.agentCore.region');
+      throw new Error(
+        'no AWS region: set the ai-agent.io/region annotation or ai-agents.invocations.agentCore.region',
+      );
     }
     // The region becomes part of the hostname the bearer token is sent to, so
     // an annotation like `evil.example/x#` must never reach the URL.
@@ -207,7 +223,9 @@ export class AgentCoreInvoker {
       const latencyMs = Date.now() - start;
       const bodyText = await res.text();
       if (!res.ok) {
-        throw new Error(`AgentCore returned HTTP ${res.status}: ${bodyText.slice(0, 200)}`);
+        throw new Error(
+          `AgentCore returned HTTP ${res.status}: ${bodyText.slice(0, 200)}`,
+        );
       }
       return { responseText: extractResponseText(bodyText), latencyMs };
     } finally {

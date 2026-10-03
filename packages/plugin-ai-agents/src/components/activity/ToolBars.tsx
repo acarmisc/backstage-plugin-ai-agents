@@ -47,7 +47,8 @@ export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
               all: 'unset',
               boxSizing: 'border-box',
               display: 'grid',
-              gridTemplateColumns: 'minmax(150px, 1.3fr) minmax(60px, 0.8fr) 40px 60px auto',
+              gridTemplateColumns:
+                'minmax(150px, 1.3fr) minmax(60px, 0.8fr) 40px 60px auto',
               alignItems: 'center',
               columnGap: 1.5,
               minHeight: 36,
@@ -55,29 +56,68 @@ export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
               borderRadius: 1,
               cursor: onSelect ? 'pointer' : 'default',
               '&:hover': { backgroundColor: theme.palette.action.hover },
-              '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 },
+              '&:focus-visible': {
+                outline: `2px solid ${theme.palette.primary.main}`,
+                outlineOffset: -2,
+              },
             }}
           >
             <Typography
               title={tool.name}
-              sx={{ fontFamily: MONO, fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              sx={{
+                fontFamily: MONO,
+                fontSize: 12.5,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
             >
               {tool.name}
             </Typography>
-            <Box sx={{ height: 8, borderRadius: 4, backgroundColor: theme.palette.action.hover, overflow: 'hidden' }}>
+            <Box
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: theme.palette.action.hover,
+                overflow: 'hidden',
+              }}
+            >
               <Box
                 data-testid="tool-bar"
                 data-calls-pct={Math.round(widthPct)}
                 data-error-pct={Math.round(errorShare * 100)}
-                sx={{ height: '100%', width: `${widthPct}%`, display: 'flex', borderRadius: 4, overflow: 'hidden' }}
+                sx={{
+                  height: '100%',
+                  width: `${widthPct}%`,
+                  display: 'flex',
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                }}
               >
                 {tool.errors > 0 && (
-                  <Box sx={{ flex: tool.errors, backgroundColor: theme.palette.error.main }} />
+                  <Box
+                    sx={{
+                      flex: tool.errors,
+                      backgroundColor: theme.palette.error.main,
+                    }}
+                  />
                 )}
-                <Box sx={{ flex: Math.max(tool.calls - tool.errors, 0), backgroundColor: alpha(theme.palette.primary.main, 0.75) }} />
+                <Box
+                  sx={{
+                    flex: Math.max(tool.calls - tool.errors, 0),
+                    backgroundColor: alpha(theme.palette.primary.main, 0.75),
+                  }}
+                />
               </Box>
             </Box>
-            <Typography variant="body2" sx={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums',
+                fontWeight: 600,
+              }}
+            >
               {tool.calls}
             </Typography>
             <Box sx={{ minHeight: 20, display: 'flex', alignItems: 'center' }}>
@@ -104,7 +144,11 @@ export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}
+              sx={{
+                whiteSpace: 'nowrap',
+                fontVariantNumeric: 'tabular-nums',
+                textAlign: 'right',
+              }}
             >
               {formatMs(tool.avgMs)} avg · {formatMs(tool.p95Ms)} p95
             </Typography>

@@ -43,33 +43,60 @@ From `@acarmisc/backstage-plugin-ai-agents-backend`:
 interface TelemetryProvider {
   getRuns(telemetryId: string, limit?: number): Promise<AgentRun[]>;
   /** null when the run does not exist for that agent. */
-  getRunTimeline(telemetryId: string, runId: string): Promise<RunEvent[] | null>;
+  getRunTimeline(
+    telemetryId: string,
+    runId: string,
+  ): Promise<RunEvent[] | null>;
   /** Optional: per-agent statistics for the panel. */
   getInsights?(telemetryId: string, hours: number): Promise<AgentInsights>;
 }
 
 interface AgentInsights {
   windowHours: number;
-  totals: { runs: number; running: number; completed: number; failed: number; unknown: number };
-  durationMs: { p50: number; p95: number };           // over finished runs
+  totals: {
+    runs: number;
+    running: number;
+    completed: number;
+    failed: number;
+    unknown: number;
+  };
+  durationMs: { p50: number; p95: number }; // over finished runs
   histogram: { start: string; runs: number; failed: number }[]; // windowHours UTC hours, oldest first
-  tools: { name: string; calls: number; errors: number; avgMs: number; p95Ms: number }[]; // top 10
+  tools: {
+    name: string;
+    calls: number;
+    errors: number;
+    avgMs: number;
+    p95Ms: number;
+  }[]; // top 10
 }
 
 type RunState = 'running' | 'completed' | 'failed' | 'unknown';
 
 interface AgentRun {
-  runId: string; agent: string; state: RunState;
-  target?: string; project?: string; mode?: string;
-  startedAt?: string; updatedAt?: string;
-  currentActivity?: string; verdict?: string;
+  runId: string;
+  agent: string;
+  state: RunState;
+  target?: string;
+  project?: string;
+  mode?: string;
+  startedAt?: string;
+  updatedAt?: string;
+  currentActivity?: string;
+  verdict?: string;
   events?: RunEvent[];
 }
 
 interface RunEvent {
-  seq: number; name: string; event: string; // 'start' | 'tool' | 'completed' | ...
-  tool?: string; label?: string; durationMs?: number;
-  outcome?: string; incomplete?: string; ts?: string;
+  seq: number;
+  name: string;
+  event: string; // 'start' | 'tool' | 'completed' | ...
+  tool?: string;
+  label?: string;
+  durationMs?: number;
+  outcome?: string;
+  incomplete?: string;
+  ts?: string;
 }
 ```
 
@@ -99,12 +126,12 @@ provider credentials never reach the browser.
 
 ## Routes
 
-| Route | Response |
-|-------|----------|
-| `GET /activity?limit=N` (N clamped to 1-30, default 10) | `AgentActivity[]`: `{ entityRef, telemetryId, title?, runs, error? }`, newest run first, runs **without** `events`. Agents with a running run first. One failing agent gets `runs: []` and `error`; the others are still returned. `501` when no provider is registered. |
-| `GET /runs/:entityRef?limit=N` | `AgentRun[]` (`[]` when the entity has no `telemetry-id`). `501` without provider, `502` when the store query fails. |
-| `GET /insights/:entityRef?hours=N` (N clamped to 1-72, default 24) | `AgentInsights`. `501` without provider or when it has no `getInsights`, `404` without telemetry id, `502` on store errors. |
-| `GET /runs/:entityRef/:runId` | `RunEvent[]`. `404` when the agent has no telemetry id or the run is not found, `501` without provider, `502` on store errors. |
+| Route                                                              | Response                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /activity?limit=N` (N clamped to 1-30, default 10)            | `AgentActivity[]`: `{ entityRef, telemetryId, title?, runs, error? }`, newest run first, runs **without** `events`. Agents with a running run first. One failing agent gets `runs: []` and `error`; the others are still returned. `501` when no provider is registered. |
+| `GET /runs/:entityRef?limit=N`                                     | `AgentRun[]` (`[]` when the entity has no `telemetry-id`). `501` without provider, `502` when the store query fails.                                                                                                                                                     |
+| `GET /insights/:entityRef?hours=N` (N clamped to 1-72, default 24) | `AgentInsights`. `501` without provider or when it has no `getInsights`, `404` without telemetry id, `502` on store errors.                                                                                                                                              |
+| `GET /runs/:entityRef/:runId`                                      | `RunEvent[]`. `404` when the agent has no telemetry id or the run is not found, `501` without provider, `502` on store errors.                                                                                                                                           |
 
 The catalog is queried with the plugin's service token.
 

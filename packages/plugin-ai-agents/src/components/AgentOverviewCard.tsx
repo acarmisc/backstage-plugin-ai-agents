@@ -31,16 +31,20 @@ const RUNTIME_ICON: Record<string, React.ReactNode> = {
   custom: <ExtensionIcon fontSize="small" />,
 };
 
-const Field: React.FC<{ label: string; value?: React.ReactNode; mono?: boolean }> = ({
-  label,
-  value,
-  mono,
-}) => (
+const Field: React.FC<{
+  label: string;
+  value?: React.ReactNode;
+  mono?: boolean;
+}> = ({ label, value, mono }) => (
   <Grid item xs={6}>
     <Typography variant="caption" color="text.secondary">
       {label}
     </Typography>
-    <Typography variant="body2" sx={{ wordBreak: 'break-all' }} style={mono ? { fontFamily: 'monospace' } : undefined}>
+    <Typography
+      variant="body2"
+      sx={{ wordBreak: 'break-all' }}
+      style={mono ? { fontFamily: 'monospace' } : undefined}
+    >
       {value ?? '—'}
     </Typography>
   </Grid>
@@ -51,7 +55,9 @@ export const AgentOverviewCard: React.FC = () => {
   const api = useApi(aiAgentsApiRef);
   const [hireOpen, setHireOpen] = useState(false);
   const agent =
-    entity && entity.spec?.type === 'ai-agent' ? entityToAgent(entity) : undefined;
+    entity && entity.spec?.type === 'ai-agent'
+      ? entityToAgent(entity)
+      : undefined;
   const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   if (!agent) return null;
   const canHire = !!(agent.hireSchema && agent.hireSchema.length > 0);
@@ -61,7 +67,9 @@ export const AgentOverviewCard: React.FC = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
         <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={48} />
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h6" noWrap>{agent.title ?? agent.name}</Typography>
+          <Typography variant="h6" noWrap>
+            {agent.title ?? agent.name}
+          </Typography>
           <Typography variant="caption" color="text.secondary" noWrap>
             {agent.entityRef}
           </Typography>
@@ -74,13 +82,23 @@ export const AgentOverviewCard: React.FC = () => {
       </Typography>
 
       <Grid container spacing={2}>
-        <Field label="Runtime" value={
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-            {RUNTIME_ICON[agent.runtime.runtime] ?? <ExtensionIcon fontSize="small" />}
-            {agent.runtime.runtime}
-          </Box>
-        } />
-        <Field label="Billing" value={<BillingBadge billing={agent.billing} />} />
+        <Field
+          label="Runtime"
+          value={
+            <Box
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            >
+              {RUNTIME_ICON[agent.runtime.runtime] ?? (
+                <ExtensionIcon fontSize="small" />
+              )}
+              {agent.runtime.runtime}
+            </Box>
+          }
+        />
+        <Field
+          label="Billing"
+          value={<BillingBadge billing={agent.billing} />}
+        />
         <Field label="Owner" value={agent.owner} />
         <Field label="Lifecycle" value={agent.lifecycle} />
         <Field label="Version" value={agent.version ?? 'N/A'} />
@@ -89,9 +107,16 @@ export const AgentOverviewCard: React.FC = () => {
 
       {agent.runtime.endpoint && isSafeUrl(agent.runtime.endpoint) && (
         <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">Endpoint</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Endpoint
+          </Typography>
           <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-            <Link href={agent.runtime.endpoint} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+            <Link
+              href={agent.runtime.endpoint}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            >
               {agent.runtime.endpoint} <OpenInNewIcon sx={{ fontSize: 12 }} />
             </Link>
           </Typography>
@@ -100,8 +125,13 @@ export const AgentOverviewCard: React.FC = () => {
 
       {agent.runtime.runtimeHandle && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary">Runtime handle</Typography>
-          <Typography variant="body2" style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          <Typography variant="caption" color="text.secondary">
+            Runtime handle
+          </Typography>
+          <Typography
+            variant="body2"
+            style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}
+          >
             {agent.runtime.runtimeHandle}
           </Typography>
         </Box>
@@ -109,7 +139,9 @@ export const AgentOverviewCard: React.FC = () => {
 
       {agent.capabilities.length > 0 && (
         <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">Capabilities</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Capabilities
+          </Typography>
           <Box sx={{ mt: 0.5 }}>
             <AgentCapabilities capabilities={agent.capabilities} max={20} />
           </Box>
@@ -118,24 +150,41 @@ export const AgentOverviewCard: React.FC = () => {
 
       {agent.tags.length > 0 && (
         <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">Tags</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Tags
+          </Typography>
           <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {agent.tags.map(t => <Chip key={t} size="small" label={t} variant="outlined" />)}
+            {agent.tags.map(t => (
+              <Chip key={t} size="small" label={t} variant="outlined" />
+            ))}
           </Box>
         </Box>
       )}
 
       {agent.links.filter(l => isSafeUrl(l.url)).length > 0 && (
         <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">Links</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Links
+          </Typography>
           <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {agent.links.filter(l => isSafeUrl(l.url)).map((l, i) => (
-              <Tooltip key={i} title={l.title}>
-                <Link href={l.url} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                  {l.title} <OpenInNewIcon sx={{ fontSize: 12 }} />
-                </Link>
-              </Tooltip>
-            ))}
+            {agent.links
+              .filter(l => isSafeUrl(l.url))
+              .map((l, i) => (
+                <Tooltip key={i} title={l.title}>
+                  <Link
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    {l.title} <OpenInNewIcon sx={{ fontSize: 12 }} />
+                  </Link>
+                </Tooltip>
+              ))}
           </Box>
         </Box>
       )}
@@ -161,7 +210,9 @@ export const AgentOverviewCard: React.FC = () => {
           agent={agent}
           open={hireOpen}
           onClose={() => setHireOpen(false)}
-          onInvoke={(values, opts) => api.invokeAgent(agent.entityRef, values, opts)}
+          onInvoke={(values, opts) =>
+            api.invokeAgent(agent.entityRef, values, opts)
+          }
         />
       )}
     </Box>

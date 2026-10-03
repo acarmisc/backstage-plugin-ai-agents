@@ -1,11 +1,24 @@
 import express, { Router, Request, Response } from 'express';
 import { Config } from '@backstage/config';
-import { AuthService, DiscoveryService, HttpAuthService, LoggerService, DatabaseService, PermissionsService } from '@backstage/backend-plugin-api';
+import {
+  AuthService,
+  DiscoveryService,
+  HttpAuthService,
+  LoggerService,
+  DatabaseService,
+  PermissionsService,
+} from '@backstage/backend-plugin-api';
 import { CatalogClient } from '@backstage/catalog-client';
 import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import { AuthorizeResult } from '@backstage/plugin-permission-common';
-import type { Permission, ResourcePermission } from '@backstage/plugin-permission-common';
-import { aiAgentInvokePermission, aiAgentHistoryReadPermission } from './permissions';
+import type {
+  Permission,
+  ResourcePermission,
+} from '@backstage/plugin-permission-common';
+import {
+  aiAgentInvokePermission,
+  aiAgentHistoryReadPermission,
+} from './permissions';
 import {
   AI_AGENT_TYPE,
   AgentActivity,
@@ -18,8 +31,18 @@ import {
   ReviewsSummary,
   TelemetryProvider,
 } from './types';
-import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './client';
-import { readAvatarProxyConfig, resolveAvatar, createCacheStore, createLocalStore } from './avatar';
+import {
+  buildProbeFn,
+  isAllowed,
+  mapProbeResult,
+  readProbeConfig,
+} from './client';
+import {
+  readAvatarProxyConfig,
+  resolveAvatar,
+  createCacheStore,
+  createLocalStore,
+} from './avatar';
 import { InvocationStore, ReviewStore } from './store';
 import {
   annotation,
@@ -58,7 +81,9 @@ export interface RouterOptions {
   probe?: ProbeFn;
   /** Override the catalog client (tests). Defaults to one built from discovery. */
   catalogClient?: {
-    getEntitiesByRefs: (r: { entityRefs: string[] }) => Promise<{ items: (Entity | undefined)[] }>;
+    getEntitiesByRefs: (r: {
+      entityRefs: string[];
+    }) => Promise<{ items: (Entity | undefined)[] }>;
     getEntities?: (
       r: { filter: Record<string, string> },
       o?: { token: string },
@@ -79,7 +104,10 @@ export interface RouterOptions {
    * without them the route redirects to the original URL.
    */
   avatarProxy?: {
-    urlReader?: Pick<import('@backstage/backend-plugin-api').UrlReaderService, 'readUrl'>;
+    urlReader?: Pick<
+      import('@backstage/backend-plugin-api').UrlReaderService,
+      'readUrl'
+    >;
     cache?: import('@backstage/backend-plugin-api').CacheService;
   };
 }
@@ -111,7 +139,17 @@ function resolveInvoker(
 }
 
 export async function createRouter(options: RouterOptions): Promise<Router> {
-  const { config, logger, auth, discovery, probe: probeOverride, invokers, telemetryProvider, httpAuth, permissions } = options;
+  const {
+    config,
+    logger,
+    auth,
+    discovery,
+    probe: probeOverride,
+    invokers,
+    telemetryProvider,
+    httpAuth,
+    permissions,
+  } = options;
   const cfg: ProbeConfig = readProbeConfig(config);
   const probe = probeOverride ?? buildProbeFn(fetch);
   const invocationsEnabled =
@@ -145,7 +183,11 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
 
   const cache = new Map<string, CachedStatus>();
 
-  function localCacheSet(ref: string, status: AgentStatus, expiresAt: number): void {
+  function localCacheSet(
+    ref: string,
+    status: AgentStatus,
+    expiresAt: number,
+  ): void {
     if (cache.size >= maxCacheEntries) {
       const oldestKey = cache.keys().next().value;
       if (oldestKey) {
@@ -156,8 +198,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   }
 
   const catalogClient =
-    options.catalogClient ??
-    new CatalogClient({ discoveryApi: discovery });
+    options.catalogClient ?? new CatalogClient({ discoveryApi: discovery });
 
   const router = Router();
   router.use(express.json());
@@ -178,7 +219,13 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       const agents = (await listAgentEntities(req)).flatMap(entity => {
         const telemetryId = annotation(entity, 'telemetry-id');
         return telemetryId
-          ? [{ entityRef: stringifyEntityRef(entity), telemetryId, title: entity.metadata.title ?? entity.metadata.name }]
+          ? [
+              {
+                entityRef: stringifyEntityRef(entity),
+                telemetryId,
+                title: entity.metadata.title ?? entity.metadata.name,
+              },
+            ]
           : [];
       });
 
@@ -188,22 +235,35 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       for (let i = 0; i < agents.length; i += CONCURRENCY) {
         const chunk = agents.slice(i, i + CONCURRENCY);
         const results = await Promise.allSettled(
-          chunk.map(agent => telemetryProvider.getRuns(agent.telemetryId, limit)),
+          chunk.map(agent =>
+            telemetryProvider.getRuns(agent.telemetryId, limit),
+          ),
         );
         results.forEach((result, j) => {
           const agent = chunk[j];
           if (result.status === 'fulfilled') {
-            activities.push({ ...agent, runs: result.value.map(({ events: _events, ...run }) => run) });
+            activities.push({
+              ...agent,
+              runs: result.value.map(({ events: _events, ...run }) => run),
+            });
           } else {
-            logger.error(`Failed to fetch runs for ${agent.entityRef}: ${result.reason?.message ?? result.reason}`);
-            activities.push({ ...agent, runs: [], error: 'telemetry query failed' });
+            logger.error(
+              `Failed to fetch runs for ${agent.entityRef}: ${result.reason?.message ?? result.reason}`,
+            );
+            activities.push({
+              ...agent,
+              runs: [],
+              error: 'telemetry query failed',
+            });
           }
         });
       }
 
       // Running agents first, then most recent run, then title.
-      const hasRunning = (a: AgentActivity) => a.runs.some(r => r.state === 'running');
-      const lastStart = (a: AgentActivity) => (a.runs[0]?.startedAt ? Date.parse(a.runs[0].startedAt) : 0);
+      const hasRunning = (a: AgentActivity) =>
+        a.runs.some(r => r.state === 'running');
+      const lastStart = (a: AgentActivity) =>
+        a.runs[0]?.startedAt ? Date.parse(a.runs[0].startedAt) : 0;
       activities.sort(
         (a, b) =>
           Number(hasRunning(b)) - Number(hasRunning(a)) ||
@@ -226,21 +286,34 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const onBehalfOf = httpAuth
       ? await httpAuth.credentials(req)
       : await auth.getOwnServiceCredentials();
-    const { token } = await auth.getPluginRequestToken({ onBehalfOf, targetPluginId: 'catalog' });
+    const { token } = await auth.getPluginRequestToken({
+      onBehalfOf,
+      targetPluginId: 'catalog',
+    });
     return token;
   }
 
-  async function resolveEntities(req: Request, refs: string[]): Promise<{ items: (Entity | undefined)[] }> {
-    return catalogClient.getEntitiesByRefs({ entityRefs: refs }, { token: await catalogToken(req) });
+  async function resolveEntities(
+    req: Request,
+    refs: string[],
+  ): Promise<{ items: (Entity | undefined)[] }> {
+    return catalogClient.getEntitiesByRefs(
+      { entityRefs: refs },
+      { token: await catalogToken(req) },
+    );
   }
 
-  async function resolveAgent(req: Request, ref: string): Promise<Entity | undefined> {
+  async function resolveAgent(
+    req: Request,
+    ref: string,
+  ): Promise<Entity | undefined> {
     const [entity] = (await resolveEntities(req, [ref])).items;
     return entity?.spec?.type === AI_AGENT_TYPE ? entity : undefined;
   }
 
   async function listAgentEntities(req: Request): Promise<Entity[]> {
-    if (!catalogClient.getEntities) throw new Error('catalog client cannot list entities');
+    if (!catalogClient.getEntities)
+      throw new Error('catalog client cannot list entities');
     const { items } = await catalogClient.getEntities(
       { filter: { 'spec.type': AI_AGENT_TYPE } },
       { token: await catalogToken(req) },
@@ -248,14 +321,20 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     return items;
   }
 
-  async function probeAndCache(ref: string, entity: Entity | undefined): Promise<AgentStatus | undefined> {
+  async function probeAndCache(
+    ref: string,
+    entity: Entity | undefined,
+  ): Promise<AgentStatus | undefined> {
     if (!entity || entity.spec?.type !== AI_AGENT_TYPE) return undefined;
     const now = Date.now();
     const cached = cache.get(ref);
     if (cached && cached.expiresAt > now) return cached.status;
     const url = probeUrlFor(entity);
     if (!url || !isAllowed(url, cfg.probeAllowlist)) {
-      const status: AgentStatus = { state: 'unknown', lastChecked: new Date().toISOString() };
+      const status: AgentStatus = {
+        state: 'unknown',
+        lastChecked: new Date().toISOString(),
+      };
       localCacheSet(ref, status, now + cfg.statusCacheTtlMs);
       return status;
     }
@@ -352,7 +431,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       }
       const result = await resolveAvatar(url, avatarProxy);
       if (result.kind === 'redirect') {
-        res.setHeader('Cache-Control', `private, max-age=${Math.max(60, result.maxAgeSec)}`);
+        res.setHeader(
+          'Cache-Control',
+          `private, max-age=${Math.max(60, result.maxAgeSec)}`,
+        );
         res.redirect(302, result.location!);
         return;
       }
@@ -360,7 +442,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.setHeader('Cache-Control', `private, max-age=${result.maxAgeSec}`);
       // Served from the app's origin: an SVG opened directly must not be able
       // to run script, and the browser must not sniff it into something else.
-      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      );
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.send(result.data);
     } catch (err: any) {
@@ -372,11 +457,18 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   async function userRef(req: Request): Promise<string | undefined> {
     if (!httpAuth) return undefined;
     try {
-      const credentials = await httpAuth.credentials(req, { allowLimitedAccess: true });
-      const principal = credentials.principal as { type: string; userEntityRef?: string };
+      const credentials = await httpAuth.credentials(req, {
+        allowLimitedAccess: true,
+      });
+      const principal = credentials.principal as {
+        type: string;
+        userEntityRef?: string;
+      };
       return principal.type === 'user' ? principal.userEntityRef : undefined;
     } catch (err) {
-      logger.warn(`Failed to resolve user for invocation audit: ${(err as any)?.message ?? err}`);
+      logger.warn(
+        `Failed to resolve user for invocation audit: ${(err as any)?.message ?? err}`,
+      );
       return undefined;
     }
   }
@@ -388,7 +480,9 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     if (!permissions || !httpAuth) return true;
     try {
       const credentials = await httpAuth.credentials(req);
-      const [decision] = await permissions.authorize([{ permission }], { credentials });
+      const [decision] = await permissions.authorize([{ permission }], {
+        credentials,
+      });
       return decision.result === AuthorizeResult.ALLOW;
     } catch {
       return false;
@@ -502,7 +596,9 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           post: args.post,
           errorMessage: message,
         });
-        res.status(502).json({ error: message, sessionId: request.sessionId, threadId });
+        res
+          .status(502)
+          .json({ error: message, sessionId: request.sessionId, threadId });
       }
     } catch (err: any) {
       logger.error('Failed to resolve agent for invocation', err);
@@ -516,7 +612,9 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     if (!(await checkPermission(req, aiAgentHistoryReadPermission))) {
-      res.status(403).json({ error: 'not authorized to read this agent history' });
+      res
+        .status(403)
+        .json({ error: 'not authorized to read this agent history' });
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
@@ -530,20 +628,31 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
 
   router.get('/invocations/:entityRef/spend', async (req, res) => {
     if (!spendReader) {
-      res.status(501).json({ error: 'liteLLM is not configured — spend unavailable' });
+      res
+        .status(501)
+        .json({ error: 'liteLLM is not configured — spend unavailable' });
       return;
     }
     if (!(await checkPermission(req, aiAgentHistoryReadPermission))) {
-      res.status(403).json({ error: 'not authorized to read this agent history' });
+      res
+        .status(403)
+        .json({ error: 'not authorized to read this agent history' });
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
     const threadId =
-      typeof req.query.thread === 'string' && req.query.thread ? req.query.thread : undefined;
+      typeof req.query.thread === 'string' && req.query.thread
+        ? req.query.thread
+        : undefined;
     const window = spendWindow(Number(req.query.days) || undefined);
     try {
-      const rows = await spendReader.getSpendLogs({ ...window, page_size: 1000 });
-      res.json(aggregateSpend(rows, spendTagMatcher({ threadId, entityRef: ref })));
+      const rows = await spendReader.getSpendLogs({
+        ...window,
+        page_size: 1000,
+      });
+      res.json(
+        aggregateSpend(rows, spendTagMatcher({ threadId, entityRef: ref })),
+      );
     } catch (err: any) {
       logger.warn(`Failed to read LiteLLM spend: ${err?.message ?? err}`);
       res.status(502).json({ error: err?.message ?? 'failed to read spend' });
@@ -558,9 +667,13 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const ref = decodeURIComponent(req.params.entityRef);
     const rating = Number(req.body?.rating);
     const comment =
-      typeof req.body?.comment === 'string' ? req.body.comment.trim().slice(0, 2000) : null;
+      typeof req.body?.comment === 'string'
+        ? req.body.comment.trim().slice(0, 2000)
+        : null;
     if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
-      res.status(400).json({ error: 'rating must be an integer between 0 and 5' });
+      res
+        .status(400)
+        .json({ error: 'rating must be an integer between 0 and 5' });
       return;
     }
     try {
@@ -599,14 +712,19 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
 
   /** Resolves the agent's telemetry id; undefined when the caller can't see it or it has none. */
   async function telemetryIdFor(req: Request): Promise<string | undefined> {
-    const entity = await resolveAgent(req, decodeURIComponent(req.params.entityRef));
+    const entity = await resolveAgent(
+      req,
+      decodeURIComponent(req.params.entityRef),
+    );
     return entity ? annotation(entity, 'telemetry-id') : undefined;
   }
 
   router.get('/insights/:entityRef', async (req, res) => {
     if (!telemetryProvider?.getInsights) {
       res.status(501).json({
-        error: telemetryProvider ? 'insights not supported by the telemetry provider' : 'telemetry not configured',
+        error: telemetryProvider
+          ? 'insights not supported by the telemetry provider'
+          : 'telemetry not configured',
       });
       return;
     }
@@ -632,7 +750,9 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const limit = Math.min(Math.max(Number(req.query.limit) || 5, 1), 50);
     try {
       const telemetryId = await telemetryIdFor(req);
-      res.json(telemetryId ? await telemetryProvider.getRuns(telemetryId, limit) : []);
+      res.json(
+        telemetryId ? await telemetryProvider.getRuns(telemetryId, limit) : [],
+      );
     } catch (err: any) {
       logger.error('Failed to fetch agent runs', err);
       res.status(502).json({ error: 'telemetry query failed' });
@@ -669,13 +789,18 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
 }
 
 function refsParameterSplit(param: string): string[] {
-  return param.split(',').map(s => s.trim()).filter(Boolean);
+  return param
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 }
 
 /** Form values from the request body; non-string entries are dropped. */
 function stringFields(input: unknown): Record<string, string> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
   return Object.fromEntries(
-    Object.entries(input).filter((e): e is [string, string] => typeof e[1] === 'string'),
+    Object.entries(input).filter(
+      (e): e is [string, string] => typeof e[1] === 'string',
+    ),
   );
 }

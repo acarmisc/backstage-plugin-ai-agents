@@ -25,7 +25,10 @@ export interface AgentFiltersBarProps {
 }
 
 const SELECT_PROPS = {
-  SelectProps: { multiple: true, renderValue: (v: unknown) => (v as string[]).join(', ') || 'All' },
+  SelectProps: {
+    multiple: true,
+    renderValue: (v: unknown) => (v as string[]).join(', ') || 'All',
+  },
 } as const;
 
 function without<T>(arr: T[], value: T): T[] {
@@ -40,24 +43,37 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
 }) => {
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
 
-  const runtimes = Array.from(new Set(agents.map(a => a.runtime.runtime))).sort();
+  const runtimes = Array.from(
+    new Set(agents.map(a => a.runtime.runtime)),
+  ).sort();
   const capabilities = Array.from(
     new Set(agents.flatMap(a => a.capabilities.map(c => c.label))),
   ).sort();
-  const lifecycles = Array.from(new Set(agents.map(a => a.lifecycle).filter(Boolean))) as string[];
-  const owners = Array.from(new Set(agents.map(a => a.owner).filter(Boolean))) as string[];
+  const lifecycles = Array.from(
+    new Set(agents.map(a => a.lifecycle).filter(Boolean)),
+  ) as string[];
+  const owners = Array.from(
+    new Set(agents.map(a => a.owner).filter(Boolean)),
+  ) as string[];
 
   const moreCount = filters.lifecycle.length + filters.owner.length;
   const hasFilters = Boolean(
     filters.search ||
-      filters.runtime.length ||
-      filters.capability.length ||
-      moreCount,
+    filters.runtime.length ||
+    filters.capability.length ||
+    moreCount,
   );
 
   return (
     <Paper sx={{ p: 1.5, mb: 2 }}>
-      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1.5,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
         <TextField
           size="small"
           placeholder="Search agents…"
@@ -72,7 +88,10 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
             ),
             endAdornment: filters.search ? (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={() => onChange({ search: '' })}>
+                <IconButton
+                  size="small"
+                  onClick={() => onChange({ search: '' })}
+                >
                   <ClearIcon fontSize="small" />
                 </IconButton>
               </InputAdornment>
@@ -80,18 +99,27 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
           }}
         />
 
-        <TextField select size="small" label="Runtime" value={filters.runtime}
-          onChange={e => onChange({ runtime: e.target.value as unknown as string[] })}
+        <TextField
+          select
+          size="small"
+          label="Runtime"
+          value={filters.runtime}
+          onChange={e =>
+            onChange({ runtime: e.target.value as unknown as string[] })
+          }
           sx={{ minWidth: 160 }}
           SelectProps={{
             multiple: true,
             renderValue: v =>
-              (v as string[]).map(r => getRuntimeMeta(r).label).join(', ') || 'All',
+              (v as string[]).map(r => getRuntimeMeta(r).label).join(', ') ||
+              'All',
           }}
         >
           {runtimes.map(r => (
             <MenuItem key={r} value={r}>
-              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
+              >
                 {getRuntimeMeta(r).icon}
                 {getRuntimeMeta(r).label}
               </Box>
@@ -99,10 +127,22 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
           ))}
         </TextField>
 
-        <TextField select size="small" label="Capability" value={filters.capability}
-          onChange={e => onChange({ capability: e.target.value as unknown as string[] })}
-          sx={{ minWidth: 150 }} {...SELECT_PROPS}>
-          {capabilities.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+        <TextField
+          select
+          size="small"
+          label="Capability"
+          value={filters.capability}
+          onChange={e =>
+            onChange({ capability: e.target.value as unknown as string[] })
+          }
+          sx={{ minWidth: 150 }}
+          {...SELECT_PROPS}
+        >
+          {capabilities.map(c => (
+            <MenuItem key={c} value={c}>
+              {c}
+            </MenuItem>
+          ))}
         </TextField>
 
         <Badge badgeContent={moreCount} color="primary" overlap="rectangular">
@@ -123,17 +163,47 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
           onClose={() => setMoreAnchor(null)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         >
-          <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 220 }}>
-            <TextField select size="small" label="Lifecycle" value={filters.lifecycle}
-              onChange={e => onChange({ lifecycle: e.target.value as unknown as string[] })}
-              {...SELECT_PROPS}>
-              {lifecycles.map(l => <MenuItem key={l} value={l}>{l}</MenuItem>)}
+          <Box
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              minWidth: 220,
+            }}
+          >
+            <TextField
+              select
+              size="small"
+              label="Lifecycle"
+              value={filters.lifecycle}
+              onChange={e =>
+                onChange({ lifecycle: e.target.value as unknown as string[] })
+              }
+              {...SELECT_PROPS}
+            >
+              {lifecycles.map(l => (
+                <MenuItem key={l} value={l}>
+                  {l}
+                </MenuItem>
+              ))}
             </TextField>
 
-            <TextField select size="small" label="Owner" value={filters.owner}
-              onChange={e => onChange({ owner: e.target.value as unknown as string[] })}
-              {...SELECT_PROPS}>
-              {owners.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+            <TextField
+              select
+              size="small"
+              label="Owner"
+              value={filters.owner}
+              onChange={e =>
+                onChange({ owner: e.target.value as unknown as string[] })
+              }
+              {...SELECT_PROPS}
+            >
+              {owners.map(o => (
+                <MenuItem key={o} value={o}>
+                  {o}
+                </MenuItem>
+              ))}
             </TextField>
           </Box>
         </Popover>
@@ -165,7 +235,9 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
               size="small"
               icon={getRuntimeMeta(r).icon as React.ReactElement}
               label={getRuntimeMeta(r).label}
-              onDelete={() => onChange({ runtime: without(filters.runtime, r) })}
+              onDelete={() =>
+                onChange({ runtime: without(filters.runtime, r) })
+              }
             />
           ))}
           {filters.capability.map(c => (
@@ -173,7 +245,9 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
               key={`capability-${c}`}
               size="small"
               label={c}
-              onDelete={() => onChange({ capability: without(filters.capability, c) })}
+              onDelete={() =>
+                onChange({ capability: without(filters.capability, c) })
+              }
             />
           ))}
           {filters.lifecycle.map(l => (
@@ -181,7 +255,9 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
               key={`lifecycle-${l}`}
               size="small"
               label={l}
-              onDelete={() => onChange({ lifecycle: without(filters.lifecycle, l) })}
+              onDelete={() =>
+                onChange({ lifecycle: without(filters.lifecycle, l) })
+              }
             />
           ))}
           {filters.owner.map(o => (

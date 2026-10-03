@@ -62,7 +62,13 @@ export interface HourBucket {
 /** Aggregates for one agent over the last `windowHours`. */
 export interface AgentInsights {
   windowHours: number;
-  totals: { runs: number; running: number; completed: number; failed: number; unknown: number };
+  totals: {
+    runs: number;
+    running: number;
+    completed: number;
+    failed: number;
+    unknown: number;
+  };
   /** Over finished runs (completed/failed); 0 when there are none. */
   durationMs: { p50: number; p95: number };
   /** Exactly `windowHours` buckets, oldest first. */
@@ -72,11 +78,11 @@ export interface AgentInsights {
 }
 
 export interface AgentActivity {
-  entityRef: string;      // stringifyEntityRef(entity), e.g. "component:default/dinesh"
-  telemetryId: string;    // value of the ai-agent.io/telemetry-id annotation
-  title?: string;         // entity.metadata.title ?? entity.metadata.name
-  runs: AgentRun[];       // newest first, at most `limit`, WITHOUT the `events` field (strip it)
-  error?: string;         // set (and runs = []) when the provider call for THIS agent failed
+  entityRef: string; // stringifyEntityRef(entity), e.g. "component:default/dinesh"
+  telemetryId: string; // value of the ai-agent.io/telemetry-id annotation
+  title?: string; // entity.metadata.title ?? entity.metadata.name
+  runs: AgentRun[]; // newest first, at most `limit`, WITHOUT the `events` field (strip it)
+  error?: string; // set (and runs = []) when the provider call for THIS agent failed
 }
 
 /**
@@ -86,7 +92,10 @@ export interface AgentActivity {
  */
 export interface TelemetryProvider {
   getRuns(telemetryId: string, limit?: number): Promise<AgentRun[]>;
-  getRunTimeline(telemetryId: string, runId: string): Promise<RunEvent[] | null>;
+  getRunTimeline(
+    telemetryId: string,
+    runId: string,
+  ): Promise<RunEvent[] | null>;
   /** Optional aggregates for the agent workspace; routes answer 501 when absent. */
   getInsights?(telemetryId: string, hours: number): Promise<AgentInsights>;
 }
@@ -106,7 +115,10 @@ export interface ProbeResult {
 }
 
 export interface ProbeFn {
-  (url: string, opts: { timeoutMs: number; authHeader?: string }): Promise<ProbeResult>;
+  (
+    url: string,
+    opts: { timeoutMs: number; authHeader?: string },
+  ): Promise<ProbeResult>;
 }
 
 /** A persisted agent invocation. */

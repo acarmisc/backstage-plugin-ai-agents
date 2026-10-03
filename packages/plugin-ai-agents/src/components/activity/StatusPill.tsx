@@ -79,9 +79,10 @@ export const StatusPill: React.FC<StatusPillProps> = ({
         paddingX: size === 'small' ? '8px' : '12px',
         paddingY: size === 'small' ? '4px' : '6px',
         borderRadius: '16px',
-        backgroundColor: theme.palette.mode === 'dark'
-          ? theme.palette.divider
-          : theme.palette.action.hover,
+        backgroundColor:
+          theme.palette.mode === 'dark'
+            ? theme.palette.divider
+            : theme.palette.action.hover,
         fontSize: size === 'small' ? '12px' : '14px',
       }}
     >

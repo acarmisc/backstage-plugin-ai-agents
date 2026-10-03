@@ -35,7 +35,10 @@ function aggregateState(activity: AgentActivity): AgentRun['state'] {
   return activity.runs[0]?.state ?? 'unknown';
 }
 
-const RunningChip: React.FC<{ count: number; label?: string }> = ({ count, label }) => (
+const RunningChip: React.FC<{ count: number; label?: string }> = ({
+  count,
+  label,
+}) => (
   <Box
     data-testid="running-chip"
     sx={{
@@ -58,11 +61,17 @@ const RunningChip: React.FC<{ count: number; label?: string }> = ({ count, label
   </Box>
 );
 
-const RailStatus: React.FC<{ activity: AgentActivity; running: number }> = ({ activity, running }) => {
+const RailStatus: React.FC<{ activity: AgentActivity; running: number }> = ({
+  activity,
+  running,
+}) => {
   if (activity.error) {
     return (
       <Tooltip title="Telemetry unavailable">
-        <WarningAmberIcon aria-label="Telemetry unavailable" sx={{ fontSize: 18, color: 'text.disabled' }} />
+        <WarningAmberIcon
+          aria-label="Telemetry unavailable"
+          sx={{ fontSize: 18, color: 'text.disabled' }}
+        />
       </Tooltip>
     );
   }
@@ -75,32 +84,49 @@ const RailStatus: React.FC<{ activity: AgentActivity; running: number }> = ({ ac
  * order (state changes never reorder it). Items have a fixed height and
  * selection only changes colours, so nothing moves when you click.
  */
-export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId, onSelectAgent }) => {
+export const AgentRail: React.FC<AgentRailProps> = ({
+  fleet,
+  selectedTelemetryId,
+  onSelectAgent,
+}) => {
   const theme = useTheme();
   const [search, setSearch] = useState('');
   const [focus, setFocus] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const agents = useMemo(() => {
-    const sorted = [...fleet].sort((a, b) => (a.title ?? a.telemetryId).localeCompare(b.title ?? b.telemetryId));
+    const sorted = [...fleet].sort((a, b) =>
+      (a.title ?? a.telemetryId).localeCompare(b.title ?? b.telemetryId),
+    );
     const q = search.trim().toLowerCase();
     return q
-      ? sorted.filter(a => (a.title ?? '').toLowerCase().includes(q) || a.telemetryId.toLowerCase().includes(q))
+      ? sorted.filter(
+          a =>
+            (a.title ?? '').toLowerCase().includes(q) ||
+            a.telemetryId.toLowerCase().includes(q),
+        )
       : sorted;
   }, [fleet, search]);
 
-  const totalRunning = fleet.reduce((n, a) => n + a.runs.filter(r => r.state === 'running').length, 0);
+  const totalRunning = fleet.reduce(
+    (n, a) => n + a.runs.filter(r => r.state === 'running').length,
+    0,
+  );
   const itemCount = agents.length + 1;
 
   const choose = useCallback(
-    (index: number) => onSelectAgent(index === 0 ? undefined : agents[index - 1].telemetryId),
+    (index: number) =>
+      onSelectAgent(index === 0 ? undefined : agents[index - 1].telemetryId),
     [agents, onSelectAgent],
   );
 
   const moveFocus = (next: number) => {
     const clamped = Math.max(0, Math.min(itemCount - 1, next));
     setFocus(clamped);
-    (listRef.current?.querySelectorAll('[role="option"]')[clamped] as HTMLElement | undefined)?.focus();
+    (
+      listRef.current?.querySelectorAll('[role="option"]')[clamped] as
+        HTMLElement | undefined
+    )?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -126,10 +152,21 @@ export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId
     borderRadius: 1.5,
     cursor: 'pointer',
     // Selection = background + inset accent. Nothing changes size or padding.
-    backgroundColor: selected ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-    boxShadow: selected ? `inset 3px 0 0 ${theme.palette.primary.main}` : 'none',
-    '&:hover': { backgroundColor: selected ? alpha(theme.palette.primary.main, 0.14) : theme.palette.action.hover },
-    '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 },
+    backgroundColor: selected
+      ? alpha(theme.palette.primary.main, 0.1)
+      : 'transparent',
+    boxShadow: selected
+      ? `inset 3px 0 0 ${theme.palette.primary.main}`
+      : 'none',
+    '&:hover': {
+      backgroundColor: selected
+        ? alpha(theme.palette.primary.main, 0.14)
+        : theme.palette.action.hover,
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${theme.palette.primary.main}`,
+      outlineOffset: -2,
+    },
   });
 
   return (
@@ -153,7 +190,9 @@ export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId
             height: 36,
             borderRadius: 1.5,
             backgroundColor: theme.palette.action.hover,
-            '&:focus-within': { boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.5)}` },
+            '&:focus-within': {
+              boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.5)}`,
+            },
           }}
         >
           <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
@@ -176,7 +215,15 @@ export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId
         role="listbox"
         aria-label="Agents"
         onKeyDown={onKeyDown}
-        sx={{ flex: 1, overflowY: 'auto', px: 1, pb: 2, display: 'flex', flexDirection: 'column', gap: 0.25 }}
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          px: 1,
+          pb: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.25,
+        }}
       >
         <Box
           role="option"
@@ -186,18 +233,28 @@ export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId
           onFocus={() => setFocus(0)}
           sx={itemSx(selectedTelemetryId === undefined)}
         >
-          <DashboardOutlinedIcon sx={{ fontSize: 22, color: 'text.secondary', mx: '3px' }} />
+          <DashboardOutlinedIcon
+            sx={{ fontSize: 22, color: 'text.secondary', mx: '3px' }}
+          />
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>All agents</Typography>
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{fleet.length} monitored</Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+              All agents
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+              {fleet.length} monitored
+            </Typography>
           </Box>
-          {totalRunning > 0 && <RunningChip count={totalRunning} label="running" />}
+          {totalRunning > 0 && (
+            <RunningChip count={totalRunning} label="running" />
+          )}
         </Box>
 
         {agents.map((activity, i) => {
           const index = i + 1;
           const selected = selectedTelemetryId === activity.telemetryId;
-          const running = activity.runs.filter(r => r.state === 'running').length;
+          const running = activity.runs.filter(
+            r => r.state === 'running',
+          ).length;
           const title = activity.title ?? activity.telemetryId;
           return (
             <Box
@@ -214,10 +271,26 @@ export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId
             >
               <AgentAvatar name={title} size={28} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography noWrap sx={{ fontSize: 14, fontWeight: selected ? 600 : 500, lineHeight: 1.3 }} title={title}>
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: 14,
+                    fontWeight: selected ? 600 : 500,
+                    lineHeight: 1.3,
+                  }}
+                  title={title}
+                >
                   {title}
                 </Typography>
-                <Typography noWrap sx={{ fontSize: 12, color: 'text.secondary', lineHeight: 1.3 }} title={secondaryLine(activity)}>
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: 12,
+                    color: 'text.secondary',
+                    lineHeight: 1.3,
+                  }}
+                  title={secondaryLine(activity)}
+                >
                   {secondaryLine(activity)}
                 </Typography>
               </Box>
@@ -227,8 +300,17 @@ export const AgentRail: React.FC<AgentRailProps> = ({ fleet, selectedTelemetryId
         })}
 
         {agents.length === 0 && (
-          <Typography sx={{ p: 2, textAlign: 'center', fontSize: 12, color: 'text.secondary' }}>
-            {fleet.length === 0 ? 'No agents with telemetry' : 'No agent matches your search'}
+          <Typography
+            sx={{
+              p: 2,
+              textAlign: 'center',
+              fontSize: 12,
+              color: 'text.secondary',
+            }}
+          >
+            {fleet.length === 0
+              ? 'No agents with telemetry'
+              : 'No agent matches your search'}
           </Typography>
         )}
       </Box>

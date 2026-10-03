@@ -57,7 +57,12 @@ test('toneForSuccessRate returns error for <80%', () => {
 });
 
 // Tool events carry the call's END time in `ts`; a call spans [ts - durationMs, ts].
-const tool = (seq: number, endMs: number, durationMs?: number, event = 'tool'): RunEvent => ({
+const tool = (
+  seq: number,
+  endMs: number,
+  durationMs?: number,
+  event = 'tool',
+): RunEvent => ({
   seq,
   name: `t${seq}`,
   event,
@@ -77,7 +82,14 @@ test('maxConcurrency: a single call is 1', () => {
 
 test('maxConcurrency: three calls spanning a common instant are 3', () => {
   // [4700,5000] [4800,5000] [4900,5200]  -> all three run during 4900..5000
-  assert.equal(maxConcurrency([tool(1, 5000, 300), tool(2, 5000, 200), tool(3, 5200, 300)]), 3);
+  assert.equal(
+    maxConcurrency([
+      tool(1, 5000, 300),
+      tool(2, 5000, 200),
+      tool(3, 5200, 300),
+    ]),
+    3,
+  );
 });
 
 test('maxConcurrency: back-to-back calls (touching) are not concurrent', () => {
@@ -87,11 +99,23 @@ test('maxConcurrency: back-to-back calls (touching) are not concurrent', () => {
 
 test('maxConcurrency: peak is found among mixed sequential and parallel calls', () => {
   // two parallel at 0..100, later one alone, later two parallel again
-  const events = [tool(1, 100, 100), tool(2, 100, 100), tool(3, 500, 100), tool(4, 900, 100), tool(5, 950, 100)];
+  const events = [
+    tool(1, 100, 100),
+    tool(2, 100, 100),
+    tool(3, 500, 100),
+    tool(4, 900, 100),
+    tool(5, 950, 100),
+  ];
   assert.equal(maxConcurrency(events), 2);
 });
 
 test('maxConcurrency ignores run start/completed markers and unsorted input', () => {
-  const events = [tool(3, 5200, 300), tool(1, 5000, 300), tool(0, 4000, 500, 'start'), tool(9, 6000, 500, 'completed'), tool(2, 5000, 200)];
+  const events = [
+    tool(3, 5200, 300),
+    tool(1, 5000, 300),
+    tool(0, 4000, 500, 'start'),
+    tool(9, 6000, 500, 'completed'),
+    tool(2, 5000, 200),
+  ];
   assert.equal(maxConcurrency(events), 3);
 });

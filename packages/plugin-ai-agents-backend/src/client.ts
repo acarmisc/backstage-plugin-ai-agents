@@ -1,6 +1,8 @@
 import type { ProbeConfig, ProbeFn, ProbeResult } from './types';
 
-export function readProbeConfig(config: import('@backstage/config').Config): ProbeConfig {
+export function readProbeConfig(
+  config: import('@backstage/config').Config,
+): ProbeConfig {
   const cfg = config.getOptionalConfig('ai-agents');
   return {
     enabled: cfg?.getOptionalBoolean('enabled') ?? true,

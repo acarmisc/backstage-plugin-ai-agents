@@ -3,7 +3,12 @@ import { createDevApp } from '@backstage/dev-utils';
 import { TestApiProvider } from '@backstage/test-utils';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import type { CatalogApi } from '@backstage/catalog-client';
-import { aiAgentsPlugin, AgentsPage, AiAgentsApi, aiAgentsApiRef } from '../src';
+import {
+  aiAgentsPlugin,
+  AgentsPage,
+  AiAgentsApi,
+  aiAgentsApiRef,
+} from '../src';
 
 // Sample agents covering all runtimes, billing models, lifecycles, and
 // capability categories. The dev page renders them through a stub CatalogApi
@@ -15,25 +20,44 @@ const sampleEntities = [
     metadata: {
       name: 'support-triage-agent',
       title: 'Support Triage Agent',
-      description: 'Classifies and routes incoming support tickets by severity and product area.',
+      description:
+        'Classifies and routes incoming support tickets by severity and product area.',
       tags: ['ai-agent', 'llm', 'support'],
       annotations: {
-        'ai-agent.io/avatar': 'https://api.dicebear.com/7.x/bottts/svg?seed=triage',
+        'ai-agent.io/avatar':
+          'https://api.dicebear.com/7.x/bottts/svg?seed=triage',
         'ai-agent.io/runtime': 'bedrock-agentcore',
-        'ai-agent.io/runtime-handle': 'arn:aws:bedrock:us-east-1:123:agent/TXXX',
-        'ai-agent.io/endpoint': 'https://abc.execute-api.us-east-1.amazonaws.com/prod',
-        'ai-agent.io/health': 'https://abc.execute-api.us-east-1.amazonaws.com/prod/health',
+        'ai-agent.io/runtime-handle':
+          'arn:aws:bedrock:us-east-1:123:agent/TXXX',
+        'ai-agent.io/endpoint':
+          'https://abc.execute-api.us-east-1.amazonaws.com/prod',
+        'ai-agent.io/health':
+          'https://abc.execute-api.us-east-1.amazonaws.com/prod/health',
         'ai-agent.io/billing-model': 'per-invocation',
         'ai-agent.io/cost-per-1k': '0.012',
-        'ai-agent.io/capabilities': 'tool-use:tools,rag:retrieval,reasoning:reasoning',
+        'ai-agent.io/capabilities':
+          'tool-use:tools,rag:retrieval,reasoning:reasoning',
         'ai-agent.io/version': '1.4.2',
       },
       links: [
-        { url: 'https://grafana.example.com/d/agents/support-triage', title: 'Metrics', icon: 'dashboard' },
-        { url: 'https://docs.example.com/agents/support-triage', title: 'Playbook', icon: 'docs' },
+        {
+          url: 'https://grafana.example.com/d/agents/support-triage',
+          title: 'Metrics',
+          icon: 'dashboard',
+        },
+        {
+          url: 'https://docs.example.com/agents/support-triage',
+          title: 'Playbook',
+          icon: 'docs',
+        },
       ],
     },
-    spec: { type: 'ai-agent', lifecycle: 'production', owner: 'cs-ops', system: 'customer-support' },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'production',
+      owner: 'cs-ops',
+      system: 'customer-support',
+    },
   },
   {
     apiVersion: 'backstage.io/v1alpha1',
@@ -41,7 +65,8 @@ const sampleEntities = [
     metadata: {
       name: 'invoice-reader-agent',
       title: 'Invoice Reader',
-      description: 'Extracts structured data from uploaded invoices and receipts using OCR + LLM.',
+      description:
+        'Extracts structured data from uploaded invoices and receipts using OCR + LLM.',
       tags: ['ai-agent', 'vision'],
       annotations: {
         'ai-agent.io/runtime': 'litellm',
@@ -50,7 +75,12 @@ const sampleEntities = [
         'ai-agent.io/capabilities': 'vision:vision,ocr:vision,tools:tools',
       },
     },
-    spec: { type: 'ai-agent', lifecycle: 'production', owner: 'finance-ops', system: 'invoicing' },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'production',
+      owner: 'finance-ops',
+      system: 'invoicing',
+    },
   },
   {
     apiVersion: 'backstage.io/v1alpha1',
@@ -58,7 +88,8 @@ const sampleEntities = [
     metadata: {
       name: 'kb-search-agent',
       title: 'KB Search',
-      description: 'Answers internal questions grounded in the company knowledge base.',
+      description:
+        'Answers internal questions grounded in the company knowledge base.',
       tags: ['ai-agent', 'rag'],
       annotations: {
         'ai-agent.io/runtime': 'lambda',
@@ -68,7 +99,12 @@ const sampleEntities = [
         'ai-agent.io/capabilities': 'rag:retrieval,reasoning:reasoning',
       },
     },
-    spec: { type: 'ai-agent', lifecycle: 'experimental', owner: 'platform-team', system: 'devex' },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'experimental',
+      owner: 'platform-team',
+      system: 'devex',
+    },
   },
   {
     apiVersion: 'backstage.io/v1alpha1',
@@ -76,7 +112,8 @@ const sampleEntities = [
     metadata: {
       name: 'release-notes-agent',
       title: 'Release Notes Writer',
-      description: 'Drafts user-facing release notes from merged merge requests.',
+      description:
+        'Drafts user-facing release notes from merged merge requests.',
       tags: ['ai-agent', 'codegen'],
       annotations: {
         'ai-agent.io/runtime': 'custom',
@@ -85,7 +122,12 @@ const sampleEntities = [
         'ai-agent.io/capabilities': 'codegen:tools,reasoning:reasoning',
       },
     },
-    spec: { type: 'ai-agent', lifecycle: 'production', owner: 'platform-team', system: 'devex' },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'production',
+      owner: 'platform-team',
+      system: 'devex',
+    },
   },
   {
     apiVersion: 'backstage.io/v1alpha1',
@@ -93,7 +135,8 @@ const sampleEntities = [
     metadata: {
       name: 'legacy-classifier',
       title: 'Legacy Classifier',
-      description: 'Legacy intent classifier — superseded by support-triage-agent.',
+      description:
+        'Legacy intent classifier — superseded by support-triage-agent.',
       tags: ['ai-agent'],
       annotations: {
         'ai-agent.io/runtime': 'custom',
@@ -101,7 +144,12 @@ const sampleEntities = [
         'ai-agent.io/capabilities': 'reasoning:reasoning',
       },
     },
-    spec: { type: 'ai-agent', lifecycle: 'deprecated', owner: 'cs-ops', system: 'customer-support' },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'deprecated',
+      owner: 'cs-ops',
+      system: 'customer-support',
+    },
   },
   {
     apiVersion: 'backstage.io/v1alpha1',
@@ -115,10 +163,16 @@ const sampleEntities = [
         'ai-agent.io/runtime': 'bedrock-agentcore',
         'ai-agent.io/billing-model': 'per-invocation',
         'ai-agent.io/cost-per-1k': '0.040',
-        'ai-agent.io/capabilities': 'voice:voice,reasoning:reasoning,tools:tools',
+        'ai-agent.io/capabilities':
+          'voice:voice,reasoning:reasoning,tools:tools',
       },
     },
-    spec: { type: 'ai-agent', lifecycle: 'experimental', owner: 'cs-ops', system: 'customer-support' },
+    spec: {
+      type: 'ai-agent',
+      lifecycle: 'experimental',
+      owner: 'cs-ops',
+      system: 'customer-support',
+    },
   },
 ];
 
@@ -135,10 +189,15 @@ const stubCatalogApi = {
         }),
       );
     });
-    return { items, totalItems: items.length, pageInfo: { hasNextPage: false } };
+    return {
+      items,
+      totalItems: items.length,
+      pageInfo: { hasNextPage: false },
+    };
   },
   getEntityByRef: async (ref: string) =>
-    sampleEntities.find(e => `component:default/${e.metadata.name}` === ref) ?? null,
+    sampleEntities.find(e => `component:default/${e.metadata.name}` === ref) ??
+    null,
 } as unknown as CatalogApi;
 
 // In-memory reviews so the review widgets are exercisable in the dev app.
@@ -157,12 +216,17 @@ class DevApi extends AiAgentsApi {
   async getReviews(entityRef: string) {
     const reviews = devReviews.filter(r => r.entityRef === entityRef);
     const average = reviews.length
-      ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+      ? Math.round(
+          (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10,
+        ) / 10
       : null;
     return { reviews, count: reviews.length, average };
   }
 
-  async addReview(entityRef: string, review: { rating: number; comment?: string }) {
+  async addReview(
+    entityRef: string,
+    review: { rating: number; comment?: string },
+  ) {
     const id = devReviews.push({
       id: devReviews.length + 1,
       entityRef,
@@ -269,7 +333,12 @@ createDevApp()
   .registerPlugin(aiAgentsPlugin)
   .addPage({
     element: (
-      <TestApiProvider apis={[[catalogApiRef, stubCatalogApi], [aiAgentsApiRef, stubAiAgentsApi]]}>
+      <TestApiProvider
+        apis={[
+          [catalogApiRef, stubCatalogApi],
+          [aiAgentsApiRef, stubAiAgentsApi],
+        ]}
+      >
         <AgentsPage />
       </TestApiProvider>
     ),
