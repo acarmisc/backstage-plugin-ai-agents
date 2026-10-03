@@ -1,0 +1,14 @@
+# Entry for the Backstage plugin directory (https://backstage.io/plugins).
+# Submit as microsite/data/plugins/ai-agents.yaml in a pull request to
+# backstage/backstage; set addedDate to the day it is submitted.
+---
+title: AI Agents
+author: Andrea Carmisciano
+authorUrl: https://github.com/acarmisc
+category: Machine Learning
+description: Catalog AI agents as components, see their health, run them from Backstage and follow their runs, cost and reviews.
+documentation: https://github.com/acarmisc/backstage-plugin-ai-agents/tree/main/packages/plugin-ai-agents#readme
+iconUrl: /img/logo-gradient-on-dark.svg
+npmPackageName: '@acarmisc/backstage-plugin-ai-agents'
+addedDate: 'YYYY-MM-DD'
+status: active

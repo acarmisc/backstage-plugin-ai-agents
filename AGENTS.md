@@ -14,7 +14,7 @@ probes live status and can invoke agents through runtime-specific modules.
 
 ## Stack & layout
 
-Four npm workspaces (`packages/*`):
+Five npm workspaces (`packages/*`):
 
 - `plugin-ai-agents` — frontend (`@acarmisc/backstage-plugin-ai-agents`).
 - `plugin-ai-agents-backend` — backend core, status probing + persistence
@@ -22,6 +22,7 @@ Four npm workspaces (`packages/*`):
 - `plugin-ai-agents-backend-module-agentcore` — AWS Bedrock AgentCore
   invoker module.
 - `plugin-ai-agents-backend-module-kagent` — kagent invoker module.
+- `plugin-ai-agents-backend-module-langfuse` — Langfuse telemetry provider.
 
 Backstage 1.53+ (New Frontend System + New Backend System). Node 22/24, npm
 workspaces. esbuild dual ESM/CJS (frontend) / CJS (backend) + `tsc` for
@@ -36,6 +37,7 @@ npm run lint                     # root: runs every workspace
 npm run build                    # root: build every workspace (needed before typecheck)
 npm run typecheck                # root
 npm test                         # root
+npm run prettier:check           # Backstage prettier config; prettier:fix to format
 ```
 
 Per-workspace (all accept `--workspace <name>`):
@@ -80,9 +82,8 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   one module is installed, that one is used. No match → 501. Add a new runtime
   by implementing `AgentInvoker` and adding a `-backend-module-*` package, not
   by editing the router.
-- **`post` is always explicit and defaults to false (dry-run).** The CES
-  agents' entrypoint (`deploy/app.py`) reads `post` and defaults an _omitted_
-  value to true, so never drop the field — `buildInvocationArgs` in
+- **`post` is always explicit and defaults to false (dry-run).** Agents may
+  treat an _omitted_ `post` as true, so never drop the field — `buildInvocationArgs` in
   `invocation.ts` is the single place that derives it (`action: post` → true).
   The UI's "Confirm and publish" is the only caller that passes `post: true`.
 - **Threads, not per-call sessions.** `makeThreadId` mints a conversation id;
@@ -90,7 +91,7 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   from it. The agentcore invoker sends it as
   `X-Amzn-Bedrock-AgentCore-Runtime-Session-Id`, kagent as the A2A `contextId`.
   Never generate a random session id per call — that breaks multi-turn memory.
-- **Spend is read from LiteLLM via a govai dependency.**
+- **Spend is read from LiteLLM.**
   `plugin-ai-agents-backend` imports `LiteLLMClient`/`normalizeRequestTags`
   from `@acarmisc/backstage-plugin-litellm-backend` (^0.14.0) and reads the
   `litellm.baseUrl`/`masterKey` config. No LiteLLM config → `/spend` answers
@@ -101,6 +102,15 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   Migrations auto-run from `packages/plugin-ai-agents-backend/migrations`
   (tables `invocations`, `agent_reviews`) on `InvocationStore`/`ReviewStore`
   creation. `files` in package.json ships `migrations`.
+- **Catalog reads run on behalf of the caller** (`httpAuth.credentials(req)`
+  → `getPluginRequestToken`), never with the plugin's own identity, so
+  catalog permissions gate every route. Don't add a status-cache shortcut
+  that answers before the catalog read.
+- **Annotations are untrusted input.** Anything that becomes part of a URL or
+  host (AgentCore `region`, kagent `endpoint`) is validated or scoped; the
+  kagent `authHeader` only goes to the `baseUrl` origin.
+- **Each module owns its config schema** (`configSchema` in its
+  package.json). Don't duplicate module keys in the backend's `config.d.ts`.
 - **Permission checks:** `ai-agent.invoke` (update) on POST
   `/invocations/:ref`; `ai-agent.history.read` (read) on GET
   `/invocations/:ref`. Both defined in `permissions.ts`.
@@ -186,9 +196,12 @@ package; tag version must equal that package's `package.json` version.
 # bump the package.json version
 git commit -am "release: ai-agents vX.Y.Z"
 git push origin main
-git tag ai-agents@X.Y.Z            # or ai-agents-backend@..., -module-agentcore@..., -module-kagent@...
+git tag ai-agents@X.Y.Z            # or ai-agents-backend@..., -module-agentcore@..., -module-kagent@..., -module-langfuse@...
 git push origin ai-agents@X.Y.Z
 ```
+
+When a tag can't be pushed, run the **Publish to npm** workflow on `main` with
+the tag as its `tag` input; it creates the tag with the release.
 
 CI verifies the version match, builds all workspaces in dependency order,
 publishes with provenance, and creates a GitHub Release. `NPM_TOKEN` repo
@@ -202,5 +215,9 @@ truth.
 - **`file:` deps in the host are copies, not symlinks** — re-sync `dist` after
   every rebuild (or reinstall) or the host runs stale code.
 - **`--legacy-peer-deps` is mandatory** on every install (local and CI).
+- **Contribution rules follow Backstage** — sign off commits (`git commit -s`),
+  no `React.FC` (ADR006), `@public` TSDoc tag on every export from a
+  package's `src/index.ts` (API Extractor), Prettier formatting. See
+  `CONTRIBUTING.md`.
 - **Tests use Node's runner, not Jest** — co-located `*.test.ts(x)`, `node --test`.
   DOM tests import `../setupTests` first (jsdom globals for MUI Portals).
