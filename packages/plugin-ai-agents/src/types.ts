@@ -163,6 +163,34 @@ export interface ReviewsSummary {
 }
 
 /** Activity data for an agent, including recent runs and real-time telemetry. */
+/** Per-tool aggregate over the insights window. */
+export interface ToolStat {
+  name: string;
+  calls: number;
+  errors: number;
+  avgMs: number;
+  p95Ms: number;
+}
+
+/** One hour of run counts (UTC hour start, ISO). */
+export interface HourBucket {
+  start: string;
+  runs: number;
+  failed: number;
+}
+
+/** Aggregates for one agent over the last `windowHours`. */
+export interface AgentInsights {
+  windowHours: number;
+  totals: { runs: number; running: number; completed: number; failed: number; unknown: number };
+  /** Over finished runs (completed/failed); 0 when there are none. */
+  durationMs: { p50: number; p95: number };
+  /** Exactly `windowHours` buckets, oldest first. */
+  histogram: HourBucket[];
+  /** Top 10 tools by number of calls, descending. */
+  tools: ToolStat[];
+}
+
 export interface AgentActivity {
   entityRef: string;
   telemetryId: string;
