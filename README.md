@@ -544,9 +544,11 @@ package and registering it under a runtime key of their choosing.
 
 The plugin shows agent runs in two places:
 
-1. **Activity tab** (on the agents page): fleet board (one card per agent)
-   showing current status, target, last verdict, and expandable timeline.
-   Queries `GET /activity?limit=N` and `GET /runs/:entityRef/:runId`.
+1. **Activity workspace** (tab on the agents page): agents in a left rail, the
+   selected agent's runs in progress, recent runs, statistics and a waterfall
+   of each run's tool calls. Also available as an **Activity tab on every
+   `ai-agent` catalog entity page**. Queries `GET /activity`, `GET /runs/…`
+   and `GET /insights/…`.
 
 2. **Run timeline** (detail drawer): per-agent run history with timestamps and
    verdicts. Queries `GET /runs/:entityRef` and `GET /runs/:entityRef/:runId`.

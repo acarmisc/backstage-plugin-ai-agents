@@ -1,15 +1,24 @@
 # Activity view
 
-The agents page has an **Activity** tab (a live fleet board) and the agent
-detail drawer shows a **run timeline**. Both read from a pluggable telemetry
-source; nothing is stored in Backstage and prompts or tool arguments are never
-read.
+The agents page has an **Activity** tab and every `ai-agent` catalog entity has an
+**Activity** tab of its own. Both read from a pluggable telemetry source;
+nothing is stored in Backstage and prompts or tool arguments are never read.
 
-- **Fleet board**: one card per agent with a status dot (pulsing while running),
-  what it is doing now, the last verdict, a sparkline of recent run durations
-  and an expandable timeline of the latest run.
-- **Run timeline**: `start`, one event per tool call (name, duration, outcome),
-  then `completed`.
+- **Workspace** (agents page → Activity): agents in a left rail (stable
+  alphabetical order, a status dot or an "N running" chip each), the selected
+  agent in the body. "All agents" shows the fleet: totals, every run in progress
+  across agents, and the latest runs.
+- **Agent panel**: KPIs (runs, success rate, p50 / p95 duration, running now),
+  **Running now** (one card per concurrent run with live elapsed time and the
+  current step), recent runs (filter by state or text), runs-per-hour chart and
+  tool usage (calls, errors, avg / p95 latency).
+- **Run detail**: facts, tool calls / errors / peak parallelism and a
+  **waterfall** of the tool calls — parallel calls overlap on the time axis.
+- **Deep links**: `?tab=activity&agent=<telemetry-id>&run=<run-id>&hours=6|24|72`.
+- **Catalog entity tab**: the same panel scoped to one agent; without a
+  `telemetry-id` it explains how to enable it.
+- The detail drawer is compact: header + actions, everything else collapsed and
+  fetched on first expansion, with an "Open activity" shortcut.
 
 ## Data flow
 
@@ -35,6 +44,16 @@ interface TelemetryProvider {
   getRuns(telemetryId: string, limit?: number): Promise<AgentRun[]>;
   /** null when the run does not exist for that agent. */
   getRunTimeline(telemetryId: string, runId: string): Promise<RunEvent[] | null>;
+  /** Optional: per-agent statistics for the panel. */
+  getInsights?(telemetryId: string, hours: number): Promise<AgentInsights>;
+}
+
+interface AgentInsights {
+  windowHours: number;
+  totals: { runs: number; running: number; completed: number; failed: number; unknown: number };
+  durationMs: { p50: number; p95: number };           // over finished runs
+  histogram: { start: string; runs: number; failed: number }[]; // windowHours UTC hours, oldest first
+  tools: { name: string; calls: number; errors: number; avgMs: number; p95Ms: number }[]; // top 10
 }
 
 type RunState = 'running' | 'completed' | 'failed' | 'unknown';
@@ -84,13 +103,15 @@ provider credentials never reach the browser.
 |-------|----------|
 | `GET /activity?limit=N` (N clamped to 1-30, default 10) | `AgentActivity[]`: `{ entityRef, telemetryId, title?, runs, error? }`, newest run first, runs **without** `events`. Agents with a running run first. One failing agent gets `runs: []` and `error`; the others are still returned. `501` when no provider is registered. |
 | `GET /runs/:entityRef?limit=N` | `AgentRun[]` (`[]` when the entity has no `telemetry-id`). `501` without provider, `502` when the store query fails. |
+| `GET /insights/:entityRef?hours=N` (N clamped to 1-72, default 24) | `AgentInsights`. `501` without provider or when it has no `getInsights`, `404` without telemetry id, `502` on store errors. |
 | `GET /runs/:entityRef/:runId` | `RunEvent[]`. `404` when the agent has no telemetry id or the run is not found, `501` without provider, `502` on store errors. |
 
 The catalog is queried with the plugin's service token.
 
 ## UI behaviour
 
-- Polls every 5 s; requests never overlap.
+- Polls the fleet every 5 s, an agent's runs every 3 s while something is running
+  (10 s otherwise) and its statistics every 30 s; requests never overlap.
 - No polling while the browser tab is hidden; becoming visible refetches at once.
 - After a failed refresh the interval is 4x longer and the last data stays on
   screen with a warning. A first-load failure shows an error instead of an

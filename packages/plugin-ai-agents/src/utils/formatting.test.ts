@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { relativeTime, formatDuration } from '../utils/formatting';
+import { relativeTime, formatDuration } from './formatting';
 
 // relativeTime tests
 test('relativeTime formats seconds', () => {

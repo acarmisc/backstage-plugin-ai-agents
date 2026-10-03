@@ -6,6 +6,7 @@ import {
   AgentStatus,
   AgentRun,
   AgentActivity,
+  AgentInsights,
   entityToAgent,
   InvocationRecord,
   ReviewsSummary,
@@ -35,6 +36,8 @@ export interface AiAgentsApiInterface {
   getRunTimeline(entityRef: string, runId: string): Promise<RunEvent[] | null>;
   /** Fleet activity across all agents; empty when telemetry is not configured (501 status). */
   getActivity(limit?: number): Promise<AgentActivity[]>;
+  /** Aggregated insights for an agent over a time window; null when telemetry is not configured (501/404). */
+  getInsights(entityRef: string, hours?: number): Promise<AgentInsights | null>;
   /** Reviews (latest first) plus count and average rating for an agent. */
   getReviews(entityRef: string, limit?: number): Promise<ReviewsSummary>;
   /** Submit a 0-5 star review with an optional comment. */
@@ -190,6 +193,29 @@ export class AiAgentsApi implements AiAgentsApiInterface {
       throw new Error(`Failed to load activity: ${res.status}`);
     }
     return (await res.json()) as AgentActivity[];
+  }
+
+  async getInsights(
+    entityRef: string,
+    hours = 24,
+  ): Promise<AgentInsights | null> {
+    try {
+      const res = await this.opts.fetchApi.fetch(
+        `${this.basePath}/insights/${encodeURIComponent(entityRef)}?hours=${hours}`,
+      );
+      // 501 and 404 mean telemetry not configured or agent not found
+      if (res.status === 501 || res.status === 404) return null;
+      if (!res.ok) {
+        throw new Error(`Failed to load insights: ${res.status}`);
+      }
+      return (await res.json()) as AgentInsights;
+    } catch (err) {
+      // Rethrow non-HTTP errors
+      if (err instanceof Error && err.message.startsWith('Failed to load')) {
+        throw err;
+      }
+      return null;
+    }
   }
 
   async getReviews(entityRef: string, limit = 50): Promise<ReviewsSummary> {

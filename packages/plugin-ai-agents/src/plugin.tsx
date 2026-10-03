@@ -8,7 +8,7 @@ import {
   fetchApiRef,
 } from '@backstage/frontend-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
-import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
+import { EntityCardBlueprint, EntityContentBlueprint } from '@backstage/plugin-catalog-react/alpha';
 import { aiAgentsApiRef, AiAgentsApi } from './api';
 
 const aiAgentsApi = ApiBlueprint.make({
@@ -65,9 +65,24 @@ const aiAgentInvocationsCard = EntityCardBlueprint.make({
   },
 });
 
+// "Activity" tab on ai-agent entity pages: runs in progress, recent runs with
+// their tool timeline, and per-agent statistics. Only for ai-agent entities.
+const aiAgentActivityTab = EntityContentBlueprint.make({
+  name: 'activity',
+  params: {
+    path: '/activity',
+    title: 'Activity',
+    filter: { 'spec.type': 'ai-agent' },
+    loader: async () => {
+      const { AgentActivityTab } = await import('./components/AgentActivityTab');
+      return <AgentActivityTab />;
+    },
+  },
+});
+
 // Explicit type annotation: without it, tsc may fail with TS2742 when
 // node_modules layouts nest a second copy of frontend-plugin-api.
 export const aiAgentsPlugin: FrontendPlugin = createFrontendPlugin({
   pluginId: 'ai-agents',
-  extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard, aiAgentInvocationsCard],
+  extensions: [aiAgentsApi, aiAgentsPage, aiAgentOverviewCard, aiAgentInvocationsCard, aiAgentActivityTab],
 });

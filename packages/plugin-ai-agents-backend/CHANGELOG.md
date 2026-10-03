@@ -3,6 +3,15 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.3] - 2026-10-03
+
+### Added
+
+- `GET /insights/:entityRef?hours=N` and the optional
+  `TelemetryProvider.getInsights(telemetryId, hours)`: per-agent totals,
+  p50/p95 duration, hourly run histogram and top tools with error rates.
+  `501` when the provider does not implement it.
+
 ## [0.9.2] - 2026-10-03
 
 ### Added

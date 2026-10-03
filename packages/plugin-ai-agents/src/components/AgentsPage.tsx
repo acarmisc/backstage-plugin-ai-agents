@@ -6,6 +6,7 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '@backstage/core-components';
 import { useApi } from '@backstage/core-plugin-api';
+import { useSearchParams } from 'react-router-dom';
 import { aiAgentsApiRef } from '../api';
 import type { AiAgent, AgentStatus } from '../types';
 import { useAgents } from '../hooks/useAgents';
@@ -13,16 +14,19 @@ import { AgentFiltersBar } from './AgentFilters';
 import { AgentsGrid } from './AgentsGrid';
 import { AgentDetailDrawer } from './AgentDetailDrawer';
 import { HireAgentDialog } from './HireAgentDialog';
-import { FleetActivity } from './FleetActivity';
+import { ActivityWorkspace } from './activity/ActivityWorkspace';
 
 const POLL_INTERVAL_MS = 30_000;
 
 export const AgentsPage: React.FC = () => {
   const api = useApi(aiAgentsApiRef);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { agents, allAgents, loading, error, retry, filters, update, reset } =
     useAgents();
 
-  const [tab, setTab] = useState<'agents' | 'activity'>('agents');
+  const tabParam = searchParams.get('tab') || 'agents';
+  const tab = (tabParam === 'activity' ? 'activity' : 'agents') as 'agents' | 'activity';
+
   const [selected, setSelected] = useState<AiAgent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hireAgent, setHireAgent] = useState<AiAgent | null>(null);
@@ -124,7 +128,15 @@ export const AgentsPage: React.FC = () => {
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs
           value={tab}
-          onChange={(_, newValue) => setTab(newValue)}
+          onChange={(_, newValue) => {
+            const newParams = new URLSearchParams(searchParams);
+            if (newValue === 'agents') {
+              newParams.delete('tab');
+            } else {
+              newParams.set('tab', newValue);
+            }
+            setSearchParams(newParams);
+          }}
           aria-label="Agents view"
         >
           <Tab label="Agents" value="agents" />
@@ -188,7 +200,7 @@ export const AgentsPage: React.FC = () => {
         </>
       )}
 
-      {tab === 'activity' && <FleetActivity />}
+      {tab === 'activity' && <ActivityWorkspace />}
     </Box>
   );
 };

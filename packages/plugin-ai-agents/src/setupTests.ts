@@ -40,3 +40,17 @@ try {
   (globalThis as any).requestAnimationFrame ?? ((cb: FrameRequestCallback) => setTimeout(cb, 0));
 (globalThis as any).cancelAnimationFrame =
   (globalThis as any).cancelAnimationFrame ?? ((id: number) => clearTimeout(id));
+
+// jsdom has no matchMedia; MUI's useMediaQuery and reduced-motion checks need it.
+if (typeof (globalThis as any).window?.matchMedia !== 'function') {
+  (globalThis as any).window.matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    dispatchEvent: () => false,
+  });
+}

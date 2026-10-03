@@ -6,7 +6,8 @@ export { HireAgentDialog } from './components/HireAgentDialog';
 export { StarRating } from './components/StarRating';
 export type { StarVariant } from './components/StarRating';
 export { AgentReviews } from './components/AgentReviews';
-export { FleetActivity } from './components/FleetActivity';
+export { ActivityWorkspace } from './components/activity/ActivityWorkspace';
+export { AgentWorkspacePanel } from './components/activity/AgentWorkspacePanel';
 export { aiAgentsApiRef, AiAgentsApi } from './api';
 export type { AiAgentsApiInterface } from './api';
 export {
@@ -32,4 +33,8 @@ export type {
   ReviewsSummary,
   AgentActivity,
   AgentRun,
+  AgentInsights,
+  RunEvent,
+  ToolStat,
+  HourBucket,
 } from './types';

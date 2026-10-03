@@ -3,6 +3,34 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.0] - 2026-10-03
+
+### Changed
+
+- **Activity tab redesigned as a master-detail workspace**: agents in a stable
+  left rail (nothing moves when you click), the selected agent in the body.
+  Selection lives in the URL (`?tab=activity&agent=<id>&run=<id>&hours=24`), so
+  views are shareable.
+- Concurrent executions are first class: a "Running now" strip with one card per
+  run in progress (live elapsed time, current step), a per-agent "N running"
+  chip in the rail, and a fleet overview of every run in progress.
+- Per-agent KPIs (runs, success rate, p50/p95 duration), runs-per-hour chart,
+  tool usage with error rates and latency, recent runs with filters, and a run
+  detail with a **waterfall** of tool calls (parallel calls visible) and the
+  peak parallelism.
+
+### Added
+
+- **"Activity" tab on `ai-agent` catalog entity pages** (same workspace panel,
+  scoped to the agent; shows how to enable it when `telemetry-id` is missing).
+- The agent detail drawer is compact by default: only the header and primary
+  actions are visible, every other section is a collapsed accordion whose data
+  is fetched on first expansion. It links to the agent's activity.
+
+### Fixed
+
+- `usePolling` never refetches in a loop and keeps polling after a manual refresh.
+
 ## [0.15.0] - 2026-10-03
 
 ### Added
