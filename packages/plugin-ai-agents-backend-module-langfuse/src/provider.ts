@@ -63,7 +63,6 @@ const PAGE_SIZE = 1000;
 const MAX_PAGES = 3;
 const RUNNING_LOOKBACK_MS = 15 * 60_000;
 
-type FetchFn = typeof fetch;
 type Filter = Record<string, unknown>;
 
 const eq = (column: string, value: string): Filter => ({
@@ -169,7 +168,7 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
 
   constructor(
     private readonly cfg: LangfuseConfig,
-    private readonly doFetch: FetchFn = fetch,
+    private readonly doFetch: typeof fetch = fetch,
     private readonly now: () => number = Date.now,
   ) {}
 

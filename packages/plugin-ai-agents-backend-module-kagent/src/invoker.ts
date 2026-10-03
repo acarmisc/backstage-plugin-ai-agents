@@ -5,6 +5,7 @@ import {
   AgentInvocationResponse,
 } from '@acarmisc/backstage-plugin-ai-agents-backend';
 
+/** @public */
 export interface KagentConfig {
   baseUrl: string;
   namespace: string;

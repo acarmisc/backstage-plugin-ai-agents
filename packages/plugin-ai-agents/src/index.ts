@@ -1,13 +1,16 @@
 export { aiAgentsPlugin } from './plugin';
 export { AgentsPage } from './components/AgentsPage';
 export { AgentCard } from './components/AgentCard';
+export type { AgentCardProps } from './components/AgentCard';
 export { AgentOverviewCard } from './components/AgentOverviewCard';
 export { HireAgentDialog } from './components/HireAgentDialog';
+export type { HireAgentDialogProps } from './components/HireAgentDialog';
 export { StarRating } from './components/StarRating';
-export type { StarVariant } from './components/StarRating';
+export type { StarRatingProps, StarVariant } from './components/StarRating';
 export { AgentReviews } from './components/AgentReviews';
 export { ActivityWorkspace } from './components/activity/ActivityWorkspace';
 export { AgentWorkspacePanel } from './components/activity/AgentWorkspacePanel';
+export type { AgentWorkspacePanelProps } from './components/activity/AgentWorkspacePanel';
 export { aiAgentsApiRef, AiAgentsApi } from './api';
 export type {
   AiAgentsApiInterface,
@@ -40,6 +43,7 @@ export type {
   AgentInsights,
   InvocationRecord,
   RunEvent,
+  RunState,
   ToolStat,
   HourBucket,
 } from './types';

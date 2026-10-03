@@ -1,5 +1,6 @@
 export { aiAgentsPlugin, aiAgentsPlugin as default } from './plugin';
 export { createRouter } from './router';
+export type { RouterOptions } from './router';
 export {
   readProbeConfig,
   buildProbeFn,

@@ -62,6 +62,7 @@ import {
 const MAX_STATUS_REFS = 200;
 const MAX_CACHE_ENTRIES = 2000;
 
+/** @public */
 export interface RouterOptions {
   config: Config;
   logger: LoggerService;

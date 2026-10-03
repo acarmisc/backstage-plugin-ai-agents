@@ -4,6 +4,7 @@ import {
   AgentInvocationResponse,
 } from '@acarmisc/backstage-plugin-ai-agents-backend';
 
+/** @public */
 export interface AgentCoreConfig {
   tokenUrl: string;
   clientId: string;

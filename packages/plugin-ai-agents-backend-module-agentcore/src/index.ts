@@ -8,3 +8,4 @@ export {
   readAgentCoreConfig,
   extractResponseText,
 } from './invoker';
+export type { AgentCoreConfig } from './invoker';

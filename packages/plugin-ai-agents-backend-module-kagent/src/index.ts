@@ -7,3 +7,4 @@ export {
   readKagentConfig,
   extractResponseText,
 } from './invoker';
+export type { KagentConfig } from './invoker';

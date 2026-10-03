@@ -10,7 +10,8 @@ export type StarVariant = 'simple' | 'fancy';
 
 const LABELS = ['Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
-interface StarRatingProps {
+/** @public */
+export interface StarRatingProps {
   value: number;
   /** Controlled change handler; omit for read-only display. */
   onChange?: (value: number) => void;
