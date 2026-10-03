@@ -540,16 +540,26 @@ back to the CLI-copy flow — other organisations can plug their own invoker
 package and registering it under a runtime key of their choosing.
 
 
-## Run timeline
+## Activity view and run timeline
 
-The detail drawer can show what an agent is doing now and what it did in its
-latest runs. The plugin stays storage-agnostic: the backend defines a
+The plugin shows agent runs in two places:
+
+1. **Activity tab** (on the agents page): fleet board (one card per agent)
+   showing current status, target, last verdict, and expandable timeline.
+   Queries `GET /activity?limit=N` and `GET /runs/:entityRef/:runId`.
+
+2. **Run timeline** (detail drawer): per-agent run history with timestamps and
+   verdicts. Queries `GET /runs/:entityRef` and `GET /runs/:entityRef/:runId`.
+
+See [`docs/activity.md`](docs/activity.md) for full architecture and API details.
+
+The plugin stays storage-agnostic: the backend defines a
 `TelemetryProvider` (`getRuns`, `getRunTimeline`) and a telemetry module
 registers one through `aiAgentsExtensionPoint.registerTelemetryProvider`.
 Nothing is stored in Backstage, and prompts or tool arguments are never read.
 
 The shipped `-module-langfuse` reads runs from the Langfuse public API
-(`/api/public/v2/observations`) with a read-only project key:
+(`/api/public/v2/observations`) with a dedicated project key (Langfuse keys are project-wide read/write; the module only reads):
 
 ```yaml
 ai-agents:
