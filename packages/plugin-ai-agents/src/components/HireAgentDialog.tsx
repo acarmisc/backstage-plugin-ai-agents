@@ -19,6 +19,7 @@ import PublishIcon from '@mui/icons-material/Publish';
 import type { InvocationResult } from '../api';
 import type { AiAgent, HireField } from '../types';
 
+/** @public */
 export interface HireAgentDialogProps {
   agent: AiAgent | null;
   open: boolean;
@@ -168,6 +169,7 @@ function PreviewBlock({
   );
 }
 
+/** @public */
 export function HireAgentDialog({
   agent,
   open,

@@ -21,6 +21,7 @@ import { StatusPill } from './StatusPill';
 import { ToolBars } from './ToolBars';
 import type { RunState } from '../../types';
 
+/** @public */
 export interface AgentWorkspacePanelProps {
   entityRef: string;
   telemetryId: string;
@@ -38,6 +39,8 @@ export interface AgentWorkspacePanelProps {
  * Everything about one agent: KPIs, runs in progress, recent runs with the
  * selected run's detail next to them, and the window's charts below.
  * Reusable: the activity workspace and the catalog entity tab both render it.
+ *
+ * @public
  */
 export function AgentWorkspacePanel({
   entityRef,

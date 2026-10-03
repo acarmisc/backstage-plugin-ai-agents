@@ -88,6 +88,7 @@ const aiAgentActivityTab = EntityContentBlueprint.make({
 
 // Explicit type annotation: without it, tsc may fail with TS2742 when
 // node_modules layouts nest a second copy of frontend-plugin-api.
+/** @public */
 export const aiAgentsPlugin: FrontendPlugin = createFrontendPlugin({
   pluginId: 'ai-agents',
   extensions: [

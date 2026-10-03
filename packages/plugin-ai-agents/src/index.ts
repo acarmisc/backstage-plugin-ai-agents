@@ -9,7 +9,11 @@ export { AgentReviews } from './components/AgentReviews';
 export { ActivityWorkspace } from './components/activity/ActivityWorkspace';
 export { AgentWorkspacePanel } from './components/activity/AgentWorkspacePanel';
 export { aiAgentsApiRef, AiAgentsApi } from './api';
-export type { AiAgentsApiInterface } from './api';
+export type {
+  AiAgentsApiInterface,
+  InvocationResult,
+  SpendSummary,
+} from './api';
 export {
   AI_AGENT_TYPE,
   AI_AGENT_ANNOTATION_PREFIX,
@@ -34,6 +38,7 @@ export type {
   AgentActivity,
   AgentRun,
   AgentInsights,
+  InvocationRecord,
   RunEvent,
   ToolStat,
   HourBucket,

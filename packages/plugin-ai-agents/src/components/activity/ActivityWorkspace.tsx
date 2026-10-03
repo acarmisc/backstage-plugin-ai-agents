@@ -21,6 +21,8 @@ const ALL = '__all__';
  * fleet overview) in the body. Selection lives in the URL so views can be
  * shared and the back button works: `agent` (telemetry id), `run`, `hours`.
  * Below the `md` breakpoint the rail becomes a select.
+ *
+ * @public
  */
 export function ActivityWorkspace() {
   const theme = useTheme();

@@ -13,6 +13,7 @@ import {
   RunEvent,
 } from './types';
 
+/** @public */
 export interface AiAgentsApiInterface {
   listAgents(): Promise<AiAgent[]>;
   getAgent(entityRef: string): Promise<AiAgent | undefined>;
@@ -65,7 +66,11 @@ export interface AiAgentsApiInterface {
   getAvatar(entityRef: string): Promise<Blob | undefined>;
 }
 
-/** Aggregated LLM spend for an agent or one conversation thread. */
+/**
+ * Aggregated LLM spend for an agent or one conversation thread.
+ *
+ * @public
+ */
 export interface SpendSummary {
   spend: number;
   totalTokens: number;
@@ -73,6 +78,7 @@ export interface SpendSummary {
   byModel: Record<string, number>;
 }
 
+/** @public */
 export interface InvocationResult {
   sessionId: string;
   /** Thread the invocation belongs to; pass it back to continue the chat. */
@@ -83,10 +89,12 @@ export interface InvocationResult {
   latencyMs?: number;
 }
 
+/** @public */
 export const aiAgentsApiRef = createApiRef<AiAgentsApiInterface>({
   id: 'plugin.ai-agents.api',
 });
 
+/** @public */
 export class AiAgentsApi implements AiAgentsApiInterface {
   constructor(
     private readonly opts: {

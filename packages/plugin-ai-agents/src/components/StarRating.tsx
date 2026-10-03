@@ -5,6 +5,7 @@ import Rating from '@mui/material/Rating';
 import Typography from '@mui/material/Typography';
 import StarIcon from '@mui/icons-material/Star';
 
+/** @public */
 export type StarVariant = 'simple' | 'fancy';
 
 const LABELS = ['Poor', 'Fair', 'Good', 'Great', 'Excellent'];
@@ -21,6 +22,8 @@ interface StarRatingProps {
  * - `simple`: compact read-mostly stars (cards, rows).
  * - `fancy`: interactive large stars with hover animation and labels
  *   (review forms).
+ *
+ * @public
  */
 export function StarRating({
   value,

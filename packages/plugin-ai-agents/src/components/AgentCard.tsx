@@ -19,6 +19,7 @@ import { BillingBadge } from './BillingBadge';
 import { AgentJobStats } from './AgentJobStats';
 import { getLinkIcon } from './linkIcon';
 
+/** @public */
 export interface AgentCardProps {
   agent: AiAgent;
   onClick?: (agent: AiAgent) => void;
@@ -26,6 +27,7 @@ export interface AgentCardProps {
   onHire?: (agent: AiAgent) => void;
 }
 
+/** @public */
 export function AgentCard({
   agent,
   onClick,

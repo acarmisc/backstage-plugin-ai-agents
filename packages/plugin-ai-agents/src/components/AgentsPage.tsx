@@ -18,6 +18,7 @@ import { ActivityWorkspace } from './activity/ActivityWorkspace';
 
 const POLL_INTERVAL_MS = 30_000;
 
+/** @public */
 export function AgentsPage() {
   const api = useApi(aiAgentsApiRef);
   const [searchParams, setSearchParams] = useSearchParams();

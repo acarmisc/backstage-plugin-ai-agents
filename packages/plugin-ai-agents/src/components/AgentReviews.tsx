@@ -59,6 +59,8 @@ function ReviewRow({ review }: { review: AgentReview }) {
  * Agent reviews: average rating, review list and a "Rate this agent" form
  * with the fancy star widget. Renders nothing while there is nothing yet
  * and no database behind it.
+ *
+ * @public
  */
 export function AgentReviews({
   entityRef,

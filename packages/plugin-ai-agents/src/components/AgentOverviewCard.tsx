@@ -56,6 +56,7 @@ function Field({
   );
 }
 
+/** @public */
 export function AgentOverviewCard() {
   const { entity } = useEntity();
   const api = useApi(aiAgentsApiRef);
