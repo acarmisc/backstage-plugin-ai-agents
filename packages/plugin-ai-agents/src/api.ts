@@ -5,6 +5,7 @@ import {
   AiAgent,
   AgentStatus,
   AgentRun,
+  AgentActivity,
   entityToAgent,
   InvocationRecord,
   ReviewsSummary,
@@ -32,6 +33,8 @@ export interface AiAgentsApiInterface {
   getRuns(entityRef: string, limit?: number): Promise<AgentRun[]>;
   /** Ordered activity events for one OTel run. */
   getRunTimeline(entityRef: string, runId: string): Promise<RunEvent[] | null>;
+  /** Fleet activity across all agents; empty when telemetry is not configured (501 status). */
+  getActivity(limit?: number): Promise<AgentActivity[]>;
   /** Reviews (latest first) plus count and average rating for an agent. */
   getReviews(entityRef: string, limit?: number): Promise<ReviewsSummary>;
   /** Submit a 0-5 star review with an optional comment. */
@@ -175,6 +178,18 @@ export class AiAgentsApi implements AiAgentsApiInterface {
     } catch {
       return null;
     }
+  }
+
+  async getActivity(limit = 20): Promise<AgentActivity[]> {
+    const res = await this.opts.fetchApi.fetch(
+      `${this.basePath}/activity?limit=${limit}`,
+    );
+    // 501 means telemetry not configured
+    if (res.status === 501) return [];
+    if (!res.ok) {
+      throw new Error(`Failed to load activity: ${res.status}`);
+    }
+    return (await res.json()) as AgentActivity[];
   }
 
   async getReviews(entityRef: string, limit = 50): Promise<ReviewsSummary> {

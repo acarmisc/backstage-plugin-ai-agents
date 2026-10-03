@@ -173,6 +173,94 @@ class DevApi extends AiAgentsApi {
     });
     return { id };
   }
+
+  async getActivity() {
+    const now = new Date();
+    return [
+      {
+        entityRef: 'component:default/support-triage-agent',
+        telemetryId: 'support-triage-1',
+        title: 'Support Triage Agent',
+        runs: [
+          {
+            runId: 'run-1',
+            agent: 'support-triage-agent',
+            target: '!148',
+            project: 'gitlab/main',
+            state: 'running' as const,
+            currentActivity: 'after get_file_content',
+            startedAt: new Date(now.getTime() - 45000).toISOString(),
+            updatedAt: new Date(now.getTime() - 10000).toISOString(),
+          },
+          {
+            runId: 'run-2',
+            agent: 'support-triage-agent',
+            state: 'completed' as const,
+            startedAt: new Date(now.getTime() - 120000).toISOString(),
+            updatedAt: new Date(now.getTime() - 60000).toISOString(),
+            verdict: 'approved',
+          },
+          {
+            runId: 'run-3',
+            agent: 'support-triage-agent',
+            state: 'completed' as const,
+            startedAt: new Date(now.getTime() - 240000).toISOString(),
+            updatedAt: new Date(now.getTime() - 180000).toISOString(),
+          },
+        ],
+      },
+      {
+        entityRef: 'component:default/invoice-reader-agent',
+        telemetryId: 'invoice-reader-1',
+        title: 'Invoice Reader',
+        runs: [
+          {
+            runId: 'run-4',
+            agent: 'invoice-reader-agent',
+            state: 'completed' as const,
+            startedAt: new Date(now.getTime() - 90000).toISOString(),
+            updatedAt: new Date(now.getTime() - 30000).toISOString(),
+            verdict: 'ready',
+          },
+          {
+            runId: 'run-5',
+            agent: 'invoice-reader-agent',
+            state: 'completed' as const,
+            startedAt: new Date(now.getTime() - 150000).toISOString(),
+            updatedAt: new Date(now.getTime() - 100000).toISOString(),
+          },
+        ],
+      },
+      {
+        entityRef: 'component:default/kb-search-agent',
+        telemetryId: 'kb-search-1',
+        title: 'KB Search',
+        runs: [
+          {
+            runId: 'run-6',
+            agent: 'kb-search-agent',
+            state: 'failed' as const,
+            startedAt: new Date(now.getTime() - 60000).toISOString(),
+            updatedAt: new Date(now.getTime() - 20000).toISOString(),
+          },
+          {
+            runId: 'run-7',
+            agent: 'kb-search-agent',
+            state: 'completed' as const,
+            startedAt: new Date(now.getTime() - 180000).toISOString(),
+            updatedAt: new Date(now.getTime() - 120000).toISOString(),
+          },
+        ],
+      },
+      {
+        entityRef: 'component:default/release-notes-agent',
+        telemetryId: 'release-notes-1',
+        title: 'Release Notes Writer',
+        error: 'telemetry provider unavailable',
+        runs: [],
+      },
+    ];
+  }
 }
 
 const stubAiAgentsApi = new DevApi({ fetchApi: {} as any }, '/api/ai-agents');

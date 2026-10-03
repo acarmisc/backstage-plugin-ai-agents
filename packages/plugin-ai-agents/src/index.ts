@@ -6,6 +6,7 @@ export { HireAgentDialog } from './components/HireAgentDialog';
 export { StarRating } from './components/StarRating';
 export type { StarVariant } from './components/StarRating';
 export { AgentReviews } from './components/AgentReviews';
+export { FleetActivity } from './components/FleetActivity';
 export { aiAgentsApiRef, AiAgentsApi } from './api';
 export type { AiAgentsApiInterface } from './api';
 export {
@@ -29,4 +30,6 @@ export type {
   HireFieldType,
   AgentReview,
   ReviewsSummary,
+  AgentActivity,
+  AgentRun,
 } from './types';

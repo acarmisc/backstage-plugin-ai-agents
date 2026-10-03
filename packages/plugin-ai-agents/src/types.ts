@@ -162,6 +162,15 @@ export interface ReviewsSummary {
   average: number | null;
 }
 
+/** Activity data for an agent, including recent runs and real-time telemetry. */
+export interface AgentActivity {
+  entityRef: string;
+  telemetryId: string;
+  title?: string;
+  runs: AgentRun[];
+  error?: string;
+}
+
 export interface AiAgent {
   /** Backstage entity ref, e.g. "component:default/support-triage-agent". */
   entityRef: string;

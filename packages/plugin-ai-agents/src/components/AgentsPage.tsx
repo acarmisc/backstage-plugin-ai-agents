@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { EmptyState } from '@backstage/core-components';
 import { useApi } from '@backstage/core-plugin-api';
@@ -11,6 +13,7 @@ import { AgentFiltersBar } from './AgentFilters';
 import { AgentsGrid } from './AgentsGrid';
 import { AgentDetailDrawer } from './AgentDetailDrawer';
 import { HireAgentDialog } from './HireAgentDialog';
+import { FleetActivity } from './FleetActivity';
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -19,6 +22,7 @@ export const AgentsPage: React.FC = () => {
   const { agents, allAgents, loading, error, retry, filters, update, reset } =
     useAgents();
 
+  const [tab, setTab] = useState<'agents' | 'activity'>('agents');
   const [selected, setSelected] = useState<AiAgent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hireAgent, setHireAgent] = useState<AiAgent | null>(null);
@@ -117,57 +121,74 @@ export const AgentsPage: React.FC = () => {
         </Typography>
       </Box>
 
-      <AgentFiltersBar
-        agents={allAgents}
-        filters={filters}
-        onChange={update}
-        onReset={reset}
-      />
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs
+          value={tab}
+          onChange={(_, newValue) => setTab(newValue)}
+          aria-label="Agents view"
+        >
+          <Tab label="Agents" value="agents" />
+          <Tab label="Activity" value="activity" />
+        </Tabs>
+      </Box>
 
-      {allAgents.length === 0 && (
-        <EmptyState
-          title="No AI agents registered"
-          description="Add a Component with spec.type: ai-agent to the catalog."
-          missing="content"
-          action={<button onClick={() => retry()}>Retry</button>}
-        />
-      )}
-      {allAgents.length > 0 && agentsWithStatus.length === 0 && (
-        <EmptyState
-          title="No agents match these filters"
-          description="Try loosening or clearing your search and filters."
-          missing="data"
-          action={<button onClick={() => reset()}>Clear filters</button>}
-        />
-      )}
-      {agentsWithStatus.length > 0 && (
-        <AgentsGrid
-          agents={agentsWithStatus}
-          onAgentClick={handleCardClick}
-          onRuntimeClick={handleRuntimeClick}
-          onHire={handleHire}
-        />
+      {tab === 'agents' && (
+        <>
+          <AgentFiltersBar
+            agents={allAgents}
+            filters={filters}
+            onChange={update}
+            onReset={reset}
+          />
+
+          {allAgents.length === 0 && (
+            <EmptyState
+              title="No AI agents registered"
+              description="Add a Component with spec.type: ai-agent to the catalog."
+              missing="content"
+              action={<button onClick={() => retry()}>Retry</button>}
+            />
+          )}
+          {allAgents.length > 0 && agentsWithStatus.length === 0 && (
+            <EmptyState
+              title="No agents match these filters"
+              description="Try loosening or clearing your search and filters."
+              missing="data"
+              action={<button onClick={() => reset()}>Clear filters</button>}
+            />
+          )}
+          {agentsWithStatus.length > 0 && (
+            <AgentsGrid
+              agents={agentsWithStatus}
+              onAgentClick={handleCardClick}
+              onRuntimeClick={handleRuntimeClick}
+              onHire={handleHire}
+            />
+          )}
+
+          <AgentDetailDrawer
+            agent={selected}
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onRefreshStatus={handleRefreshStatus}
+            onHire={handleHire}
+            historyReloadKey={invocationNonce}
+          />
+
+          <HireAgentDialog
+            agent={hireAgent}
+            open={hireOpen}
+            onClose={() => setHireOpen(false)}
+            onInvoke={async (values, opts) => {
+              const result = await api.invokeAgent(hireAgent!.entityRef, values, opts);
+              setInvocationNonce(n => n + 1);
+              return result;
+            }}
+          />
+        </>
       )}
 
-      <AgentDetailDrawer
-        agent={selected}
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onRefreshStatus={handleRefreshStatus}
-        onHire={handleHire}
-        historyReloadKey={invocationNonce}
-      />
-
-      <HireAgentDialog
-        agent={hireAgent}
-        open={hireOpen}
-        onClose={() => setHireOpen(false)}
-        onInvoke={async (values, opts) => {
-          const result = await api.invokeAgent(hireAgent!.entityRef, values, opts);
-          setInvocationNonce(n => n + 1);
-          return result;
-        }}
-      />
+      {tab === 'activity' && <FleetActivity />}
     </Box>
   );
 };
