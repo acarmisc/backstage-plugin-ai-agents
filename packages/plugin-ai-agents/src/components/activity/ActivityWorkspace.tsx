@@ -22,7 +22,7 @@ const ALL = '__all__';
  * shared and the back button works: `agent` (telemetry id), `run`, `hours`.
  * Below the `md` breakpoint the rail becomes a select.
  */
-export const ActivityWorkspace: React.FC = () => {
+export function ActivityWorkspace() {
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down('md'));
   const [params, setParams] = useSearchParams();
@@ -189,4 +189,4 @@ export const ActivityWorkspace: React.FC = () => {
       )}
     </Box>
   );
-};
+}

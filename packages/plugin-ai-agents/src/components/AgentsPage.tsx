@@ -18,7 +18,7 @@ import { ActivityWorkspace } from './activity/ActivityWorkspace';
 
 const POLL_INTERVAL_MS = 30_000;
 
-export const AgentsPage: React.FC = () => {
+export function AgentsPage() {
   const api = useApi(aiAgentsApiRef);
   const [searchParams, setSearchParams] = useSearchParams();
   const { agents, allAgents, loading, error, retry, filters, update, reset } =
@@ -213,4 +213,4 @@ export const AgentsPage: React.FC = () => {
       {tab === 'activity' && <ActivityWorkspace />}
     </Box>
   );
-};
+}

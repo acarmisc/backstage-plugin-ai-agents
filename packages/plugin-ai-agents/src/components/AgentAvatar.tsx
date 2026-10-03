@@ -49,11 +49,7 @@ export interface AgentAvatarProps {
   size?: number;
 }
 
-export const AgentAvatar: React.FC<AgentAvatarProps> = ({
-  name,
-  avatarUrl,
-  size = 44,
-}) => {
+export function AgentAvatar({ name, avatarUrl, size = 44 }: AgentAvatarProps) {
   // Bumped when an image fails so the (set-backed) broken check re-renders.
   const [, setLoadEpoch] = useState(0);
   const showImage = isSafeUrl(avatarUrl) && !brokenUrls.has(avatarUrl);
@@ -114,4 +110,4 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
       )}
     </Box>
   );
-};
+}

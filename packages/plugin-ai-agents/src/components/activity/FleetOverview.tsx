@@ -38,10 +38,7 @@ const headSx = {
 };
 
 /** Fleet level view: totals, every run in progress across agents, latest runs. */
-export const FleetOverview: React.FC<FleetOverviewProps> = ({
-  fleet,
-  onSelectRun,
-}) => {
+export function FleetOverview({ fleet, onSelectRun }: FleetOverviewProps) {
   const theme = useTheme();
 
   const { running, recent, failed, errors } = useMemo(() => {
@@ -270,4 +267,4 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       </SectionCard>
     </Box>
   );
-};
+}

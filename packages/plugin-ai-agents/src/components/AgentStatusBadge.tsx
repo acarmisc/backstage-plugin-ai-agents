@@ -15,9 +15,7 @@ export interface AgentStatusBadgeProps {
   status?: AgentStatus;
 }
 
-export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({
-  status,
-}) => {
+export function AgentStatusBadge({ status }: AgentStatusBadgeProps) {
   const state = status?.state ?? 'unknown';
   const color = STATE_COLOR[state];
   const ring = state === 'unknown' ? `1px dashed ${color}` : 'none';
@@ -68,4 +66,4 @@ export const AgentStatusBadge: React.FC<AgentStatusBadgeProps> = ({
       </Box>
     </Tooltip>
   );
-};
+}

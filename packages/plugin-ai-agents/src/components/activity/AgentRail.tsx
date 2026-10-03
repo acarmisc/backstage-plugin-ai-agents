@@ -35,36 +35,38 @@ function aggregateState(activity: AgentActivity): AgentRun['state'] {
   return activity.runs[0]?.state ?? 'unknown';
 }
 
-const RunningChip: React.FC<{ count: number; label?: string }> = ({
-  count,
-  label,
-}) => (
-  <Box
-    data-testid="running-chip"
-    sx={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 0.5,
-      height: 20,
-      px: 0.75,
-      borderRadius: 10,
-      fontSize: 11,
-      fontWeight: 700,
-      fontVariantNumeric: 'tabular-nums',
-      color: 'info.main',
-      backgroundColor: theme => alpha(theme.palette.info.main, 0.14),
-      whiteSpace: 'nowrap',
-    }}
-  >
-    {count}
-    {label ? ` ${label}` : ''}
-  </Box>
-);
+function RunningChip({ count, label }: { count: number; label?: string }) {
+  return (
+    <Box
+      data-testid="running-chip"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.5,
+        height: 20,
+        px: 0.75,
+        borderRadius: 10,
+        fontSize: 11,
+        fontWeight: 700,
+        fontVariantNumeric: 'tabular-nums',
+        color: 'info.main',
+        backgroundColor: theme => alpha(theme.palette.info.main, 0.14),
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {count}
+      {label ? ` ${label}` : ''}
+    </Box>
+  );
+}
 
-const RailStatus: React.FC<{ activity: AgentActivity; running: number }> = ({
+function RailStatus({
   activity,
   running,
-}) => {
+}: {
+  activity: AgentActivity;
+  running: number;
+}) {
   if (activity.error) {
     return (
       <Tooltip title="Telemetry unavailable">
@@ -77,18 +79,18 @@ const RailStatus: React.FC<{ activity: AgentActivity; running: number }> = ({
   }
   if (running > 0) return <RunningChip count={running} />;
   return <StatusDot state={aggregateState(activity)} size={8} />;
-};
+}
 
 /**
  * Left rail: "All agents" followed by the agents in a STABLE alphabetical
  * order (state changes never reorder it). Items have a fixed height and
  * selection only changes colours, so nothing moves when you click.
  */
-export const AgentRail: React.FC<AgentRailProps> = ({
+export function AgentRail({
   fleet,
   selectedTelemetryId,
   onSelectAgent,
-}) => {
+}: AgentRailProps) {
   const theme = useTheme();
   const [search, setSearch] = useState('');
   const [focus, setFocus] = useState(0);
@@ -316,4 +318,4 @@ export const AgentRail: React.FC<AgentRailProps> = ({
       </Box>
     </Box>
   );
-};
+}

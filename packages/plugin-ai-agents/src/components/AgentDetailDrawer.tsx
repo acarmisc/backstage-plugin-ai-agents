@@ -46,23 +46,28 @@ export interface AgentDetailDrawerProps {
   historyReloadKey?: number;
 }
 
-const Row: React.FC<{ label: string; children: React.ReactNode }> = ({
+function Row({
   label,
   children,
-}) => (
-  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      sx={{ minWidth: 110, flexShrink: 0 }}
-    >
-      {label}
-    </Typography>
-    <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-);
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ minWidth: 110, flexShrink: 0 }}
+      >
+        {label}
+      </Typography>
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
+    </Box>
+  );
+}
 
-const SafeLink: React.FC<{ text: string }> = ({ text }) => {
+function SafeLink({ text }: { text: string }) {
   const [kind, rest] = text.split(':');
   const [ns, name] = (rest ?? 'default/').split('/');
   return (
@@ -71,16 +76,16 @@ const SafeLink: React.FC<{ text: string }> = ({ text }) => {
       <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
     </Link>
   );
-};
+}
 
-export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
+export function AgentDetailDrawer({
   agent,
   open,
   onClose,
   onRefreshStatus,
   onHire,
   historyReloadKey = 0,
-}) => {
+}: AgentDetailDrawerProps) {
   const navigate = useNavigate();
   const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -500,4 +505,4 @@ export const AgentDetailDrawer: React.FC<AgentDetailDrawerProps> = ({
       </Box>
     </Drawer>
   );
-};
+}

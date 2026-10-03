@@ -96,14 +96,21 @@ function makeSessionId(): string {
   return raw.padEnd(33, '0').slice(0, 80);
 }
 
-const PreviewBlock: React.FC<{
+function PreviewBlock({
+  title,
+  language,
+  content,
+  onCopy,
+  missingChip,
+  collapsible,
+}: {
   title: string;
   language: string;
   content: string;
   onCopy: () => void;
   missingChip?: React.ReactNode;
   collapsible?: boolean;
-}> = ({ title, language, content, onCopy, missingChip, collapsible }) => {
+}) {
   const [openPreview, setOpenPreview] = useState(!collapsible);
   return (
     <Box>
@@ -159,14 +166,14 @@ const PreviewBlock: React.FC<{
       )}
     </Box>
   );
-};
+}
 
-export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
+export function HireAgentDialog({
   agent,
   open,
   onClose,
   onInvoke,
-}) => {
+}: HireAgentDialogProps) {
   const fields = useMemo(() => agent?.hireSchema ?? [], [agent]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -623,4 +630,4 @@ export const HireAgentDialog: React.FC<HireAgentDialogProps> = ({
       </DialogActions>
     </Dialog>
   );
-};
+}

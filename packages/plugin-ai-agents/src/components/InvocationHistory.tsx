@@ -26,23 +26,30 @@ function formatWhen(iso?: string): string {
       });
 }
 
-const SectionTitle: React.FC = () => (
-  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-    Recent invocations
-  </Typography>
-);
+function SectionTitle() {
+  return (
+    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+      Recent invocations
+    </Typography>
+  );
+}
 
 /**
  * Recent agent invocations with status, user and latency. Renders nothing
  * when there is no history yet so cards stay clean on fresh agents.
  */
-export const InvocationHistory: React.FC<{
+export function InvocationHistory({
+  entityRef,
+  limit = 10,
+  reloadKey = 0,
+  emptyText,
+}: {
   entityRef: string;
   limit?: number;
   /** Reload trigger — change to refetch. */
   reloadKey?: number;
   emptyText?: string;
-}> = ({ entityRef, limit = 10, reloadKey = 0, emptyText }) => {
+}) {
   const api = useApi(aiAgentsApiRef);
   const [records, setRecords] = useState<InvocationRecord[] | null>(null);
   const [nonce, setNonce] = useState(0);
@@ -175,4 +182,4 @@ export const InvocationHistory: React.FC<{
       </Stack>
     </Box>
   );
-};
+}

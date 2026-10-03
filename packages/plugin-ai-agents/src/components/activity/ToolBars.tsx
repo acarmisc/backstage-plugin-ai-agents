@@ -17,7 +17,7 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
  * share painted in the error colour), call count, an error pill when
  * relevant, and avg / p95 latency. Rows are buttons (keyboard operable).
  */
-export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
+export function ToolBars({ tools, onSelect }: ToolBarsProps) {
   const theme = useTheme();
 
   if (tools.length === 0) {
@@ -157,4 +157,4 @@ export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
       })}
     </Box>
   );
-};
+}

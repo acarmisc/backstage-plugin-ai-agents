@@ -56,11 +56,11 @@ export interface BillingBadgeProps {
   variant?: 'chip' | 'text';
 }
 
-export const BillingBadge: React.FC<BillingBadgeProps> = ({
+export function BillingBadge({
   billing,
   compact = false,
   variant = 'chip',
-}) => {
+}: BillingBadgeProps) {
   const color = BILLING_COLOR[billing.model] ?? 'default';
   const lines = costSummary(billing);
 
@@ -123,4 +123,4 @@ export const BillingBadge: React.FC<BillingBadgeProps> = ({
       ))}
     </Box>
   );
-};
+}

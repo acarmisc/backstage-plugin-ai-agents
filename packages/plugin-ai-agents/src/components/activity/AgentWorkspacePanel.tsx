@@ -39,7 +39,7 @@ export interface AgentWorkspacePanelProps {
  * selected run's detail next to them, and the window's charts below.
  * Reusable: the activity workspace and the catalog entity tab both render it.
  */
-export const AgentWorkspacePanel: React.FC<AgentWorkspacePanelProps> = ({
+export function AgentWorkspacePanel({
   entityRef,
   telemetryId,
   title,
@@ -49,7 +49,7 @@ export const AgentWorkspacePanel: React.FC<AgentWorkspacePanelProps> = ({
   onSelectRun,
   hours = 24,
   onHoursChange,
-}) => {
+}: AgentWorkspacePanelProps) {
   const [internalRunId, setInternalRunId] = useState<string | undefined>();
   const controlled = onSelectRun !== undefined;
   const runId = controlled ? selectedRunId : internalRunId;
@@ -276,4 +276,4 @@ export const AgentWorkspacePanel: React.FC<AgentWorkspacePanelProps> = ({
       </Box>
     </Box>
   );
-};
+}

@@ -6,9 +6,7 @@ import type { AiAgent } from '../types';
 import { AgentWorkspacePanel } from './activity/AgentWorkspacePanel';
 
 /** Presentation of the catalog "Activity" tab for one agent (no catalog dependency, so it is unit-testable). */
-export const AgentActivityTabView: React.FC<{ agent?: AiAgent }> = ({
-  agent,
-}) => {
+export function AgentActivityTabView({ agent }: { agent?: AiAgent }) {
   const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   const [hours, setHours] = useState(24);
 
@@ -43,4 +41,4 @@ export const AgentActivityTabView: React.FC<{ agent?: AiAgent }> = ({
       onHoursChange={setHours}
     />
   );
-};
+}

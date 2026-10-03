@@ -22,11 +22,11 @@ interface StarRatingProps {
  * - `fancy`: interactive large stars with hover animation and labels
  *   (review forms).
  */
-export const StarRating: React.FC<StarRatingProps> = ({
+export function StarRating({
   value,
   onChange,
   variant = 'simple',
-}) => {
+}: StarRatingProps) {
   if (variant === 'simple') {
     return (
       <Rating
@@ -75,4 +75,4 @@ export const StarRating: React.FC<StarRatingProps> = ({
       </Fade>
     </Box>
   );
-};
+}

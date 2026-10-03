@@ -27,12 +27,12 @@ export interface RecentRunsProps {
  * Displays recent runs in a filterable MUI Table.
  * Supports filtering by status and text search on target/project/verdict.
  */
-export const RecentRuns: React.FC<RecentRunsProps> = ({
+export function RecentRuns({
   runs,
   selectedRunId,
   onSelect,
   loading = false,
-}) => {
+}: RecentRunsProps) {
   const theme = useTheme();
   const [filterState, setFilterState] = useState<RunState | 'all'>('all');
   const [searchText, setSearchText] = useState('');
@@ -298,4 +298,4 @@ export const RecentRuns: React.FC<RecentRunsProps> = ({
       )}
     </Box>
   );
-};
+}

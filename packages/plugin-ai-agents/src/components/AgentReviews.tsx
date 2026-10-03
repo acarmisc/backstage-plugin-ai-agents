@@ -24,44 +24,49 @@ function formatWhen(iso?: string): string {
       });
 }
 
-const ReviewRow: React.FC<{ review: AgentReview }> = ({ review }) => (
-  <Box
-    sx={{
-      py: 0.75,
-      borderBottom: '1px solid',
-      borderColor: 'divider',
-      '&:last-child': { borderBottom: 'none' },
-    }}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <StarRating value={review.rating} />
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ ml: 'auto' }}
-        whiteSpace="nowrap"
-      >
-        {review.userRef?.split('/').pop() ?? 'anonymous'} ·{' '}
-        {formatWhen(review.createdAt)}
-      </Typography>
+function ReviewRow({ review }: { review: AgentReview }) {
+  return (
+    <Box
+      sx={{
+        py: 0.75,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        '&:last-child': { borderBottom: 'none' },
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <StarRating value={review.rating} />
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ ml: 'auto' }}
+          whiteSpace="nowrap"
+        >
+          {review.userRef?.split('/').pop() ?? 'anonymous'} ·{' '}
+          {formatWhen(review.createdAt)}
+        </Typography>
+      </Box>
+      {review.comment && (
+        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+          {review.comment}
+        </Typography>
+      )}
     </Box>
-    {review.comment && (
-      <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-        {review.comment}
-      </Typography>
-    )}
-  </Box>
-);
+  );
+}
 
 /**
  * Agent reviews: average rating, review list and a "Rate this agent" form
  * with the fancy star widget. Renders nothing while there is nothing yet
  * and no database behind it.
  */
-export const AgentReviews: React.FC<{
+export function AgentReviews({
+  entityRef,
+  limit = 50,
+}: {
   entityRef: string;
   limit?: number;
-}> = ({ entityRef, limit = 50 }) => {
+}) {
   const api = useApi(aiAgentsApiRef);
   const [summary, setSummary] = useState<ReviewsSummary | null>(null);
   const [rating, setRating] = useState(0);
@@ -187,4 +192,4 @@ export const AgentReviews: React.FC<{
       )}
     </Box>
   );
-};
+}

@@ -25,11 +25,11 @@ export interface AgentCapabilitiesProps {
   size?: 'small' | 'medium';
 }
 
-export const AgentCapabilities: React.FC<AgentCapabilitiesProps> = ({
+export function AgentCapabilities({
   capabilities,
   max = MAX_VISIBLE,
   size = 'small',
-}) => {
+}: AgentCapabilitiesProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   if (!capabilities.length) return null;
@@ -88,4 +88,4 @@ export const AgentCapabilities: React.FC<AgentCapabilitiesProps> = ({
       )}
     </Box>
   );
-};
+}

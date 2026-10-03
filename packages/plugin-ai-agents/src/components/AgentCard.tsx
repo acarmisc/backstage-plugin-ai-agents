@@ -26,12 +26,12 @@ export interface AgentCardProps {
   onHire?: (agent: AiAgent) => void;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({
+export function AgentCard({
   agent,
   onClick,
   onRuntimeClick,
   onHire,
-}) => {
+}: AgentCardProps) {
   const title = agent.title ?? agent.name;
   const avatarSrc = useAvatarSrc(agent.entityRef, agent.avatarUrl);
   const owner = agent.owner?.replace(/^group:/, '');
@@ -219,4 +219,4 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       )}
     </Card>
   );
-};
+}

@@ -35,12 +35,12 @@ function without<T>(arr: T[], value: T): T[] {
   return arr.filter(v => v !== value);
 }
 
-export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
+export function AgentFiltersBar({
   agents,
   filters,
   onChange,
   onReset,
-}) => {
+}: AgentFiltersBarProps) {
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
 
   const runtimes = Array.from(
@@ -272,4 +272,4 @@ export const AgentFiltersBar: React.FC<AgentFiltersBarProps> = ({
       )}
     </Paper>
   );
-};
+}

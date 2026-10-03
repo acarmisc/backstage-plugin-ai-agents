@@ -22,39 +22,45 @@ export interface RunDetailProps {
   onClose?: () => void;
 }
 
-const Fact: React.FC<{
+function Fact({
+  label,
+  children,
+  title,
+}: {
   label: string;
   children: React.ReactNode;
   title?: string;
-}> = ({ label, children, title }) => (
-  <Box sx={{ minWidth: 0 }} title={title}>
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      sx={{
-        display: 'block',
-        textTransform: 'uppercase',
-        letterSpacing: 0.4,
-        fontSize: 10.5,
-      }}
-    >
-      {label}
-    </Typography>
-    <Typography
-      noWrap
-      sx={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}
-    >
-      {children}
-    </Typography>
-  </Box>
-);
+}) {
+  return (
+    <Box sx={{ minWidth: 0 }} title={title}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: 'block',
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+          fontSize: 10.5,
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        noWrap
+        sx={{
+          fontSize: 14,
+          fontWeight: 600,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {children}
+      </Typography>
+    </Box>
+  );
+}
 
 /** One run: facts, parallelism, and the waterfall of its tool calls. */
-export const RunDetail: React.FC<RunDetailProps> = ({
-  entityRef,
-  run,
-  onClose,
-}) => {
+export function RunDetail({ entityRef, run, onClose }: RunDetailProps) {
   const ref = useRef<HTMLDivElement>(null);
   const running = run.state === 'running';
   const now = useNow(1000, running);
@@ -218,4 +224,4 @@ export const RunDetail: React.FC<RunDetailProps> = ({
       </SectionCard>
     </Box>
   );
-};
+}

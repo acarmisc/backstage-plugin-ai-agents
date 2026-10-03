@@ -24,12 +24,16 @@ function formatTokens(value: number): string {
  * conversation thread. Renders nothing when LiteLLM is not configured, so
  * static setups stay clean.
  */
-export const AgentSpend: React.FC<{
+export function AgentSpend({
+  entityRef,
+  threadId,
+  days = 30,
+}: {
   entityRef: string;
   /** When set, the spend is scoped to this conversation thread. */
   threadId?: string;
   days?: number;
-}> = ({ entityRef, threadId, days = 30 }) => {
+}) {
   const api = useApi(aiAgentsApiRef);
   const [summary, setSummary] = useState<SpendSummary | null>(null);
 
@@ -97,4 +101,4 @@ export const AgentSpend: React.FC<{
       )}
     </Box>
   );
-};
+}

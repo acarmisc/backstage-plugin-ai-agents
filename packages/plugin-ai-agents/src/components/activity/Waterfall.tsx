@@ -32,13 +32,13 @@ interface WaterfallRowProps {
   theme: Theme;
 }
 
-const WaterfallRow: React.FC<WaterfallRowProps> = ({
+function WaterfallRow({
   isMarker,
   label,
   pct,
   incomplete,
   theme,
-}) => {
+}: WaterfallRowProps) {
   return (
     <Box
       sx={{
@@ -98,7 +98,7 @@ const WaterfallRow: React.FC<WaterfallRowProps> = ({
       </Box>
     </Box>
   );
-};
+}
 
 interface WaterfallToolRowProps {
   event: RunEvent;
@@ -108,13 +108,13 @@ interface WaterfallToolRowProps {
   theme: Theme;
 }
 
-const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
+function WaterfallToolRow({
   event,
   timeline,
   isSelected,
   onSelect,
   theme,
-}) => {
+}: WaterfallToolRowProps) {
   const handleClick = useCallback(() => {
     onSelect?.(event.seq);
   }, [event.seq, onSelect]);
@@ -254,7 +254,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
       </Box>
     </Box>
   );
-};
+}
 
 // ============================================================================
 // Main export component
@@ -265,11 +265,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
  * Shows overlapping tool calls as independent lanes to visualize parallelism.
  * Supports selection and displays run markers (start, completed).
  */
-export const Waterfall: React.FC<WaterfallProps> = ({
-  events,
-  selectedSeq,
-  onSelect,
-}) => {
+export function Waterfall({ events, selectedSeq, onSelect }: WaterfallProps) {
   const theme = useTheme();
 
   // Compute timeline metrics
@@ -434,4 +430,4 @@ export const Waterfall: React.FC<WaterfallProps> = ({
       </Box>
     </Box>
   );
-};
+}

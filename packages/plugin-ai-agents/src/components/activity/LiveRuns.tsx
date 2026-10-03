@@ -22,11 +22,7 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
  * Every run currently in progress, side by side. Cards have a fixed size so a
  * run starting or finishing never shifts the others; selection is an outline.
  */
-export const LiveRuns: React.FC<LiveRunsProps> = ({
-  runs,
-  selectedRunId,
-  onSelect,
-}) => {
+export function LiveRuns({ runs, selectedRunId, onSelect }: LiveRunsProps) {
   const theme = useTheme();
   const running = runs.filter(r => r.state === 'running');
   const now = useNow(1000, running.length > 0);
@@ -178,4 +174,4 @@ export const LiveRuns: React.FC<LiveRunsProps> = ({
       )}
     </SectionCard>
   );
-};
+}

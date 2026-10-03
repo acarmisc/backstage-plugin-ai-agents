@@ -31,26 +31,32 @@ const RUNTIME_ICON: Record<string, React.ReactNode> = {
   custom: <ExtensionIcon fontSize="small" />,
 };
 
-const Field: React.FC<{
+function Field({
+  label,
+  value,
+  mono,
+}: {
   label: string;
   value?: React.ReactNode;
   mono?: boolean;
-}> = ({ label, value, mono }) => (
-  <Grid item xs={6}>
-    <Typography variant="caption" color="text.secondary">
-      {label}
-    </Typography>
-    <Typography
-      variant="body2"
-      sx={{ wordBreak: 'break-all' }}
-      style={mono ? { fontFamily: 'monospace' } : undefined}
-    >
-      {value ?? '—'}
-    </Typography>
-  </Grid>
-);
+}) {
+  return (
+    <Grid item xs={6}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{ wordBreak: 'break-all' }}
+        style={mono ? { fontFamily: 'monospace' } : undefined}
+      >
+        {value ?? '—'}
+      </Typography>
+    </Grid>
+  );
+}
 
-export const AgentOverviewCard: React.FC = () => {
+export function AgentOverviewCard() {
   const { entity } = useEntity();
   const api = useApi(aiAgentsApiRef);
   const [hireOpen, setHireOpen] = useState(false);
@@ -217,4 +223,4 @@ export const AgentOverviewCard: React.FC = () => {
       )}
     </Box>
   );
-};
+}

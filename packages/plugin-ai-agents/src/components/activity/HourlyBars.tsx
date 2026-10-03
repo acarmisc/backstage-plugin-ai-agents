@@ -28,10 +28,7 @@ function labelStep(count: number): number {
  * Stacked bars (completed / failed) per hour. Pure CSS grid: one column per
  * bucket, so it scales to any width and window size without layout maths.
  */
-export const HourlyBars: React.FC<HourlyBarsProps> = ({
-  buckets,
-  height = 96,
-}) => {
+export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
   const theme = useTheme();
 
   if (buckets.length === 0) {
@@ -172,4 +169,4 @@ export const HourlyBars: React.FC<HourlyBarsProps> = ({
       </Box>
     </Box>
   );
-};
+}
