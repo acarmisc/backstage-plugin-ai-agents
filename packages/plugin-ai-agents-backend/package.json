@@ -11,6 +11,7 @@
     "role": "backend-plugin",
     "pluginId": "ai-agents",
     "pluginPackages": [
+      "@acarmisc/backstage-plugin-ai-agents",
       "@acarmisc/backstage-plugin-ai-agents-backend"
     ]
   },
@@ -19,9 +20,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents"
+    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents",
+    "directory": "packages/plugin-ai-agents-backend"
   },
-  "homepage": "https://github.com/acarmisc/backstage-plugin-ai-agents#readme",
+  "homepage": "https://github.com/acarmisc/backstage-plugin-ai-agents/tree/main/packages/plugin-ai-agents-backend#readme",
+  "bugs": {
+    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents/issues"
+  },
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20"
@@ -31,6 +36,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.cjs.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "package.json": [
+        "package.json"
+      ]
     }
   },
   "main": "dist/index.cjs.js",

@@ -10,16 +10,20 @@
   "backstage": {
     "role": "backend-plugin-module",
     "pluginId": "ai-agents",
-    "pluginPackage": "@acarmisc/backstage-plugin-ai-agents-backend-module-kagent"
+    "pluginPackage": "@acarmisc/backstage-plugin-ai-agents-backend"
   },
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents"
+    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents",
+    "directory": "packages/plugin-ai-agents-backend-module-kagent"
   },
-  "homepage": "https://github.com/acarmisc/backstage-plugin-ai-agents#readme",
+  "homepage": "https://github.com/acarmisc/backstage-plugin-ai-agents/tree/main/packages/plugin-ai-agents-backend-module-kagent#readme",
+  "bugs": {
+    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents/issues"
+  },
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20"
@@ -28,6 +32,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "package.json": [
+        "package.json"
+      ]
     }
   },
   "main": "dist/index.cjs.js",
