@@ -19,8 +19,7 @@ export function readProbeConfig(config: import('@backstage/config').Config): Pro
  */
 function originPattern(pattern: string): string {
   const schemeIdx = pattern.indexOf('://');
-  if (schemeIdx === -1) return pattern.replace(/\/.*$/, '');
-  const pathIdx = pattern.indexOf('/', schemeIdx + 3);
+  const pathIdx = pattern.indexOf('/', schemeIdx === -1 ? 0 : schemeIdx + 3);
   return pathIdx === -1 ? pattern : pattern.slice(0, pathIdx);
 }
 
