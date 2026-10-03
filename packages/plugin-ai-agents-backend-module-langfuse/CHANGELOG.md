@@ -3,7 +3,7 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-03
 
 - Initial version: Langfuse `TelemetryProvider` for the run timeline. Reads
   `<agent>-invoke` AGENT and TOOL observations from the public observations

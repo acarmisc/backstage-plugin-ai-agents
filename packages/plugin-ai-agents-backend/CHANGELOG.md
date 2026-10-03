@@ -3,6 +3,19 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.2] - 2026-10-03
+
+### Added
+
+- `registerTelemetryProvider` extension point and a `TelemetryProvider`
+  contract (`getRuns`, `getRunTimeline`) so any OTel store can feed run
+  timelines. Routes: `GET /runs/:entityRef`, `GET /runs/:entityRef/:runId`
+  and the fleet-wide `GET /activity`.
+
+### Fixed
+
+- Catalog lookups made by the new routes carry the plugin service token.
+
 ## [0.9.1] - 2026-10-01
 
 ### Fixed

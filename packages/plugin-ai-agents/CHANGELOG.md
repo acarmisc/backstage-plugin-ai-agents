@@ -3,6 +3,18 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.15.0] - 2026-10-03
+
+### Added
+
+- **Activity** tab on the agents page: a live fleet board with one card per
+  agent (status, what it is doing now, last verdict, run-duration sparkline,
+  expandable run timeline). Polls every 5 s, pauses while the tab is hidden
+  and backs off after errors. Requires the backend `GET /activity` route and a
+  telemetry module (e.g. `-backend-module-langfuse`); agents need the
+  `ai-agent.io/telemetry-id` annotation.
+- Run timeline in the agent detail drawer for agents with `telemetry-id`.
+
 ## [0.14.1] - 2026-10-01
 
 ### Fixed
