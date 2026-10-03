@@ -10,6 +10,8 @@ import { AgentCoreInvoker } from './invoker';
  * plugin. Reads its configuration from `ai-agents.invocations.agentCore`
  * and resolves per-agent details (region, runtime handle) from the entity's
  * `ai-agent.io/region` and `/runtime-handle` annotations.
+ *
+ * @public
  */
 export const aiAgentsModuleAgentcore = createBackendModule({
   pluginId: 'ai-agents',

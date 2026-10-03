@@ -1,9 +1,14 @@
+/** @public */
 export const AI_AGENT_TYPE = 'ai-agent';
+/** @public */
 export const AI_AGENT_ANNOTATION_PREFIX = 'ai-agent.io';
+/** @public */
 export const AI_AGENT_ANNOTATION_PREFIX_LEGACY = 'ai-agent.acarmisc.org';
 
+/** @public */
 export type AgentStatusState = 'healthy' | 'degraded' | 'down' | 'unknown';
 
+/** @public */
 export interface AgentStatus {
   state: AgentStatusState;
   lastChecked?: string;
@@ -11,8 +16,10 @@ export interface AgentStatus {
   message?: string;
 }
 
+/** @public */
 export type RunState = 'running' | 'completed' | 'failed' | 'unknown';
 
+/** @public */
 export interface RunEvent {
   seq: number;
   name: string;
@@ -28,6 +35,7 @@ export interface RunEvent {
   ts?: string;
 }
 
+/** @public */
 export interface AgentRun {
   runId: string;
   agent: string;
@@ -43,7 +51,11 @@ export interface AgentRun {
   events?: RunEvent[];
 }
 
-/** Per-tool aggregate over the insights window. */
+/**
+ * Per-tool aggregate over the insights window.
+ *
+ * @public
+ */
 export interface ToolStat {
   name: string;
   calls: number;
@@ -52,14 +64,22 @@ export interface ToolStat {
   p95Ms: number;
 }
 
-/** One hour of run counts (UTC hour start, ISO). */
+/**
+ * One hour of run counts (UTC hour start, ISO).
+ *
+ * @public
+ */
 export interface HourBucket {
   start: string;
   runs: number;
   failed: number;
 }
 
-/** Aggregates for one agent over the last `windowHours`. */
+/**
+ * Aggregates for one agent over the last `windowHours`.
+ *
+ * @public
+ */
 export interface AgentInsights {
   windowHours: number;
   totals: {
@@ -77,18 +97,28 @@ export interface AgentInsights {
   tools: ToolStat[];
 }
 
+/**
+ * Recent runs of one agent, as returned by `GET /activity`.
+ *
+ * @public
+ */
 export interface AgentActivity {
-  entityRef: string; // stringifyEntityRef(entity), e.g. "component:default/dinesh"
-  telemetryId: string; // value of the ai-agent.io/telemetry-id annotation
-  title?: string; // entity.metadata.title ?? entity.metadata.name
-  runs: AgentRun[]; // newest first, at most `limit`, WITHOUT the `events` field (strip it)
-  error?: string; // set (and runs = []) when the provider call for THIS agent failed
+  entityRef: string;
+  /** Value of the `ai-agent.io/telemetry-id` annotation. */
+  telemetryId: string;
+  title?: string;
+  /** Newest first, without `events`. */
+  runs: AgentRun[];
+  /** Set, with empty `runs`, when the telemetry query for this agent failed. */
+  error?: string;
 }
 
 /**
  * Server-side adapter for an OTel store. The router resolves the catalog
  * entity's telemetry id before calling this interface, keeping catalog access
  * and provider credentials outside the browser.
+ *
+ * @public
  */
 export interface TelemetryProvider {
   getRuns(telemetryId: string, limit?: number): Promise<AgentRun[]>;
@@ -100,6 +130,7 @@ export interface TelemetryProvider {
   getInsights?(telemetryId: string, hours: number): Promise<AgentInsights>;
 }
 
+/** @public */
 export interface ProbeConfig {
   enabled: boolean;
   probeTimeoutMs: number;
@@ -108,12 +139,14 @@ export interface ProbeConfig {
   probeAllowlist: string[];
 }
 
+/** @public */
 export interface ProbeResult {
   ok: boolean;
   status: number;
   latencyMs: number;
 }
 
+/** @public */
 export interface ProbeFn {
   (
     url: string,
@@ -121,7 +154,11 @@ export interface ProbeFn {
   ): Promise<ProbeResult>;
 }
 
-/** A persisted agent invocation. */
+/**
+ * A persisted agent invocation.
+ *
+ * @public
+ */
 export interface InvocationRecord {
   id?: number;
   entityRef: string;
@@ -140,7 +177,11 @@ export interface InvocationRecord {
   createdAt?: string;
 }
 
-/** A persisted agent review (0-5 star rating + optional comment). */
+/**
+ * A persisted agent review (0-5 star rating + optional comment).
+ *
+ * @public
+ */
 export interface ReviewRecord {
   id?: number;
   entityRef: string;
@@ -152,13 +193,18 @@ export interface ReviewRecord {
   createdAt?: string;
 }
 
+/** @public */
 export interface ReviewsSummary {
   reviews: ReviewRecord[];
   count: number;
   average: number | null;
 }
 
-/** Provider-agnostic invocation target resolved from entity annotations. */
+/**
+ * Provider-agnostic invocation target resolved from entity annotations.
+ *
+ * @public
+ */
 export interface AgentTarget {
   region?: string;
   runtimeHandle?: string;
@@ -172,11 +218,13 @@ export interface AgentTarget {
  * These travel as first-class payload fields to the agent (its entrypoint
  * reads `target`, `project`, `post`, `model`, ...), separately from the
  * rendered `prompt` text.
+ *
+ * @public
  */
 export interface AgentInvocationArgs {
-  /** Jira issue key / MR IID, for reviewer agents. */
+  /** What the agent works on, e.g. an issue key or merge request id. */
   target?: string;
-  /** GitLab project path, for review agents. */
+  /** Repository or project the target belongs to. */
   project?: string;
   /**
    * Whether the agent may perform external writes (post comments/notes).
@@ -188,7 +236,7 @@ export interface AgentInvocationArgs {
   model?: string;
   /** Knowledge-base ids to constrain retrieval (chat-grade agents). */
   knowledgeBaseIds?: string[];
-  /** Agent mode hint (e.g. kagent/jared `reviewer` | `collaborator`). */
+  /** Agent-defined mode hint, e.g. `reviewer`. */
   mode?: string;
 }
 
@@ -196,6 +244,8 @@ export interface AgentInvocationArgs {
  * Pluggable invocation transport. Implemented by provider modules
  * (e.g. `-backend-module-agentcore`, `-backend-module-kagent`) and
  * registered per-runtime through `aiAgentsExtensionPoint`.
+ *
+ * @public
  */
 export interface AgentInvocationRequest {
   entityRef: string;
@@ -214,11 +264,13 @@ export interface AgentInvocationRequest {
   target: AgentTarget;
 }
 
+/** @public */
 export interface AgentInvocationResponse {
   responseText: string;
   latencyMs: number;
 }
 
+/** @public */
 export interface AgentInvoker {
   invoke(req: AgentInvocationRequest): Promise<AgentInvocationResponse>;
 }

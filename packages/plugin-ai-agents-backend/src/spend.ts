@@ -4,7 +4,11 @@ import {
   normalizeRequestTags,
 } from '@acarmisc/backstage-plugin-litellm-backend';
 
-/** Aggregated spend for a conversation or agent. */
+/**
+ * Aggregated spend for a conversation or agent.
+ *
+ * @public
+ */
 export interface SpendSummary {
   /** Total USD spend across the matched requests. */
   spend: number;
@@ -14,7 +18,11 @@ export interface SpendSummary {
   byModel: Record<string, number>;
 }
 
-/** A row consumed for aggregation; kept narrow so tests need no LiteLLM. */
+/**
+ * A row consumed for aggregation; kept narrow so tests need no LiteLLM.
+ *
+ * @public
+ */
 export interface SpendRow {
   spend?: number;
   total_tokens?: number;
@@ -22,6 +30,7 @@ export interface SpendRow {
   request_tags?: string[] | Record<string, string>;
 }
 
+/** @public */
 export interface SpendReader {
   /** Reads spend rows for a date window, optionally scoped to a key. */
   getSpendLogs(params: {
@@ -32,9 +41,11 @@ export interface SpendReader {
 }
 
 /**
- * Reads `litellm.baseUrl` / `litellm.masterKey` (the same config the govai
- * plugin uses) and builds a spend reader. Returns undefined when LiteLLM is
+ * Reads `litellm.baseUrl` / `litellm.masterKey` (shared with the LiteLLM
+ * backend plugin) and builds a spend reader. Returns undefined when LiteLLM is
  * not configured, so the spend route can degrade to 501.
+ *
+ * @public
  */
 export function buildSpendReader(config: Config): SpendReader | undefined {
   const baseUrl = config.getOptionalString('litellm.baseUrl');
@@ -54,6 +65,8 @@ function isoDate(d: Date): string {
  * Aggregates spend rows that carry `session:<threadId>` in their request
  * tags. Falls back to `entity:<ref>` when no thread is given, so per-agent
  * totals (all threads) work too. Rows with malformed tags are skipped.
+ *
+ * @public
  */
 export function aggregateSpend(
   rows: SpendRow[],
@@ -82,12 +95,18 @@ export function aggregateSpend(
   return summary;
 }
 
-/** The default lookback window for a spend query. */
+/**
+ * The default lookback window for a spend query.
+ *
+ * @public
+ */
 export const DEFAULT_SPEND_DAYS = 30;
 
 /**
  * Resolve the date window for a spend query. `days` is clamped to
  * [1, 90] to keep the admin `/spend/logs` query bounded.
+ *
+ * @public
  */
 export function spendWindow(
   days?: number,
@@ -102,7 +121,11 @@ export function spendWindow(
   return { start_date: isoDate(start), end_date: isoDate(end) };
 }
 
-/** Filter helper: does a tag list match a thread or entity tag? */
+/**
+ * Filter helper: does a tag list match a thread or entity tag?
+ *
+ * @public
+ */
 export function spendTagMatcher(opts: {
   threadId?: string;
   entityRef: string;

@@ -138,6 +138,7 @@ function resolveInvoker(
   return {};
 }
 
+/** @public */
 export async function createRouter(options: RouterOptions): Promise<Router> {
   const {
     config,
@@ -165,8 +166,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     reviews = await ReviewStore.create(await options.database.getClient());
   }
 
-  // Spend attribution is optional: it reads the LiteLLM instance the govai
-  // plugin is configured against. No LiteLLM config → the route answers 501.
+  // Spend attribution is optional: it reads the LiteLLM proxy configured
+  // under `litellm`. Without that config the route answers 501.
   const spendReader = options.spendReader ?? buildSpendReader(config);
 
   // Avatar proxy: fetches agent avatars through the integrations' credentials

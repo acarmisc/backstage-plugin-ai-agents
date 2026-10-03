@@ -11,6 +11,8 @@ import { KagentInvoker } from './invoker';
  * its base URL from `ai-agents.invocations.kagent` and resolving the
  * per-agent namespace/name from the entity's `ai-agent.io/namespace` and
  * `/runtime-handle` annotations.
+ *
+ * @public
  */
 export const aiAgentsModuleKagent = createBackendModule({
   pluginId: 'ai-agents',

@@ -14,6 +14,7 @@ export interface AgentCoreConfig {
   timeoutMs: number;
 }
 
+/** @public */
 export function readAgentCoreConfig(
   config: Config,
 ): AgentCoreConfig | undefined {
@@ -39,6 +40,8 @@ interface CachedToken {
 /**
  * Extracts human-readable text from the various payload shapes AgentCore
  * runtimes return (plain text, {"result": ...}, {"output": {...}}, SSE...).
+ *
+ * @public
  */
 export function extractResponseText(body: string): string {
   try {
@@ -73,13 +76,11 @@ export function extractResponseText(body: string): string {
 }
 
 /**
- * Map the generic invocation request onto the AgentCore entrypoint payload
- * (`ces-ai-agents/deploy/app.py`): the agent reads `target`, `project`,
- * `post`, `model`, `knowledge_base_ids`, `mode`,
- * `litellm_tags` and `trace_user_id` as first-class fields — not just the
- * rendered prompt. `post` is always explicit because the entrypoint defaults
- * an omitted value to true, which would silently turn a dry-run into a
- * posting run.
+ * Maps the invocation request onto the JSON payload sent to the AgentCore
+ * runtime: `prompt` plus the structured `target`, `project`, `post`,
+ * `model`, `knowledge_base_ids`, `mode`, `litellm_tags` and
+ * `trace_user_id` fields. `post` is always sent, so an agent that defaults a
+ * missing value to true can't turn a dry run into a write.
  */
 export function buildPayload(
   req: AgentInvocationRequest,
@@ -107,7 +108,11 @@ function runtimeName(entityRef: string): string {
   return name || entityRef;
 }
 
-/** Minimal OAuth2 client-credentials client with in-memory token cache. */
+/**
+ * Minimal OAuth2 client-credentials client with in-memory token cache.
+ *
+ * @public
+ */
 export class TokenClient {
   private cached?: CachedToken;
 
@@ -151,6 +156,7 @@ export class TokenClient {
   }
 }
 
+/** @public */
 export class AgentCoreInvoker {
   private readonly config: AgentCoreConfig | undefined;
   private readonly tokens: TokenClient | undefined;

@@ -13,6 +13,7 @@ import { aiAgentsPermissions } from './permissions';
 export { aiAgentsExtensionPoint };
 export type { AiAgentsExtensionPoint };
 
+/** @public */
 export const aiAgentsPlugin = createBackendPlugin({
   pluginId: 'ai-agents',
   register(reg) {

@@ -12,6 +12,7 @@ export interface KagentConfig {
   timeoutMs: number;
 }
 
+/** @public */
 export function readKagentConfig(config: Config): KagentConfig | undefined {
   const cfg = config.getOptionalConfig('ai-agents.invocations.kagent');
   if (!cfg) return undefined;
@@ -48,6 +49,8 @@ function textFromParts(parts: unknown): string | undefined {
  * Extracts human-readable text from a kagent A2A `message/send` JSON-RPC
  * response, which — depending on the agent — resolves to either a Task
  * (text in `artifacts[].parts[]`) or a Message (text in `parts[]`).
+ *
+ * @public
  */
 export function extractResponseText(body: string): string {
   let parsed: any;
@@ -82,6 +85,8 @@ export function extractResponseText(body: string): string {
  * Invokes an agent hosted on kagent (https://kagent.dev) via the A2A
  * protocol endpoint the kagent controller exposes at
  * `/api/a2a/{namespace}/{agent-name}/`.
+ *
+ * @public
  */
 export class KagentInvoker {
   private readonly config: KagentConfig | undefined;

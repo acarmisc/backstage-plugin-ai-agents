@@ -43,6 +43,7 @@ function toRecord(row: DbRow): InvocationRecord {
   };
 }
 
+/** @public */
 export class InvocationStore {
   private constructor(private readonly db: Knex) {}
 
@@ -104,6 +105,7 @@ function toReview(row: ReviewRow): ReviewRecord {
   };
 }
 
+/** @public */
 export class ReviewStore {
   private constructor(private readonly db: Knex) {}
 
