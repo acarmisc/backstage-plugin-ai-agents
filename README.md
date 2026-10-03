@@ -1,684 +1,224 @@
-# Backstage AI Agents Plugin
+# AI Agents plugin for Backstage
 
-A Backstage plugin that manages **AI Agents** stored as catalog `Component`
-entities, surfaced through a dedicated, card-based view at `/ai-agents` —
-separate from the standard catalog browse.
+Catalog your AI agents in Backstage and give people one place to find them,
+check that they are up, run them and see what they did.
 
-## What it does
+An agent is an ordinary catalog `Component` with `spec.type: ai-agent`, so it
+keeps ownership, relations, search and permissions like any other component.
+The plugin adds:
 
-- Treats each AI agent as a first-class Backstage catalog `Component` with
-  `spec.type: ai-agent`, so agents inherit ownership, relations, tags,
-  metadata, RBAC, and searchability like any other component.
-- Renders a responsive grid of rich **agent cards**: avatar, name, purpose,
-  runtime environment, capabilities (chips), billing model, owner, lifecycle,
-  version, links, and a live health badge.
-- Provides filters (search, runtime, capability, lifecycle, owner) and a
-  detail drawer with a deep link into the catalog entity page.
-- Optional **backend** probes each agent's health/endpoint annotation and
-  returns live status (healthy / degraded / down / unknown) with an
-  in-memory TTL cache.
+- an **AI Agents** page (`/ai-agents`) with a card per agent, filters and a
+  detail drawer;
+- live **status** (healthy / degraded / down) from each agent's health URL;
+- a **Hire** dialog that runs an agent from Backstage as a multi-turn
+  conversation, dry run first;
+- **reviews** (0–5 stars) and invocation **history**;
+- **spend** per agent and per conversation, read from a LiteLLM proxy;
+- an **Activity** view of runs and tool calls, read from your telemetry store;
+- an overview card, an invocations card and an Activity tab on the agent's
+  entity page.
+
+Each backend feature is optional. Without the backend the page still lists
+agents; it just has no status, runs or history.
+
+| Agents                                             | Activity                                       |
+| -------------------------------------------------- | ---------------------------------------------- |
+| ![The AI Agents page](docs/images/agents-page.png) | ![The Activity view](docs/images/activity.png) |
+
+How the frontend, the backend and its modules work together is described in
+[docs/architecture.md](docs/architecture.md), with an interactive version in
+[docs/architecture.html](docs/architecture.html):
+
+![How the frontend, the backend and its modules run an agent](docs/images/architecture.png)
 
 ## Packages
 
-- `packages/plugin-ai-agents` — frontend
-  (`@acarmisc/backstage-plugin-ai-agents`)
-- `packages/plugin-ai-agents-backend` — backend, optional but recommended
-  (`@acarmisc/backstage-plugin-ai-agents-backend`)
-- `packages/plugin-ai-agents-backend-module-agentcore` — AWS Bedrock
-  AgentCore invocation module
-  (`@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`)
-- `packages/plugin-ai-agents-backend-module-kagent` — kagent
-  (Kubernetes-native agent runtime) invocation module
-  (`@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`)
-- `packages/plugin-ai-agents-backend-module-langfuse` — run timeline
-  (what an agent is doing / has done) read from Langfuse
-  (`@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`)
+| Package                                                                                                               | What it does                                                 |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [`@acarmisc/backstage-plugin-ai-agents`](packages/plugin-ai-agents)                                                   | Frontend: page, cards, drawer, Hire dialog, Activity view    |
+| [`@acarmisc/backstage-plugin-ai-agents-backend`](packages/plugin-ai-agents-backend)                                   | Backend: status probing, invocations, reviews, spend, routes |
+| [`@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`](packages/plugin-ai-agents-backend-module-agentcore) | Runs agents hosted on AWS Bedrock AgentCore                  |
+| [`@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`](packages/plugin-ai-agents-backend-module-kagent)       | Runs agents hosted on [kagent](https://kagent.dev) (A2A)     |
+| [`@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`](packages/plugin-ai-agents-backend-module-langfuse)   | Reads agent runs from [Langfuse](https://langfuse.com)       |
 
-Built with the Backstage **New Frontend System**
-(`@backstage/frontend-plugin-api`, `PageBlueprint`, `ApiBlueprint`) and the
-**New Backend System** (`@backstage/backend-plugin-api`).
+Each package README covers its installation and configuration.
 
----
+## Requirements
 
-## Catalog model
+- Backstage 1.53 or later.
+- The [new frontend system](https://backstage.io/docs/frontend-system/) and the
+  [new backend system](https://backstage.io/docs/backend-system/). Apps on the
+  legacy frontend system are not supported.
+- A database for invocation history and reviews (the plugin's own Knex
+  migrations create the tables). Without one those features return `501`.
 
-Agents are `Component` entities with `spec.type: ai-agent`. Agent-specific
-fields live under the `ai-agent.io/*` annotation namespace, plus
-`metadata.tags` and `metadata.links`. No custom `spec` schema is needed —
-catalog processors tolerate unknown annotations, which keeps the model
-portable across Backstage versions.
+## Getting started
 
-> **Migration note:** Annotations moved from `ai-agent.acarmisc.org/*` to
-> `ai-agent.io/*` in this version. The old prefix is still read as a fallback,
-> so existing entities keep working, but new or updated entities should use
-> the new prefix.
+1. Install the frontend and backend:
 
-Only `spec.type: ai-agent` is required for an agent to appear on the
-`/ai-agents` page. The `runtime` annotation defaults to `custom` if missing;
-all other annotations are optional.
+   ```bash
+   yarn --cwd packages/app add @acarmisc/backstage-plugin-ai-agents
+   yarn --cwd packages/backend add @acarmisc/backstage-plugin-ai-agents-backend
+   ```
 
-### Annotation reference
+2. Register the backend in `packages/backend/src/index.ts`:
 
-| Annotation                    | Required    | Description                                                                                                                                                              |
-| ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ai-agent.io/runtime`         | recommended | Runtime badge: `bedrock-agentcore`, `litellm`, `lambda`, `custom`, or any string. Defaults to `custom`.                                                                  |
-| `ai-agent.io/billing-model`   | no          | `per-invocation`, `per-token`, `subscription`, `free` (default `free`)                                                                                                   |
-| `ai-agent.io/capabilities`    | no          | Comma- or newline-separated chips, optionally `label:category`                                                                                                           |
-| `ai-agent.io/cost-per-1k`     | no          | USD per 1000 invocations (or per 1M tokens for `per-token`)                                                                                                              |
-| `ai-agent.io/budget`          | no          | Monthly spend cap                                                                                                                                                        |
-| `ai-agent.io/avatar`          | no          | Image URL: absolute http(s), `data:image/*` (self-contained base64), or an app-relative path like `/img/agents/x.png`. Falls back to initials on a tinted circle.        |
-| `ai-agent.io/version`         | no          | Version string in the card footer                                                                                                                                        |
-| `ai-agent.io/health`          | no          | URL the backend probes for live status (preferred)                                                                                                                       |
-| `ai-agent.io/endpoint`        | no          | Invocation endpoint; probed if no `health` annotation                                                                                                                    |
-| `ai-agent.io/runtime-handle`  | no          | ARN/handle shown in the detail drawer                                                                                                                                    |
-| `ai-agent.io/purpose`         | no          | Overrides `description` as the card's purpose text                                                                                                                       |
-| `ai-agent.io/hire-schema`     | no          | JSON array declaring the "Hire Agent" form fields. See [Hiring an agent](#hiring-an-agent).                                                                              |
-| `ai-agent.io/prompt-template` | no          | Prompt template with `{field_name}` placeholders matching `hire-schema` fields, used to build the AgentCore invocation preview. See [Hiring an agent](#hiring-an-agent). |
-| `ai-agent.io/region`          | no          | AWS region for the AgentCore runtime, used in the Hire preview's CLI command (e.g. `eu-west-1`).                                                                         |
-| `ai-agent.io/namespace`       | no          | Kubernetes namespace for a kagent-hosted agent; defaults to the `-module-kagent` config's `namespace`.                                                                   |
-| `ai-agent.io/telemetry-id`    | no          | The agent's name in the telemetry store (e.g. `dinesh`). Enables the run timeline in the detail drawer. See [Run timeline](#run-timeline).                               |
+   ```ts
+   backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
+   ```
 
-Capability categories (used for chip color): `reasoning`, `retrieval`,
-`tools`, `vision`, `voice`, `data`, `safety`. A capability without a
-category renders as a default-colored chip.
+3. If your app does not discover features automatically, add the frontend
+   plugin to `createApp`:
 
----
+   ```ts
+   import aiAgentsPlugin from '@acarmisc/backstage-plugin-ai-agents';
 
-## Hiring an agent
+   export default createApp({ features: [aiAgentsPlugin] });
+   ```
 
-Agents that declare a `ai-agent.io/hire-schema` annotation show a
-**Hire Agent** button on their card, detail drawer, and entity-page card.
-Clicking it opens a form rendered from the schema.
+4. Allow the backend to probe your agents' health URLs:
 
-When the backend is wired with an invoker module, the dialog becomes a
-**conversation**:
+   ```yaml
+   # app-config.yaml
+   ai-agents:
+     probeAllowlist:
+       - https://*.agents.example.com
+   ```
 
-1. **Run agent** starts the conversation. Runs are **dry-run by default** —
-   the agent reports back without writing anything to GitLab/Jira.
-2. The result appears in the chat. Follow-up messages continue the same
-   **thread**, which keeps the agent's session (multi-turn memory) alive.
-3. For agents whose schema exposes an `action`/`post` field, a
-   **Confirm and publish** step re-invokes with writes enabled once you
-   approve the result. Nothing is posted before that.
+5. Add the modules for the runtimes and telemetry store you use (see their
+   READMEs), then describe an agent in the catalog.
 
-The full input — `prompt`, `target`, `project`, `post`, `model`,
-`litellm_tags` and `trace_user_id` — is sent to the agent as structured
-fields, not just baked into the prompt text. Each invocation carries
-`channel:backstage`, `session:<thread>`, `invoked-by:<user>` and
-`backstage-entity:<ref>` tags so LiteLLM spend can be attributed per agent
-and per conversation; the drawer's **Cost** section shows the result.
-
-A collapsed invocation preview (prompt + HTTP payload + AWS CLI command)
-with a **Copy CLI** fallback is available before the first run.
-
-The `hire-schema` annotation value is a JSON array of field objects:
+## Describing an agent
 
 ```yaml
-ai-agent.io/hire-schema: '[{"name":"project","label":"GitLab project","type":"text","required":true,"help":"e.g. my-org/my-project"},{"name":"target","label":"MR IID","type":"text","required":true},{"name":"action","label":"Action","type":"select","required":true,"options":["dry-run","post"],"default":"dry-run"}]'
-```
-
-| Field key  | Type                                                  | Description                                                                                               |
-| ---------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `name`     | string (required)                                     | Machine key for the field; used as the form-state key and the `{name}` placeholder in the prompt template |
-| `label`    | string (required)                                     | Human-readable label shown above the input                                                                |
-| `type`     | `text` \| `url` \| `textarea` \| `select` \| `number` | Input to render (default `text`)                                                                          |
-| `required` | boolean                                               | Whether the field must be filled before submit                                                            |
-| `default`  | string                                                | Default value when the form opens                                                                         |
-| `options`  | string[]                                              | For `select` fields: the selectable options                                                               |
-| `help`     | string                                                | Optional helper text shown under the input                                                                |
-
-Malformed JSON, non-array JSON, or unknown `type` values are tolerated:
-the schema is dropped and the **Hire Agent** button stays hidden.
-
-### Prompt template
-
-The `ai-agent.io/prompt-template` annotation is a string with
-`{field_name}` placeholders matching the `hire-schema` fields. As the user
-fills the form, the preview substitutes the placeholders with the field
-values and builds:
-
-1. **Prompt** — the filled template (or, when no `prompt-template` is set,
-   a JSON object of all field values).
-2. **Payload** — the `{"prompt": "..."}` JSON body for the AgentCore
-   `/invocations` endpoint.
-3. **AWS CLI command** — `aws bedrock-agentcore invoke-agent-runtime`,
-   using `ai-agent.io/region` and
-   `ai-agent.io/runtime-handle`. If either is missing, a warning
-   chip is shown and the values are left as placeholders.
-
-```yaml
-ai-agent.io/prompt-template: "Review merge request !{target} in project '{project}'. Action: {action}."
-ai-agent.io/region: us-east-1
-ai-agent.io/runtime-handle: support-triage-runtime
-```
-
----
-
-## Adding an agent
-
-### 1. Create the `catalog-info.yaml`
-
-Place this file at the **root of the agent's GitLab repository**, on the
-default branch. This is the only file Backstage needs to ingest the agent.
-
-```yaml
-# catalog-info.yaml — repo root
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: support-triage-agent
-  title: Support Triage Agent # shown as the card title
-  description: Classifies and routes incoming support tickets by severity and product area.
-  tags: [ai-agent, llm, support] # 'ai-agent' tag is conventional but optional
-  annotations:
-    # --- recommended ---
-    ai-agent.io/runtime: bedrock-agentcore # bedrock-agentcore | litellm | lambda | custom
-    ai-agent.io/billing-model: per-invocation # per-invocation | per-token | subscription | free
-
-    # --- optional but useful on the card ---
-    ai-agent.io/capabilities: 'tool-use:tools,rag:retrieval,reasoning:reasoning'
-    ai-agent.io/cost-per-1k: '0.012' # USD per 1k invocations (or per 1M tokens)
-    ai-agent.io/version: '1.4.2'
-    ai-agent.io/avatar: https://api.dicebear.com/7.x/bottts/svg?seed=triage
-
-    # --- runtime handles (used by the backend status prober) ---
-    ai-agent.io/runtime-handle: arn:aws:bedrock:us-east-1:123:agent/TXXX
-    ai-agent.io/endpoint: https://abc.execute-api.us-east-1.amazonaws.com/prod
-    ai-agent.io/health: https://abc.execute-api.us-east-1.amazonaws.com/prod/health
-    # the backend probes `health` first, falls back to `endpoint`; omit both → status "unknown"
-
-    # --- standard Backstage annotations (optional, work everywhere) ---
-    backstage.io/techdocs-ref: dir:.
-    gitlab.com/project-slug: my-org/agents/support-triage-agent
-
-  links:
-    - url: https://grafana.example.com/d/agents/support-triage
-      title: Metrics
-      icon: dashboard
-    - url: https://docs.example.com/agents/support-triage
-      title: Playbook
-      icon: docs
-spec:
-  type: ai-agent # ← the plugin filters on this exact value
-  lifecycle: production # production | experimental | deprecated
-  owner: cs-ops # must match a Group/User entity ref in the catalog
-  system: customer-support # optional, must match a System entity
-  dependsOn:
-    - component:default/ticketing-api
-    - resource:default/bedrock-agent
-```
-
-### 2. Commit and push
-
-Commit `catalog-info.yaml` to the default branch of a project inside one of
-the GitLab groups configured for catalog discovery (see below). Push.
-
-### 3. Wait for the next discovery scan (or force a refresh)
-
-The agent appears at `/ai-agents` within one discovery cycle. To see it
-immediately, open **Catalog → Register existing component** in Backstage and
-paste the GitLab raw URL of the `catalog-info.yaml`; the provider will also
-pick it up on its next run regardless.
-
----
-
-## How Backstage discovers agents (GitLab)
-
-Discovery is **automatic** — you do not register each agent manually. The
-Backstage backend runs the `@backstage/plugin-catalog-backend-module-gitlab`
-module, which periodically scans configured GitLab groups for
-`catalog-info.yaml` files.
-
-### The flow
-
-1. **You commit `catalog-info.yaml`** to the repo root on the default branch
-   of a project in a configured GitLab group.
-
-2. **Every 30 minutes** the GitLab catalog provider lists all projects in
-   the configured groups (using the `GITLAB_TOKEN` from
-   `integrations.gitlab`), and for each project fetches
-   `catalog-info.yaml` from the default branch.
-
-3. The provider parses the YAML. Because `catalog.rules` allows `Component`
-   and the entity is `kind: Component` with `spec.type: ai-agent`, it is
-   ingested into the catalog. The `gitlab.com/project-slug` annotation (or
-   the provider's auto-detection) links the entity to its GitLab repo.
-
-4. **The AI Agents frontend** calls
-   `catalogApi.getEntities({ filter: { kind: 'Component', 'spec.type': 'ai-agent' } })`
-   — a standard catalog query, no custom discovery. It returns every
-   ingested agent entity, mapped by `entityToAgent()` into the card data.
-
-5. **The backend status prober** resolves each agent's entity ref via the
-   catalog service token, reads its `ai-agent.io/health` (or
-   `endpoint`) annotation, and probes it for live status.
-
-### Configuring discovery
-
-Discovery is configured in `app-config.production.yaml` under
-`catalog.providers.gitlab`. One provider per GitLab group:
-
-```yaml
-catalog:
-  providers:
-    gitlab:
-      agents: # ← provider name (arbitrary)
-        host: ${GITLAB_HOST} # e.g. gitlab.example.com
-        group: ${GITLAB_GROUP} # e.g. "my-org-agents"
-        entityFilename: catalog-info.yaml # ← the file it looks for in every repo
-        projectPattern: '[\s\S]*' # matches every project in the group
-        schedule:
-          frequency: { minutes: 30 } # re-scan interval
-          timeout: { minutes: 3 }
-          initialDelay: { seconds: 60 } # staggered across providers at boot
-```
-
-To cover a new group, add another block under `catalog.providers.gitlab`
-with the group name and redeploy. The `projectPattern: '[\s\S]*'` already
-matches every project, so no per-repo allowlist is needed.
-
-### Checking discovery is working
-
-- **Backstage UI**: Catalog → search for the agent name. If it appears in
-  the catalog, the plugin will show it on `/ai-agents`.
-- **Backend API** (auth required):
-  `GET /api/catalog/entities?filter=kind=component,spec.type=ai-agent`
-  returns all ingested agents.
-- **Logs**: the catalog provider logs each scanned location and any parse
-  errors at `info`/`warn` level under the `catalog` logger.
-
-### Troubleshooting discovery
-
-| Symptom                                          | Cause / Fix                                                                                                                                                                                     |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agent doesn't appear in the catalog              | The repo is not in a configured GitLab group, or `catalog-info.yaml` is not at the repo root on the default branch. Add the group to `catalog.providers.gitlab` and redeploy, or move the file. |
-| Agent appears in Catalog but not on `/ai-agents` | `spec.type` is not exactly `ai-agent`. The filter is case-sensitive.                                                                                                                            |
-| Status badge stays `unknown`                     | No `ai-agent.io/health` or `endpoint` annotation, or the URL is not in `ai-agents.probeAllowlist`, or the backend is disabled (`ai-agents.enabled: false`).                                     |
-| Status badge shows `down` with `fetch failed`    | The health/endpoint URL is unreachable from the Backstage backend (network policy, DNS, or the agent is offline). Check the URL from inside the cluster.                                        |
-| Card shows no capabilities / billing             | The corresponding annotations are missing or malformed. Capabilities use `label:category` pairs separated by commas or newlines.                                                                |
-
----
-
-## Installation
-
-### 1. Add the packages
-
-```bash
-# app (frontend)
-yarn workspace app add @acarmisc/backstage-plugin-ai-agents
-# backend
-yarn workspace backend add @acarmisc/backstage-plugin-ai-agents-backend
-```
-
-For local development against an unreleased copy, use a `file:` dependency
-in `packages/app/package.json` and `packages/backend/package.json`:
-
-```json
-"@acarmisc/backstage-plugin-ai-agents": "file:/abs/path/to/backstage-plugin-ai-agents/packages/plugin-ai-agents"
-"@acarmisc/backstage-plugin-ai-agents-backend": "file:/abs/path/to/backstage-plugin-ai-agents/packages/plugin-ai-agents-backend"
-```
-
-### 2. Register the backend
-
-`packages/backend/src/index.ts`:
-
-```typescript
-backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
-```
-
-### 3. Register the frontend
-
-`packages/app/src/App.tsx` (New Frontend System):
-
-```typescript
-import { aiAgentsPlugin } from '@acarmisc/backstage-plugin-ai-agents';
-
-export default createApp({
-  features: [
-    /* ...other plugins... */
-    aiAgentsPlugin,
-  ],
-});
-```
-
-The `PageBlueprint` registers the `/ai-agents` route automatically. For the
-sidebar, add a nav item (the host app's `Sidebar.tsx` is hand-wired):
-
-```tsx
-import ExtensionIcon from '@material-ui/icons/Extension';
-<SidebarItem icon={ExtensionIcon} to="/ai-agents" text="AI Agents" />;
-```
-
-> **Icon note**: `@material-ui/icons/SmartToy` does not exist in v4 (the
-> Backstage app pins `@material-ui/icons`, not `@mui/icons-material`). Use
-> `Extension` or another v4 icon. Inside the plugin's own source,
-> `@mui/icons-material` (v5) is used and `SmartToy` is available there.
-
-### 4. Configuration
-
-`app-config.yaml`:
-
-```yaml
-ai-agents:
-  enabled: true
-  probeTimeoutMs: 3000
-  statusCacheTtlMs: 15000
-  # probeAuthHeader: ${AI_AGENTS_PROBE_TOKEN}   # optional, for gated agents
-  # probeAllowlist:
-  #   - "https://*.execute-api.*.amazonaws.com/*"
-  # avatarProxy:
-  #   enabled: true                            # serve private-repo avatars
-  #   allowlist:
-  #     - "https://gitlab.example.com/*"
-```
-
-| Key                                   | Type     | Default    | Description                                                                                              |
-| ------------------------------------- | -------- | ---------- | -------------------------------------------------------------------------------------------------------- |
-| `ai-agents.enabled`                   | boolean  | `true`     | Enable live status probing                                                                               |
-| `ai-agents.probeTimeoutMs`            | number   | `3000`     | Per-probe timeout                                                                                        |
-| `ai-agents.statusCacheTtlMs`          | number   | `15000`    | In-memory status cache TTL                                                                               |
-| `ai-agents.probeAuthHeader`           | string   | —          | Static Authorization header for probes (`@visibility secret`)                                            |
-| `ai-agents.probeAllowlist`            | string[] | `[]`       | Allowed probe URL origin globs (empty = no probing)                                                      |
-| `ai-agents.avatarProxy.enabled`       | boolean  | `false`    | Proxy `http(s)` avatars through the backend (with integration credentials) so private-repo images render |
-| `ai-agents.avatarProxy.allowlist`     | string[] | `[]`       | Allowed avatar URL origin globs (empty = no proxying; off-allowlist URLs 302 to the direct URL)          |
-| `ai-agents.avatarProxy.ttlMs`         | number   | `86400000` | How long a fetched avatar is served from cache                                                           |
-| `ai-agents.avatarProxy.negativeTtlMs` | number   | `3600000`  | How long a failed fetch is remembered before retrying                                                    |
-| `ai-agents.avatarProxy.maxBytes`      | number   | `524288`   | Reject avatars larger than this (bytes)                                                                  |
-
-With the proxy enabled, `GET /api/ai-agents/avatar/:entityRef` fetches the
-entity's `ai-agent.io/avatar` URL with the backend's integration credentials
-(e.g. the GitLab token) and caches the bytes (positive and negative
-entries, with ETag revalidation). Failures redirect to the original URL so
-public images keep working. GitLab `/-/raw/` avatar URLs are rewritten to
-their equivalent `/-/blob/` form (and `?token=`-style credential params are
-dropped) before fetching, since Backstage's GitLab
-`UrlReader` only understands the latter. The frontend (`useAvatarSrc`)
-prefers the proxied blob for `http(s)` URLs — shared per agent for the page
-session, and shows initials (never the upstream URL) until it arrives — and uses `data:` URIs and app-relative paths directly.
-
-Without the backend (or with `enabled: false`), the plugin still works —
-cards just show an `unknown` status badge.
-
-### 5. Entity-page card (optional, included automatically)
-
-The plugin also registers an **Agent Overview** card via
-`EntityCardBlueprint`, filtered to entities with `spec.type: ai-agent`. When
-the plugin is registered in the app, every `ai-agent` Component's catalog
-entity page automatically gets a card showing the runtime, billing,
-capabilities, tags, endpoint, runtime handle, and a "View on the AI Agents
-page" link — no extra wiring needed.
-
-The card renders inside the catalog entity Overview page alongside the
-other entity cards (About, Tech Insights, etc.). It's hidden on non-agent
-entities, so regular services/APIs/resources are unaffected.
-
-If you need to restrict or reorder it, use the standard
-`app-config.yaml` entity-card config:
-
-```yaml
-app:
-  extensions:
-    - entity-card:ai-agents/overview:
-        config:
-          type: info # render as a compact info card (default)
-```
-
-## API endpoints
-
-All under `/api/ai-agents`, all Backstage-auth-authenticated:
-
-| Endpoint                        | Method | Purpose                                                                                                                                                                                     |
-| ------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/health`                       | GET    | `{ status: 'ok', enabled }`                                                                                                                                                                 |
-| `/statuses?refs=ref1,ref2`      | GET    | Live status for the given agent entity refs                                                                                                                                                 |
-| `/status/:entityRef`            | GET    | Single agent status (used by the drawer's Refresh button)                                                                                                                                   |
-| `/invocations/:entityRef`       | POST   | Run the agent. Body: `{ values, threadId?, prompt?, post? }`. `post` defaults to `false` (dry-run); `threadId` continues a conversation. Requires an invoker module; responds 501 otherwise |
-| `/invocations/:entityRef`       | GET    | Invocation history for the agent (latest first, `?limit=` up to 100). Requires a database                                                                                                   |
-| `/invocations/:entityRef/spend` | GET    | LiteLLM spend attributed to the agent, or to one thread with `?thread=`. Responds 501 when LiteLLM is not configured                                                                        |
-| `/reviews/:entityRef`           | POST   | Submit a review. Body: `{ rating: 0-5, comment? }`. Requires a database                                                                                                                     |
-| `/reviews/:entityRef`           | GET    | Reviews + count + average rating (`?limit=` up to 100). Requires a database                                                                                                                 |
-
-## Agent reviews
-
-Users can rate an agent from 0 to 5 stars and leave an optional comment.
-Reviews appear in the agent detail drawer and on the entity-page overview
-card. The backend persists them in the plugin database (`agent_reviews`
-table) and attributes them to the authenticated user.
-
-Two star widgets ship in `StarRating`:
-
-- `simple` — compact read-mostly stars (review list, average display).
-- `fancy` — large interactive stars with hover animation and
-  Poor→Excellent labels (the "Rate this agent" form).
-
-The section hides itself when no database is configured (the endpoints
-respond 501).
-
-## Agent invocations
-
-The backend core is transport-agnostic: it resolves the entity, builds the
-prompt, resolves the structured invocation args (`target`, `project`,
-`post`, ...), persists the invocation (`status`, `prompt`, `response`,
-`user`, `latency`, `threadId`, `post`) into the plugin database, and
-delegates the actual call to a pluggable **invoker** registered through the
-`ai-agents.invoker` extension point. Multiple provider modules can be
-installed side by side — the entity's `ai-agent.io/runtime` annotation picks
-which one handles a given agent (e.g. `bedrock-agentcore` vs `kagent`). If
-an entity has no `runtime` annotation and exactly one provider module is
-installed, that single invoker is used, so single-runtime setups don't need
-the annotation.
-
-`post` is always sent explicitly and defaults to `false` — a run never
-writes to GitLab/Jira until the user confirms in the conversation. Note
-that some agent entrypoints default an _omitted_ `post` to true, which is
-exactly the footgun this default closes.
-
-Invocations carry a **thread id**; the derived session id is reused across
-turns (AgentCore receives it as
-`X-Amzn-Bedrock-AgentCore-Runtime-Session-Id`, kagent as the A2A
-`contextId`), so a conversation keeps the agent's memory. Spend is tagged
-`channel:backstage`, `session:<threadId>`, `invoked-by:<user>` and
-`backstage-entity:<ref>`, which is what the drawer's cost section reads back
-through `GET /invocations/:ref/spend`.
-
-Spend attribution requires the same `litellm.baseUrl` / `litellm.masterKey`
-config the LiteLLM governance plugin uses; without it the spend endpoint
-answers 501 and the UI hides the section.
-
-The shipped AgentCore module invokes AWS Bedrock AgentCore runtimes using a
-Keycloak client-credentials JWT:
-
-```yaml
-ai-agents:
-  invocations:
-    # enabled: true   # default
-    agentCore:
-      tokenUrl: https://auth.example.com/realms/my-realm/protocol/openid-connect/token
-      clientId: backstage
-      clientSecret: ${AI_AGENTS_AGENTCORE_CLIENT_SECRET}
-      region: eu-west-1 # default; the /region annotation overrides it
-      accountId: '123456789012' # only needed if runtime-handle has no full ARN
-```
-
-The shipped kagent module invokes agents hosted on a [kagent](https://kagent.dev)
-runtime via its A2A endpoint (`/api/a2a/{namespace}/{agent-name}/`, JSON-RPC
-`message/send`):
-
-```yaml
-ai-agents:
-  invocations:
-    kagent:
-      baseUrl: http://kagent-controller.kagent.svc.cluster.local:8083
-      namespace: kagent # default; the /namespace annotation overrides it
-      # authHeader: "Bearer ..."   # only if the controller sits behind auth
-```
-
-```yaml
-# catalog-info.yaml for a kagent-hosted agent
-metadata:
+  name: support-triage
+  title: Support Triage
+  description: Classifies incoming tickets by severity and product area.
   annotations:
     ai-agent.io/runtime: kagent
-    ai-agent.io/runtime-handle: helm-agent # the kagent Agent's name
-    ai-agent.io/namespace: kagent # optional override of the module default
+    ai-agent.io/runtime-handle: support-triage
+    ai-agent.io/health: https://support-triage.agents.example.com/healthz
+    ai-agent.io/capabilities: 'tool-use:tools,rag:retrieval'
+    ai-agent.io/billing-model: per-token
+  links:
+    - url: https://grafana.example.com/d/support-triage
+      title: Metrics
+spec:
+  type: ai-agent
+  lifecycle: production
+  owner: group:default/support
 ```
 
-Then register whichever module(s) you need next to the plugin in your backend:
+Only `spec.type: ai-agent` is required (the match is case-sensitive). Agents
+reach the catalog the same way as other components, through a location or an
+entity provider.
 
-```ts
-backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
-backend.add(
-  import('@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore'),
-);
-backend.add(
-  import('@acarmisc/backstage-plugin-ai-agents-backend-module-kagent'),
-);
-```
+### Annotations
 
-Without a matching module the endpoint answers 501 and the frontend falls
-back to the CLI-copy flow — other organisations can plug their own invoker
-(Lambda, Azure ML, HTTP…) by implementing `AgentInvoker` from the backend
-package and registering it under a runtime key of their choosing.
+All annotations are optional. Entities that still use the old
+`ai-agent.acarmisc.org/` prefix keep working.
 
-## Activity view and run timeline
+| Annotation                    | Purpose                                                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai-agent.io/runtime`         | Runtime name, e.g. `bedrock-agentcore` or `kagent`. Picks the invoker module and the badge. Default `custom`.                            |
+| `ai-agent.io/runtime-handle`  | The runtime's id for the agent: AgentCore runtime ARN, kagent agent name.                                                                |
+| `ai-agent.io/region`          | AWS region of an AgentCore runtime.                                                                                                      |
+| `ai-agent.io/namespace`       | Kubernetes namespace of a kagent agent.                                                                                                  |
+| `ai-agent.io/endpoint`        | The agent's endpoint. Probed when `health` is not set. For kagent, overrides the controller URL.                                         |
+| `ai-agent.io/health`          | URL probed for live status.                                                                                                              |
+| `ai-agent.io/telemetry-id`    | The agent's name in the telemetry store. Enables the Activity view.                                                                      |
+| `ai-agent.io/purpose`         | Card text; defaults to `metadata.description`.                                                                                           |
+| `ai-agent.io/avatar`          | Image: `http(s)` URL, `data:image/*` URI or app-relative path. Initials otherwise.                                                       |
+| `ai-agent.io/version`         | Shown in the card footer.                                                                                                                |
+| `ai-agent.io/capabilities`    | Comma- or newline-separated chips, `label` or `label:category` (`reasoning`, `retrieval`, `tools`, `vision`, `voice`, `data`, `safety`). |
+| `ai-agent.io/billing-model`   | `per-invocation`, `per-token`, `subscription` or `free` (default).                                                                       |
+| `ai-agent.io/cost-per-1k`     | Cost per 1000 invocations, or per 1M tokens for `per-token`.                                                                             |
+| `ai-agent.io/budget`          | Monthly budget.                                                                                                                          |
+| `ai-agent.io/hire-schema`     | JSON array describing the Hire form. See [Running agents](#running-agents).                                                              |
+| `ai-agent.io/prompt-template` | Prompt with `{field}` placeholders filled from the Hire form.                                                                            |
 
-The plugin shows agent runs in two places:
+## Running agents
 
-1. **Activity workspace** (tab on the agents page): agents in a left rail, the
-   selected agent's runs in progress, recent runs, statistics and a waterfall
-   of each run's tool calls. Also available as an **Activity tab on every
-   `ai-agent` catalog entity page**. Queries `GET /activity`, `GET /runs/…`
-   and `GET /insights/…`.
-
-2. **Run timeline** (detail drawer): per-agent run history with timestamps and
-   verdicts. Queries `GET /runs/:entityRef` and `GET /runs/:entityRef/:runId`.
-
-See [`docs/activity.md`](docs/activity.md) for full architecture and API details.
-
-The plugin stays storage-agnostic: the backend defines a
-`TelemetryProvider` (`getRuns`, `getRunTimeline`) and a telemetry module
-registers one through `aiAgentsExtensionPoint.registerTelemetryProvider`.
-Nothing is stored in Backstage, and prompts or tool arguments are never read.
-
-The shipped `-module-langfuse` reads runs from the Langfuse public API
-(`/api/public/v2/observations`) with a dedicated project key (Langfuse keys are project-wide read/write; the module only reads):
+An agent with a `hire-schema` gets a **Hire** button. The schema is a JSON
+array of form fields:
 
 ```yaml
-ai-agents:
-  telemetry:
-    langfuse:
-      baseUrl: https://langfuse.example.com
-      publicKey: ${LANGFUSE_PUBLIC_KEY}
-      secretKey: ${LANGFUSE_SECRET_KEY}
-      # lookbackHours: 24
-      # runningWindowSeconds: 90
-      # servicePrefix: abs_ces_agents_   # OTel service name = prefix + telemetry-id
+ai-agent.io/hire-schema: >-
+  [{"name":"target","label":"Issue","type":"text","required":true},
+   {"name":"action","label":"Action","type":"select","options":["dry-run","post"],"default":"dry-run"}]
+ai-agent.io/prompt-template: 'Triage issue {target}.'
 ```
 
-```ts
-backend.add(
-  import('@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse'),
-);
-```
+| Field      | Description                                                 |
+| ---------- | ----------------------------------------------------------- |
+| `name`     | Key of the value and of the `{name}` placeholder (required) |
+| `label`    | Input label (required)                                      |
+| `type`     | `text` (default), `url`, `textarea`, `select` or `number`   |
+| `required` | Whether the field must be filled                            |
+| `default`  | Initial value                                               |
+| `options`  | Choices of a `select`                                       |
+| `help`     | Helper text under the input                                 |
 
-Tag the catalog entity with `ai-agent.io/telemetry-id: dinesh`. The module
-expects the OpenTelemetry GenAI shape the Strands SDK emits: one
-`<telemetry-id>-invoke` AGENT observation per run (with an optional
-`review_quality` object and `ces.agent.target` / `ces.agent.project`
-attributes) and one TOOL observation per tool call. The invoke span is
-exported when the run ends, so a trace that already has tool calls but no
-invoke span yet is shown as running.
+An invalid schema hides the button instead of breaking the card.
+
+The backend sends the filled prompt together with structured fields
+(`target`, `project`, `model`, `mode`, `post`). Two of them need care:
+
+- **`post` is always sent and defaults to `false`.** Agents can treat it as
+  "allowed to write" (post a comment, open a ticket). The dialog runs a dry run
+  first and only sends `post: true` from its **Confirm and publish** button,
+  shown when the schema has an `action` or `post` field.
+- **Conversations keep their thread.** Follow-up messages reuse the thread id,
+  which becomes the AgentCore session id or the A2A `contextId`, so the agent
+  keeps its memory across turns.
+
+Without an invoker module for the agent's runtime the dialog falls back to a
+copyable request preview. To support another runtime, implement `AgentInvoker`
+and register it from a backend module; see the
+[backend README](packages/plugin-ai-agents-backend#extension-point).
+
+## Permissions
+
+| Permission              | Action   | Checked on                                             |
+| ----------------------- | -------- | ------------------------------------------------------ |
+| `ai-agent.invoke`       | `update` | `POST /invocations/:ref`                               |
+| `ai-agent.history.read` | `read`   | `GET /invocations/:ref`, `GET /invocations/:ref/spend` |
+
+Every route also reads the catalog on behalf of the caller, so a user only
+sees, probes and runs agents their catalog permissions let them read.
+
+## Security notes
+
+- Status probing is deny-by-default: the backend only fetches URLs whose origin
+  matches `ai-agents.probeAllowlist`.
+- Catalog authors control annotations, so annotation values are treated as
+  untrusted: links are rendered only for `http(s)`, the AgentCore region must
+  be a valid AWS region, and the kagent `authHeader` is only sent to the
+  configured controller.
+- The Langfuse module reads observation metadata only, never prompts, model
+  output or tool arguments.
+
+Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## Development
 
 ```bash
-# Build both packages
-npm run build --workspaces
-
-# Run tests (node --test)
-npm test --workspace @acarmisc/backstage-plugin-ai-agents
-npm test --workspace @acarmisc/backstage-plugin-ai-agents-backend
-
-# Standalone frontend dev mode (renders sample agents, no catalog/backend)
-cd packages/plugin-ai-agents && npm start
+npm install --legacy-peer-deps
+npm run build      # build before typecheck and test: modules use the backend's dist types
+npm run lint
+npm run typecheck
+npm test
+cd packages/plugin-ai-agents && npm start   # frontend with sample agents, no backend
 ```
 
-The dev mode (`packages/plugin-ai-agents/dev/index.tsx`) bundles six sample
-agents covering all runtimes, billing models, lifecycles, and capability
-categories, served through an in-memory stub `CatalogApi` — no live catalog
-or backend required.
-
-## Architecture
-
-- **Frontend** lists agents via the Backstage `CatalogApi` filtered to
-  `kind: Component, spec.type: ai-agent`; an `entityToAgent` mapper reads the
-  annotation namespace into a typed `AiAgent` shape. The optional status
-  overlay is fetched from the backend and merged client-side.
-- **Backend** provides two modes: stateless status probing (default), and
-  optional persistence. The stateless path resolves entity refs via the
-  catalog service token, reads each agent's `health`/`endpoint` annotation,
-  probes it with a short timeout, and maps the HTTP result to a status state,
-  cached in-memory for `statusCacheTtlMs` to survive bursts. When a database
-  is configured, the backend additionally persists invocation history and
-  reviews to `invocations` and `agent_reviews` tables; the plugin degrades
-  gracefully to status-only mode without one. The catalog remains the single
-  source of truth for agent data.
-
-## Design decisions
-
-- **Agents as catalog Components** — inherit ownership, RBAC, search,
-  relations, providers. No new persistence.
-- **Annotations, not custom `spec`** — catalog processors tolerate unknown
-  annotations; structured `spec` custom fields are riskier across versions.
-- **Backend probes only** — no agent CRUD. Create/edit agents via the normal
-  catalog workflow (`catalog-info.yaml`, providers, scaffolder templates).
-- **Drawer + catalog deep link** — quick view in the drawer, full entity
-  page via "Open in catalog", avoiding duplication of the catalog UI.
-- **Entity-page card** — an `EntityCardBlueprint` (filtered to
-  `spec.type: ai-agent`) shows the same agent overview on the catalog entity
-  page, so the agent's context is visible wherever it's referenced.
-
-## Releasing
-
-Both packages are published to npm via GitHub Actions on tag push. The
-workflow lives in `.github/workflows/publish.yaml`.
-
-### Cut a release
-
-```bash
-# 1. Bump the version in the package you're releasing
-$EDITOR packages/plugin-ai-agents/package.json          # or plugin-ai-agents-backend
-# e.g. "version": "0.2.0"
-
-# 2. Commit and push to main
-git commit -am "release: ai-agents vX.Y.Z"
-git push origin main
-
-# 3. Tag and push — the tag name determines which package is published
-git tag ai-agents@X.Y.Z          # frontend → @acarmisc/backstage-plugin-ai-agents
-git push origin ai-agents@X.Y.Z
-# or, for the backend:
-git tag ai-agents-backend@X.Y.Z
-git push origin ai-agents-backend@X.Y.Z
-```
-
-### What the workflow does
-
-1. Verifies the tag version matches the package's `package.json` version
-   (prevents publishing the wrong version).
-2. Installs with `--legacy-peer-deps`, builds, runs `npm publish --access
-public` using the `NPM_TOKEN` repo secret.
-3. Auto-creates a GitHub Release with generated release notes.
-
-### Tag conventions
-
-| Tag pattern                   | Package published                              |
-| ----------------------------- | ---------------------------------------------- |
-| `ai-agents@<version>`         | `@acarmisc/backstage-plugin-ai-agents`         |
-| `ai-agents-backend@<version>` | `@acarmisc/backstage-plugin-ai-agents-backend` |
-
-The version in the tag **must** match the `version` field in the
-corresponding `package.json`, or the workflow fails fast.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions and the release process,
+[docs/architecture.md](docs/architecture.md) for how the pieces talk to each
+other and [docs/activity.md](docs/activity.md) for the Activity view and the
+telemetry provider contract.
 
 ## License
 
-Apache-2.0
+[Apache-2.0](LICENSE)

@@ -133,7 +133,8 @@ provider credentials never reach the browser.
 | `GET /insights/:entityRef?hours=N` (N clamped to 1-72, default 24) | `AgentInsights`. `501` without provider or when it has no `getInsights`, `404` without telemetry id, `502` on store errors.                                                                                                                                              |
 | `GET /runs/:entityRef/:runId`                                      | `RunEvent[]`. `404` when the agent has no telemetry id or the run is not found, `501` without provider, `502` on store errors.                                                                                                                                           |
 
-The catalog is queried with the plugin's service token.
+The catalog is read on behalf of the calling user, so an agent the user cannot
+see returns `404` (or `[]` for `/runs`).
 
 ## UI behaviour
 
