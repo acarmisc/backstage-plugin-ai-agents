@@ -14,11 +14,14 @@ const cfg: LangfuseConfig = {
   secretKey: 'sk',
   lookbackHours: 24,
   runningWindowSeconds: 90,
-  servicePrefix: 'abs_ces_agents_',
+  servicePrefix: 'agents_',
+  serviceAttribute: 'resourceAttributes.service.name',
+  targetAttribute: 'attributes.agent.target',
+  projectAttribute: 'attributes.agent.project',
   cacheTtlMs: 1000,
 };
 const NOW = Date.parse('2026-10-03T10:00:00Z');
-const SVC = 'resourceAttributes.aws.local.service';
+const SVC = 'resourceAttributes.service.name';
 
 const invoke = (
   trace: string,
@@ -42,7 +45,7 @@ const invoke = (
       completed: false,
       incomplete_reason: 'max_iterations',
     },
-    [SVC]: 'abs_ces_agents_dinesh.DEFAULT',
+    [SVC]: 'agents_dinesh.DEFAULT',
     ...extra,
   },
 });
@@ -66,7 +69,7 @@ const tool = (
     'attributes.gen_ai.tool.name': name,
     'attributes.gen_ai.tool.status': status,
     'attributes.gen_ai.tool.json_schema': 'must never leak',
-    [SVC]: 'abs_ces_agents_dinesh.DEFAULT',
+    [SVC]: 'agents_dinesh.DEFAULT',
   },
 });
 
@@ -110,7 +113,9 @@ test('readLangfuseConfig returns undefined when unconfigured and applies default
     }),
   );
   assert.equal(c?.baseUrl, 'http://x');
-  assert.equal(c?.servicePrefix, 'abs_ces_agents_');
+  assert.equal(c?.servicePrefix, '');
+  assert.equal(c?.serviceAttribute, 'resourceAttributes.service.name');
+  assert.equal(c?.targetAttribute, undefined);
 });
 
 test('finished runs come from invoke spans, newest first, with a verdict and no events payload', async () => {
@@ -287,11 +292,11 @@ test('queries are cached; upstream failures reject and are not cached', async ()
 test('target and project come from the invoke span attributes', async () => {
   const rows = [
     invoke('a', '2026-10-03T09:00:00Z', '2026-10-03T09:01:00Z', {
-      'attributes.ces.agent.target': '148',
-      'attributes.ces.agent.project': 'lux/ds',
+      'attributes.agent.target': '148',
+      'attributes.agent.project': 'lux/ds',
     }),
     invoke('b', '2026-10-03T08:00:00Z', '2026-10-03T08:01:00Z', {
-      'attributes.ces.agent.target': 'CES-12',
+      'attributes.agent.target': 'PROJ-12',
     }),
   ];
   const p = new LangfuseTelemetryProvider(cfg, mockFetch(rows), () => NOW);
@@ -299,8 +304,8 @@ test('target and project come from the invoke span attributes', async () => {
   assert.deepEqual(
     runs.map(r => [r.target, r.project]),
     [
-      ['!148', 'lux/ds'],
-      ['CES-12', undefined],
+      ['148', 'lux/ds'],
+      ['PROJ-12', undefined],
     ],
   );
 });

@@ -8,6 +8,8 @@ import { LangfuseTelemetryProvider, readLangfuseConfig } from './provider';
 /**
  * Registers Langfuse as the telemetry source for agent run timelines.
  * Configured under `ai-agents.telemetry.langfuse`; a no-op when absent.
+ *
+ * @public
  */
 export const aiAgentsModuleLangfuse = createBackendModule({
   pluginId: 'ai-agents',

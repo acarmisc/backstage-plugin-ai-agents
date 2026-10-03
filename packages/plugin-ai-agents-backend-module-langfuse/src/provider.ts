@@ -6,17 +6,25 @@ import type {
   AgentInsights,
 } from '@acarmisc/backstage-plugin-ai-agents-backend';
 
+/** @public */
 export interface LangfuseConfig {
   baseUrl: string;
   publicKey: string;
   secretKey: string;
   lookbackHours: number;
   runningWindowSeconds: number;
-  /** Prefix of the OTel service name, e.g. `abs_ces_agents_` → `abs_ces_agents_dinesh.DEFAULT`. */
+  /** Prepended to the telemetry id to match the agent's service name. */
   servicePrefix: string;
+  /** Observation metadata key holding the OTel service name. */
+  serviceAttribute: string;
+  /** Optional metadata key shown as the run's target. */
+  targetAttribute?: string;
+  /** Optional metadata key shown as the run's project. */
+  projectAttribute?: string;
   cacheTtlMs: number;
 }
 
+/** @public */
 export function readLangfuseConfig(config: Config): LangfuseConfig | undefined {
   const c = config.getOptionalConfig('ai-agents.telemetry.langfuse');
   if (!c) return undefined;
@@ -26,7 +34,12 @@ export function readLangfuseConfig(config: Config): LangfuseConfig | undefined {
     secretKey: c.getString('secretKey'),
     lookbackHours: c.getOptionalNumber('lookbackHours') ?? 24,
     runningWindowSeconds: c.getOptionalNumber('runningWindowSeconds') ?? 90,
-    servicePrefix: c.getOptionalString('servicePrefix') ?? 'abs_ces_agents_',
+    servicePrefix: c.getOptionalString('servicePrefix') ?? '',
+    serviceAttribute:
+      c.getOptionalString('serviceAttribute') ??
+      'resourceAttributes.service.name',
+    targetAttribute: c.getOptionalString('targetAttribute'),
+    projectAttribute: c.getOptionalString('projectAttribute'),
     cacheTtlMs: c.getOptionalNumber('cacheTtlMs') ?? 4000,
   };
 }
@@ -46,9 +59,6 @@ interface Observation {
 
 const TOOL_NAME_KEY = 'attributes.gen_ai.tool.name';
 const TOOL_STATUS_KEY = 'attributes.gen_ai.tool.status';
-const TARGET_KEY = 'attributes.ces.agent.target';
-const PROJECT_KEY = 'attributes.ces.agent.project';
-const SERVICE_KEY = 'resourceAttributes.aws.local.service';
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 3;
 const RUNNING_LOOKBACK_MS = 15 * 60_000;
@@ -119,20 +129,11 @@ function verdict(q: ReturnType<typeof readQuality>): string | undefined {
   return parts.length ? parts.join(' · ') : undefined;
 }
 
-/** Numeric targets are GitLab MR iids; anything else (e.g. a Jira key) is shown as is. */
-function displayTarget(
-  meta: Record<string, unknown> | undefined,
-): string | undefined {
-  const t = meta?.[TARGET_KEY];
-  if (typeof t !== 'string' || !t) return undefined;
-  return /^\d+$/.test(t) ? `!${t}` : t;
-}
-
 function stringAttr(
   meta: Record<string, unknown> | undefined,
-  key: string,
+  key: string | undefined,
 ): string | undefined {
-  const v = meta?.[key];
+  const v = key ? meta?.[key] : undefined;
   return typeof v === 'string' && v ? v : undefined;
 }
 
@@ -157,6 +158,8 @@ function toolFailed(o: Observation): boolean {
  * Only core/basic/metadata fields are requested (never `io`, which holds
  * prompts and tool arguments) and only an explicit allow-list of derived
  * values leaves the backend.
+ *
+ * @public
  */
 export class LangfuseTelemetryProvider implements TelemetryProvider {
   private readonly cache = new Map<
@@ -203,7 +206,7 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     const owned =
       invoke ||
       tools.some(o =>
-        String(o.metadata?.[SERVICE_KEY] ?? '').startsWith(
+        String(o.metadata?.[this.cfg.serviceAttribute] ?? '').startsWith(
           `${this.cfg.servicePrefix}${telemetryId}`,
         ),
       );
@@ -360,8 +363,8 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     return {
       runId: o.traceId,
       agent,
-      target: displayTarget(o.metadata),
-      project: stringAttr(o.metadata, PROJECT_KEY),
+      target: stringAttr(o.metadata, this.cfg.targetAttribute),
+      project: stringAttr(o.metadata, this.cfg.projectAttribute),
       state: o.level === 'ERROR' ? 'failed' : 'completed',
       startedAt: o.startTime,
       updatedAt: o.endTime ?? o.startTime,
@@ -401,7 +404,7 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       {
         type: 'stringObject',
         column: 'metadata',
-        key: SERVICE_KEY,
+        key: this.cfg.serviceAttribute,
         operator: 'contains',
         value: `${this.cfg.servicePrefix}${telemetryId}`,
       },
