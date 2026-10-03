@@ -1,14 +1,8 @@
 import React from 'react';
 import { createDevApp } from '@backstage/dev-utils';
-import { TestApiProvider } from '@backstage/test-utils';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import type { CatalogApi } from '@backstage/catalog-client';
-import {
-  aiAgentsPlugin,
-  AgentsPage,
-  AiAgentsApi,
-  aiAgentsApiRef,
-} from '../src';
+import { AgentsPage, AiAgentsApi, aiAgentsApiRef } from '../src';
 
 // Sample agents covering all runtimes, billing models, lifecycles, and
 // capability categories. The dev page renders them through a stub CatalogApi
@@ -249,8 +243,8 @@ class DevApi extends AiAgentsApi {
           {
             runId: 'run-1',
             agent: 'support-triage-agent',
-            target: '!148',
-            project: 'gitlab/main',
+            target: 'PROJ-148',
+            project: 'acme/web',
             state: 'running' as const,
             currentActivity: 'after get_file_content',
             startedAt: new Date(now.getTime() - 45000).toISOString(),
@@ -327,21 +321,26 @@ class DevApi extends AiAgentsApi {
   }
 }
 
-const stubAiAgentsApi = new DevApi({ fetchApi: {} as any }, '/api/ai-agents');
+const stubAiAgentsApi = new DevApi(
+  { fetchApi: {} as any, catalogApi: stubCatalogApi },
+  '/api/ai-agents',
+);
 
+// The plugin targets the new frontend system, so it is not registered with
+// this legacy dev app; the stub APIs are registered directly instead.
 createDevApp()
-  .registerPlugin(aiAgentsPlugin)
+  .registerApi({
+    api: catalogApiRef,
+    deps: {},
+    factory: () => stubCatalogApi,
+  })
+  .registerApi({
+    api: aiAgentsApiRef,
+    deps: {},
+    factory: () => stubAiAgentsApi,
+  })
   .addPage({
-    element: (
-      <TestApiProvider
-        apis={[
-          [catalogApiRef, stubCatalogApi],
-          [aiAgentsApiRef, stubAiAgentsApi],
-        ]}
-      >
-        <AgentsPage />
-      </TestApiProvider>
-    ),
+    element: <AgentsPage />,
     title: 'AI Agents',
     path: '/ai-agents',
   })

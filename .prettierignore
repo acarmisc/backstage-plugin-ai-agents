@@ -3,3 +3,5 @@ dist-test
 node_modules
 package-lock.json
 coverage
+# Generated from the architecture-diagram skill template
+docs/architecture.html
