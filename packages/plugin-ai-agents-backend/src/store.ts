@@ -78,11 +78,6 @@ export class InvocationStore {
       .limit(limit);
     return rows.map(toRecord);
   }
-
-  async get(id: number): Promise<InvocationRecord | undefined> {
-    const rows: DbRow[] = await this.db('invocations').where({ id });
-    return rows.length ? toRecord(rows[0]) : undefined;
-  }
 }
 
 type ReviewRow = {

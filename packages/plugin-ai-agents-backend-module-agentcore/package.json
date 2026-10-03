@@ -1,6 +1,6 @@
 {
   "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "AWS Bedrock AgentCore invocation module for the ai-agents Backstage backend plugin.",
   "keywords": [
     "backstage",

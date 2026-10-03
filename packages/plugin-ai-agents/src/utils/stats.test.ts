@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { percentile, formatMs, formatPct, formatCount } from './stats';
+import { percentile, formatMs, formatPct } from './stats';
 
 // ============================================================================
 // percentile() tests
@@ -148,56 +148,4 @@ test('formatPct: above 1 (>100%) clamps to 100%', () => {
 
 test('formatPct: below 0 (<0%) clamps to 0%', () => {
   assert.strictEqual(formatPct(-0.5), '0%');
-});
-
-// ============================================================================
-// formatCount() tests
-// ============================================================================
-
-test('formatCount: 0', () => {
-  assert.strictEqual(formatCount(0), '0');
-});
-
-test('formatCount: 42', () => {
-  assert.strictEqual(formatCount(42), '42');
-});
-
-test('formatCount: 999', () => {
-  assert.strictEqual(formatCount(999), '999');
-});
-
-test('formatCount: 1000 = 1k', () => {
-  assert.strictEqual(formatCount(1000), '1k');
-});
-
-test('formatCount: 1234 = 1.2k', () => {
-  assert.strictEqual(formatCount(1234), '1.2k');
-});
-
-test('formatCount: 1500 = 1.5k', () => {
-  assert.strictEqual(formatCount(1500), '1.5k');
-});
-
-test('formatCount: 1000000 = 1M', () => {
-  assert.strictEqual(formatCount(1000000), '1M');
-});
-
-test('formatCount: 1500000 = 1.5M', () => {
-  assert.strictEqual(formatCount(1500000), '1.5M');
-});
-
-test('formatCount: 1234567 = 1.2M', () => {
-  assert.strictEqual(formatCount(1234567), '1.2M');
-});
-
-test('formatCount: 1000000000 = 1G', () => {
-  assert.strictEqual(formatCount(1000000000), '1G');
-});
-
-test('formatCount: 1500000000 = 1.5G', () => {
-  assert.strictEqual(formatCount(1500000000), '1.5G');
-});
-
-test('formatCount: 999k displayed as 999k', () => {
-  assert.strictEqual(formatCount(999000), '999k');
 });

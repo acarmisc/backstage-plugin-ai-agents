@@ -7,8 +7,6 @@ import { AuthorizeResult } from '@backstage/plugin-permission-common';
 import type { Permission, ResourcePermission } from '@backstage/plugin-permission-common';
 import { aiAgentInvokePermission, aiAgentHistoryReadPermission } from './permissions';
 import {
-  AI_AGENT_ANNOTATION_PREFIX,
-  AI_AGENT_ANNOTATION_PREFIX_LEGACY,
   AI_AGENT_TYPE,
   AgentActivity,
   AgentInvocationRequest,
@@ -24,6 +22,7 @@ import { buildProbeFn, isAllowed, mapProbeResult, readProbeConfig } from './clie
 import { readAvatarProxyConfig, resolveAvatar, createCacheStore, createLocalStore } from './avatar';
 import { InvocationStore, ReviewStore } from './store';
 import {
+  annotation,
   buildInvocationArgs,
   buildInvocationTags,
   buildPrompt,
@@ -88,13 +87,6 @@ export interface RouterOptions {
 interface CachedStatus {
   status: AgentStatus;
   expiresAt: number;
-}
-
-function annotation(entity: Entity, key: string): string | undefined {
-  return (
-    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`] ??
-    entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`]
-  );
 }
 
 function probeUrlFor(entity: Entity): string | undefined {
@@ -183,86 +175,41 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 30);
 
     try {
-      // Get all ai-agent entities
-      const entities = await listAgentEntities();
-
-      // Filter to only agents with telemetry-id annotation
-      const agentsWithTelemetry = entities.filter((e: Entity) => {
-        const telemetryId = annotation(e, 'telemetry-id');
-        return !!telemetryId;
+      const agents = (await listAgentEntities(req)).flatMap(entity => {
+        const telemetryId = annotation(entity, 'telemetry-id');
+        return telemetryId
+          ? [{ entityRef: stringifyEntityRef(entity), telemetryId, title: entity.metadata.title ?? entity.metadata.name }]
+          : [];
       });
 
-      // Helper to strip events from runs
-      const stripEvents = (runs: any[]) =>
-        runs.map(run => {
-          const { events, ...rest } = run;
-          return rest;
-        });
-
-      const formatEntityRef = (entity: Entity): string => stringifyEntityRef(entity);
-
-      // Fetch runs with 8 concurrent agents at a time
+      // Bounded fan-out so a large fleet doesn't flood the telemetry backend.
       const CONCURRENCY = 8;
       const activities: AgentActivity[] = [];
-
-      for (let i = 0; i < agentsWithTelemetry.length; i += CONCURRENCY) {
-        const chunk = agentsWithTelemetry.slice(i, i + CONCURRENCY);
+      for (let i = 0; i < agents.length; i += CONCURRENCY) {
+        const chunk = agents.slice(i, i + CONCURRENCY);
         const results = await Promise.allSettled(
-          chunk.map(async (entity: Entity) => {
-            const entityRef = formatEntityRef(entity);
-            const telemetryId = annotation(entity, 'telemetry-id')!;
-            const title = entity.metadata.title ?? entity.metadata.name;
-
-            const runs = await telemetryProvider!.getRuns(telemetryId, limit);
-            return {
-              entityRef,
-              telemetryId,
-              title,
-              runs: stripEvents(runs),
-            };
-          }),
+          chunk.map(agent => telemetryProvider.getRuns(agent.telemetryId, limit)),
         );
-
-        for (let j = 0; j < results.length; j++) {
-          const result = results[j];
-          const entity = chunk[j];
-
+        results.forEach((result, j) => {
+          const agent = chunk[j];
           if (result.status === 'fulfilled') {
-            activities.push(result.value);
+            activities.push({ ...agent, runs: result.value.map(({ events: _events, ...run }) => run) });
           } else {
-            const entityRef = formatEntityRef(entity);
-            const telemetryId = annotation(entity, 'telemetry-id')!;
-            const title = entity.metadata.title ?? entity.metadata.name;
-
-            logger.error(`Failed to fetch runs for ${entityRef}: ${(result.reason as any)?.message ?? result.reason}`);
-            activities.push({
-              entityRef,
-              telemetryId,
-              title,
-              runs: [],
-              error: 'telemetry query failed',
-            });
+            logger.error(`Failed to fetch runs for ${agent.entityRef}: ${result.reason?.message ?? result.reason}`);
+            activities.push({ ...agent, runs: [], error: 'telemetry query failed' });
           }
-        }
+        });
       }
 
-      // Sort: running first, then by most recent startedAt desc, then by title
-      activities.sort((a, b) => {
-        // Check if either has a running run
-        const aHasRunning = a.runs.some(r => r.state === 'running');
-        const bHasRunning = b.runs.some(r => r.state === 'running');
-
-        if (aHasRunning && !bHasRunning) return -1;
-        if (!aHasRunning && bHasRunning) return 1;
-
-        // Sort by most recent startedAt
-        const aStartedAt = a.runs[0]?.startedAt ? new Date(a.runs[0].startedAt).getTime() : 0;
-        const bStartedAt = b.runs[0]?.startedAt ? new Date(b.runs[0].startedAt).getTime() : 0;
-        if (aStartedAt !== bStartedAt) return bStartedAt - aStartedAt;
-
-        // Sort by title
-        return (a.title ?? '').localeCompare(b.title ?? '');
-      });
+      // Running agents first, then most recent run, then title.
+      const hasRunning = (a: AgentActivity) => a.runs.some(r => r.state === 'running');
+      const lastStart = (a: AgentActivity) => (a.runs[0]?.startedAt ? Date.parse(a.runs[0].startedAt) : 0);
+      activities.sort(
+        (a, b) =>
+          Number(hasRunning(b)) - Number(hasRunning(a)) ||
+          lastStart(b) - lastStart(a) ||
+          (a.title ?? '').localeCompare(b.title ?? ''),
+      );
 
       res.json(activities);
     } catch (err: any) {
@@ -271,21 +218,33 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     }
   });
 
-  async function resolveEntities(refs: string[]): Promise<{ items: (Entity | undefined)[] }> {
-    const { token } = await auth.getPluginRequestToken({
-      onBehalfOf: await auth.getOwnServiceCredentials(),
-      targetPluginId: 'catalog',
-    });
-    return catalogClient.getEntitiesByRefs({ entityRefs: refs }, { token });
+  /**
+   * Catalog reads run on behalf of the caller, so the catalog's own read
+   * permissions decide which agents a user can probe, invoke or inspect.
+   */
+  async function catalogToken(req: Request): Promise<string> {
+    const onBehalfOf = httpAuth
+      ? await httpAuth.credentials(req)
+      : await auth.getOwnServiceCredentials();
+    const { token } = await auth.getPluginRequestToken({ onBehalfOf, targetPluginId: 'catalog' });
+    return token;
   }
 
-  async function listAgentEntities(): Promise<Entity[]> {
+  async function resolveEntities(req: Request, refs: string[]): Promise<{ items: (Entity | undefined)[] }> {
+    return catalogClient.getEntitiesByRefs({ entityRefs: refs }, { token: await catalogToken(req) });
+  }
+
+  async function resolveAgent(req: Request, ref: string): Promise<Entity | undefined> {
+    const [entity] = (await resolveEntities(req, [ref])).items;
+    return entity?.spec?.type === AI_AGENT_TYPE ? entity : undefined;
+  }
+
+  async function listAgentEntities(req: Request): Promise<Entity[]> {
     if (!catalogClient.getEntities) throw new Error('catalog client cannot list entities');
-    const { token } = await auth.getPluginRequestToken({
-      onBehalfOf: await auth.getOwnServiceCredentials(),
-      targetPluginId: 'catalog',
-    });
-    const { items } = await catalogClient.getEntities({ filter: { 'spec.type': AI_AGENT_TYPE } }, { token });
+    const { items } = await catalogClient.getEntities(
+      { filter: { 'spec.type': AI_AGENT_TYPE } },
+      { token: await catalogToken(req) },
+    );
     return items;
   }
 
@@ -331,7 +290,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     try {
-      const { items } = await resolveEntities(refs);
+      const { items } = await resolveEntities(req, refs);
       const out: Record<string, AgentStatus> = {};
       await Promise.all(
         items.map(async (entity, i) => {
@@ -353,16 +312,9 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
-    const now = Date.now();
-    const cached = cache.get(ref);
-    if (cached && cached.expiresAt > now) {
-      res.json(cached.status);
-      return;
-    }
     try {
-      const { items } = await resolveEntities([ref]);
-      const entity = items[0];
-      if (!entity || entity.spec?.type !== AI_AGENT_TYPE) {
+      const entity = await resolveAgent(req, ref);
+      if (!entity) {
         res.status(404).json({ error: 'not an ai-agent entity' });
         return;
       }
@@ -383,10 +335,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     }
     const ref = decodeURIComponent(req.params.entityRef);
     try {
-      const { items } = await resolveEntities([ref]);
-      const entity = items[0];
-      const url =
-        entity && entity.spec?.type === AI_AGENT_TYPE ? annotation(entity, 'avatar') : undefined;
+      const entity = await resolveAgent(req, ref);
+      const url = entity ? annotation(entity, 'avatar') : undefined;
       // Only absolute http(s) URLs are proxied: data: URIs and app-relative
       // paths need no credentials and are fetched by the browser directly.
       if (!url || !/^https?:\/\//i.test(url)) {
@@ -408,6 +358,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       }
       res.setHeader('Content-Type', result.contentType);
       res.setHeader('Cache-Control', `private, max-age=${result.maxAgeSec}`);
+      // Served from the app's origin: an SVG opened directly must not be able
+      // to run script, and the browser must not sniff it into something else.
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       res.send(result.data);
     } catch (err: any) {
       logger.warn(`avatar route failed for ${ref}: ${err?.message ?? err}`);
@@ -458,8 +412,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
-    const values: Record<string, string> =
-      req.body && typeof req.body.values === 'object' ? req.body.values : {};
+    const values = stringFields(req.body?.values);
     // Follow-up turns of a conversation send a free-text prompt directly;
     // without it the prompt is rendered from the entity's template.
     const explicitPrompt =
@@ -479,9 +432,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       typeof req.body?.post === 'boolean' ? req.body.post : undefined;
 
     try {
-      const { items } = await resolveEntities([ref]);
-      const entity = items[0];
-      if (!entity || entity.spec?.type !== AI_AGENT_TYPE) {
+      const entity = await resolveAgent(req, ref);
+      if (!entity) {
         res.status(404).json({ error: 'not an ai-agent entity' });
         return;
       }
@@ -612,9 +564,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     try {
-      const { items } = await resolveEntities([ref]);
-      const entity = items[0];
-      if (!entity || entity.spec?.type !== AI_AGENT_TYPE) {
+      const entity = await resolveAgent(req, ref);
+      if (!entity) {
         res.status(404).json({ error: 'not an ai-agent entity' });
         return;
       }
@@ -646,26 +597,26 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     }
   });
 
+  /** Resolves the agent's telemetry id; undefined when the caller can't see it or it has none. */
+  async function telemetryIdFor(req: Request): Promise<string | undefined> {
+    const entity = await resolveAgent(req, decodeURIComponent(req.params.entityRef));
+    return entity ? annotation(entity, 'telemetry-id') : undefined;
+  }
+
   router.get('/insights/:entityRef', async (req, res) => {
-    if (!telemetryProvider) {
-      res.status(501).json({ error: 'telemetry not configured' });
-      return;
-    }
-    if (!telemetryProvider.getInsights) {
-      res.status(501).json({ error: 'insights not supported by the telemetry provider' });
-      return;
-    }
-    const ref = decodeURIComponent(req.params.entityRef);
-    const [entity] = (await resolveEntities([ref])).items;
-    const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
-      ? annotation(entity, 'telemetry-id')
-      : undefined;
-    if (!telemetryId) {
-      res.status(404).json({ error: 'agent telemetry is not configured' });
+    if (!telemetryProvider?.getInsights) {
+      res.status(501).json({
+        error: telemetryProvider ? 'insights not supported by the telemetry provider' : 'telemetry not configured',
+      });
       return;
     }
     const hours = Math.min(Math.max(Number(req.query.hours) || 24, 1), 72);
     try {
+      const telemetryId = await telemetryIdFor(req);
+      if (!telemetryId) {
+        res.status(404).json({ error: 'agent telemetry is not configured' });
+        return;
+      }
       res.json(await telemetryProvider.getInsights(telemetryId, hours));
     } catch (err: any) {
       logger.error('Failed to fetch agent insights', err);
@@ -678,18 +629,10 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.status(501).json({ error: 'telemetry not configured' });
       return;
     }
-    const ref = decodeURIComponent(req.params.entityRef);
-    const [entity] = (await resolveEntities([ref])).items;
-    const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
-      ? annotation(entity, 'telemetry-id')
-      : undefined;
-    if (!telemetryId) {
-      res.json([]);
-      return;
-    }
     const limit = Math.min(Math.max(Number(req.query.limit) || 5, 1), 50);
     try {
-      res.json(await telemetryProvider.getRuns(telemetryId, limit));
+      const telemetryId = await telemetryIdFor(req);
+      res.json(telemetryId ? await telemetryProvider.getRuns(telemetryId, limit) : []);
     } catch (err: any) {
       logger.error('Failed to fetch agent runs', err);
       res.status(502).json({ error: 'telemetry query failed' });
@@ -701,16 +644,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.status(501).json({ error: 'telemetry not configured' });
       return;
     }
-    const ref = decodeURIComponent(req.params.entityRef);
-    const [entity] = (await resolveEntities([ref])).items;
-    const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
-      ? annotation(entity, 'telemetry-id')
-      : undefined;
-    if (!telemetryId) {
-      res.status(404).json({ error: 'agent telemetry is not configured' });
-      return;
-    }
     try {
+      const telemetryId = await telemetryIdFor(req);
+      if (!telemetryId) {
+        res.status(404).json({ error: 'agent telemetry is not configured' });
+        return;
+      }
       const events = await telemetryProvider.getRunTimeline(
         telemetryId,
         decodeURIComponent(req.params.runId),
@@ -731,4 +670,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
 
 function refsParameterSplit(param: string): string[] {
   return param.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+/** Form values from the request body; non-string entries are dropped. */
+function stringFields(input: unknown): Record<string, string> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  return Object.fromEntries(
+    Object.entries(input).filter((e): e is [string, string] => typeof e[1] === 'string'),
+  );
 }

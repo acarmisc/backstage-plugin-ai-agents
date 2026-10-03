@@ -1,4 +1,3 @@
-import { formatDuration } from '../../utils/formatting';
 import { formatMs } from '../../utils/stats';
 import type { AgentRun } from '../../types';
 
@@ -9,13 +8,6 @@ export function elapsedSince(startedAt: string | undefined, now = Date.now()): n
   if (!startedAt) return 0;
   const startMs = new Date(startedAt).getTime();
   return Math.max(0, now - startMs);
-}
-
-/**
- * Format elapsed time from start timestamp to now.
- */
-export function formatElapsed(startedAt: string | undefined, now = Date.now()): string {
-  return formatDuration(elapsedSince(startedAt, now));
 }
 
 /**
@@ -31,9 +23,6 @@ export function runDuration(run: AgentRun, now = Date.now()): number {
   return Math.max(0, endMs - startMs);
 }
 
-/**
- * Format a run's duration.
- */
 export function formatRunDuration(run: AgentRun, now = Date.now()): string {
   return formatMs(runDuration(run, now));
 }

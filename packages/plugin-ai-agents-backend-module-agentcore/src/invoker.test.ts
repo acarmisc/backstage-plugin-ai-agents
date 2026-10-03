@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
 import {
+  AgentCoreInvoker,
   buildPayload,
   extractResponseText,
   readAgentCoreConfig,
@@ -84,4 +85,34 @@ test('buildPayload includes post=true and knowledge_base_ids when requested', ()
   assert.deepEqual(payload.knowledge_base_ids, ['kb-1', 'kb-2']);
   assert.deepEqual(payload.litellm_tags, ['agent:erlich']);
   assert.equal(payload.trace_user_id, undefined);
+});
+
+test('AgentCoreInvoker refuses a region that would redirect the bearer token', async () => {
+  const config = new ConfigReader({
+    'ai-agents': {
+      invocations: {
+        agentCore: { tokenUrl: 'https://auth/token', clientId: 'c', clientSecret: 's', region: 'eu-west-1' },
+      },
+    },
+  });
+  const urls: string[] = [];
+  const fetchImpl = (async (url: string) => {
+    urls.push(url);
+    return { ok: true, json: async () => ({ access_token: 't' }), text: async () => '{}' } as Response;
+  }) as typeof fetch;
+  const invoker = new AgentCoreInvoker(config, fetchImpl);
+  await assert.rejects(
+    invoker.invoke({
+      entityRef: 'component:default/a',
+      sessionId: 's'.repeat(33),
+      threadId: 't',
+      prompt: 'p',
+      fields: {},
+      args: { post: false },
+      tags: [],
+      target: { region: 'evil.example/x#', runtimeHandle: 'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/a' },
+    }),
+    /invalid AWS region/,
+  );
+  assert.deepEqual(urls, []);
 });

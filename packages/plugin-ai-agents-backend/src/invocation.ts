@@ -2,7 +2,8 @@ import { Entity } from '@backstage/catalog-model';
 import { AI_AGENT_ANNOTATION_PREFIX, AI_AGENT_ANNOTATION_PREFIX_LEGACY } from './types';
 import type { AgentInvocationArgs } from './types';
 
-function annotation(entity: Entity, key: string): string | undefined {
+/** Reads an `ai-agent.io/*` annotation, falling back to the legacy namespace. */
+export function annotation(entity: Entity, key: string): string | undefined {
   return (
     entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX}/${key}`] ??
     entity.metadata.annotations?.[`${AI_AGENT_ANNOTATION_PREFIX_LEGACY}/${key}`]

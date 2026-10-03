@@ -27,6 +27,8 @@ export function readAgentCoreConfig(config: Config): AgentCoreConfig | undefined
   };
 }
 
+const AWS_REGION_RE = /^[a-z]{2}(-[a-z]+)+-\d+$/;
+
 interface CachedToken {
   token: string;
   expiresAtMs: number;
@@ -142,15 +144,12 @@ export class AgentCoreInvoker {
   private readonly config: AgentCoreConfig | undefined;
   private readonly tokens: TokenClient | undefined;
 
-  constructor(config: Config, fetchImpl: typeof fetch = fetch) {
+  constructor(config: Config, private readonly fetchImpl: typeof fetch = fetch) {
     this.config = readAgentCoreConfig(config);
     if (this.config) {
       this.tokens = new TokenClient(this.config, fetchImpl);
     }
-    this.fetchImpl = fetchImpl;
   }
-
-  private fetchImpl: typeof fetch;
 
   async invoke(req: AgentInvocationRequest): Promise<AgentInvocationResponse> {
     if (!this.config || !this.tokens) {
@@ -162,6 +161,11 @@ export class AgentCoreInvoker {
     const runtimeHandle = req.target?.runtimeHandle;
     if (!region) {
       throw new Error('no AWS region: set the ai-agent.io/region annotation or ai-agents.invocations.agentCore.region');
+    }
+    // The region becomes part of the hostname the bearer token is sent to, so
+    // an annotation like `evil.example/x#` must never reach the URL.
+    if (!AWS_REGION_RE.test(region)) {
+      throw new Error(`invalid AWS region "${region}"`);
     }
     if (!runtimeHandle) {
       throw new Error('agent has no runtime-handle annotation');

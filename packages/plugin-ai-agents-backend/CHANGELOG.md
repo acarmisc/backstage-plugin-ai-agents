@@ -3,6 +3,34 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.4] - 2026-10-03
+
+### Security
+
+- Catalog reads now run on behalf of the calling user (`httpAuth`
+  credentials) instead of the plugin's own service identity, so the
+  catalog's read permissions decide which agents a user can probe, invoke,
+  review or inspect. `GET /status/:ref` no longer answers from the cache
+  before that check.
+- `GET /avatar/:ref` sends `Content-Security-Policy: default-src 'none'; sandbox`
+  and `X-Content-Type-Options: nosniff`, so a proxied SVG opened directly
+  from the app's origin cannot run script.
+- `POST /invocations/:ref` keeps only string form values.
+
+### Fixed
+
+- `GET /runs/:ref`, `/runs/:ref/:runId` and `/insights/:ref` answer 502
+  when the catalog read fails instead of leaving the request hanging.
+- Health probes no longer buffer the whole response body.
+
+### Removed
+
+- Unused `InvocationStore.get` and `ProbeResult.snippet`.
+
+### Changed
+
+- `avatarProxy` is now declared in `config.d.ts`.
+
 ## [0.9.3] - 2026-10-03
 
 ### Added

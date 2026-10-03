@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-10-03
+
+### Changed
+
+- Internal cleanup: `getInsights` reuses the run classification and filters
+  of `getRuns`. No behavior change.
+
 ## [0.2.0] - 2026-10-03
 
 ### Added

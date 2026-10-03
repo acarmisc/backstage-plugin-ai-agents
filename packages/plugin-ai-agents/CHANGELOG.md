@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.1] - 2026-10-03
+
+### Removed
+
+- Unused `RunTimeline` component (superseded by the Activity workspace),
+  unused formatting helpers and the unused `@backstage/theme` dependency.
+
 ## [0.16.0] - 2026-10-03
 
 ### Changed

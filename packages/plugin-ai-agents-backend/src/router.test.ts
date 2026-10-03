@@ -935,6 +935,8 @@ test('GET /avatar serves cached images and fetches upstream once', async () => {
     const res1 = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`);
     assert.equal(res1.status, 200);
     assert.equal(res1.headers.get('content-type'), 'image/png');
+    assert.match(res1.headers.get('content-security-policy') ?? '', /sandbox/);
+    assert.equal(res1.headers.get('x-content-type-options'), 'nosniff');
     const bytes = Buffer.from(await res1.arrayBuffer());
     assert.equal(bytes.subarray(0, 4).toString('hex'), PNG.subarray(0, 4).toString('hex'));
 
@@ -1239,6 +1241,98 @@ test('catalog calls for /activity and /runs carry the plugin service token', asy
     await fetch(`${url}/activity`);
     await fetch(`${url}/runs/${encodeURIComponent('component:default/dinesh')}`);
     assert.deepEqual(tokens, ['tok', 'tok']);
+  } finally {
+    await close();
+  }
+});
+
+test('catalog calls run on behalf of the calling user when httpAuth is wired', async () => {
+  const entity = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const onBehalfOf: unknown[] = [];
+  const auth = {
+    getPluginRequestToken: async (o: { onBehalfOf: unknown }) => {
+      onBehalfOf.push(o.onBehalfOf);
+      return { token: 'user-tok' };
+    },
+    getOwnServiceCredentials: async () => ({ principal: { type: 'service' } }),
+  } as any;
+  const userCreds = { principal: { type: 'user', userEntityRef: 'user:default/alice' } };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth,
+    httpAuth: { credentials: async () => userCreds } as any,
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity], [entity]),
+    telemetryProvider: { getRuns: async () => [], getRunTimeline: async () => [] },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    await fetch(`${url}/activity`);
+    await fetch(`${url}/runs/${encodeURIComponent('component:default/dinesh')}`);
+    assert.deepEqual(onBehalfOf, [userCreds, userCreds]);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /runs answers 502 instead of hanging when the catalog read fails', async () => {
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: {
+      getEntitiesByRefs: async () => {
+        throw new Error('catalog down');
+      },
+    },
+    telemetryProvider: { getRuns: async () => [], getRunTimeline: async () => [], getInsights: async () => ({}) as any },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const ref = encodeURIComponent('component:default/dinesh');
+    for (const path of [`/runs/${ref}`, `/runs/${ref}/r1`, `/insights/${ref}`]) {
+      const res = await fetch(`${url}${path}`);
+      assert.equal(res.status, 502, path);
+    }
+  } finally {
+    await close();
+  }
+});
+
+test('POST /invocations drops non-string form values', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/runtime': 'kagent' });
+  const requests: any[] = [];
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([
+      [
+        'kagent',
+        {
+          invoke: async (req: any) => {
+            requests.push(req);
+            return { responseText: 'ok', latencyMs: 1 };
+          },
+        },
+      ],
+    ]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    for (const values of [null, ['a'], { issue: 'X-1', nested: { a: 1 }, n: 3 }]) {
+      const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values }),
+      });
+      assert.equal(res.status, 200);
+    }
+    assert.deepEqual(requests.map(r => r.fields), [{}, {}, { issue: 'X-1' }]);
   } finally {
     await close();
   }

@@ -23,6 +23,14 @@ export function readKagentConfig(config: Config): KagentConfig | undefined {
   };
 }
 
+function sameOrigin(a: string, b: string): boolean {
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
+}
+
 function textFromParts(parts: unknown): string | undefined {
   if (!Array.isArray(parts)) return undefined;
   const text = parts
@@ -90,7 +98,11 @@ export class KagentInvoker {
     const url = `${base.replace(/\/$/, '')}/api/a2a/${encodeURIComponent(namespace)}/${encodeURIComponent(agentName)}/`;
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (this.config.authHeader) headers.Authorization = this.config.authHeader;
+    // The endpoint annotation is catalog-authored: only send the configured
+    // credential to the configured controller, never to another origin.
+    if (this.config.authHeader && sameOrigin(base, this.config.baseUrl)) {
+      headers.Authorization = this.config.authHeader;
+    }
 
     // `contextId` carries the conversation thread so multi-turn memory is
     // preserved across invocations of the same thread.
