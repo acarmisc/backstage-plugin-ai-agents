@@ -30,6 +30,9 @@ separate from the standard catalog browse.
 - `packages/plugin-ai-agents-backend-module-kagent` — kagent
   (Kubernetes-native agent runtime) invocation module
   (`@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`)
+- `packages/plugin-ai-agents-backend-module-langfuse` — run timeline
+  (what an agent is doing / has done) read from Langfuse
+  (`@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`)
 
 Built with the Backstage **New Frontend System**
 (`@backstage/frontend-plugin-api`, `PageBlueprint`, `ApiBlueprint`) and the
@@ -73,6 +76,7 @@ all other annotations are optional.
 | `ai-agent.io/prompt-template` | no | Prompt template with `{field_name}` placeholders matching `hire-schema` fields, used to build the AgentCore invocation preview. See [Hiring an agent](#hiring-an-agent). |
 | `ai-agent.io/region` | no | AWS region for the AgentCore runtime, used in the Hire preview's CLI command (e.g. `eu-west-1`). |
 | `ai-agent.io/namespace` | no | Kubernetes namespace for a kagent-hosted agent; defaults to the `-module-kagent` config's `namespace`. |
+| `ai-agent.io/telemetry-id` | no | The agent's name in the telemetry store (e.g. `dinesh`). Enables the run timeline in the detail drawer. See [Run timeline](#run-timeline). |
 
 Capability categories (used for chip color): `reasoning`, `retrieval`,
 `tools`, `vision`, `voice`, `data`, `safety`. A capability without a
@@ -534,6 +538,42 @@ Without a matching module the endpoint answers 501 and the frontend falls
 back to the CLI-copy flow — other organisations can plug their own invoker
 (Lambda, Azure ML, HTTP…) by implementing `AgentInvoker` from the backend
 package and registering it under a runtime key of their choosing.
+
+
+## Run timeline
+
+The detail drawer can show what an agent is doing now and what it did in its
+latest runs. The plugin stays storage-agnostic: the backend defines a
+`TelemetryProvider` (`getRuns`, `getRunTimeline`) and a telemetry module
+registers one through `aiAgentsExtensionPoint.registerTelemetryProvider`.
+Nothing is stored in Backstage, and prompts or tool arguments are never read.
+
+The shipped `-module-langfuse` reads runs from the Langfuse public API
+(`/api/public/v2/observations`) with a read-only project key:
+
+```yaml
+ai-agents:
+  telemetry:
+    langfuse:
+      baseUrl: https://langfuse.example.com
+      publicKey: ${LANGFUSE_PUBLIC_KEY}
+      secretKey: ${LANGFUSE_SECRET_KEY}
+      # lookbackHours: 24
+      # runningWindowSeconds: 90
+      # servicePrefix: abs_ces_agents_   # OTel service name = prefix + telemetry-id
+```
+
+```ts
+backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse'));
+```
+
+Tag the catalog entity with `ai-agent.io/telemetry-id: dinesh`. The module
+expects the OpenTelemetry GenAI shape the Strands SDK emits: one
+`<telemetry-id>-invoke` AGENT observation per run (with an optional
+`review_quality` object and `ces.agent.target` / `ces.agent.project`
+attributes) and one TOOL observation per tool call. The invoke span is
+exported when the run ends, so a trace that already has tool calls but no
+invoke span yet is shown as running.
 
 ## Development
 

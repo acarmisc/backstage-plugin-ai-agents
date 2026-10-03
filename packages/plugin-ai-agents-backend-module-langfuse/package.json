@@ -1,0 +1,61 @@
+{
+  "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse",
+  "version": "0.1.0",
+  "description": "Langfuse telemetry provider for the ai-agents Backstage backend plugin: live/recent agent runs derived from the Langfuse public observations API.",
+  "keywords": [
+    "backstage",
+    "backstage-plugin",
+    "backstage-backend-plugin-module",
+    "langfuse",
+    "opentelemetry"
+  ],
+  "backstage": {
+    "role": "backend-plugin-module",
+    "pluginId": "ai-agents",
+    "pluginPackage": "@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acarmisc/backstage-plugin-ai-agents"
+  },
+  "homepage": "https://github.com/acarmisc/backstage-plugin-ai-agents#readme",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.cjs.js"
+    }
+  },
+  "main": "dist/index.cjs.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "config.d.ts"
+  ],
+  "configSchema": "config.d.ts",
+  "scripts": {
+    "build": "node build.js && tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test --experimental-test-coverage dist-test/**/*.test.js dist-test/*.test.js",
+    "lint": "backstage-cli package lint",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build",
+    "postpack": ""
+  },
+  "dependencies": {
+    "@acarmisc/backstage-plugin-ai-agents-backend": "^0.9.0",
+    "@backstage/backend-plugin-api": "^1.9.1",
+    "@backstage/config": "^1.3.0"
+  },
+  "devDependencies": {
+    "@backstage/cli": "^0.36.2",
+    "@types/node": "^20.19.43",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.9.3"
+  }
+}

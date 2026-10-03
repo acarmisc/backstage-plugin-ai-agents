@@ -31,7 +31,7 @@ function eventLabel(event: RunEvent): string {
   if (event.event === 'completed') {
     return event.incomplete ? `Completed: ${event.incomplete}` : 'Run completed';
   }
-  return event.tool ?? event.event;
+  return event.label ?? event.tool ?? event.event;
 }
 
 export const RunTimelineView: React.FC<{ run?: AgentRun; events: RunEvent[] }> = ({ run, events }) => {

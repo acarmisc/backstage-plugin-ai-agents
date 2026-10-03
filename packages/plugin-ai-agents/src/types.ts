@@ -102,6 +102,9 @@ export interface RunEvent {
   name: string;
   event: string;
   tool?: string;
+  /** Pre-rendered display label, for sources that have no tool name. */
+  label?: string;
+  durationMs?: number;
   outcome?: string;
   target?: string;
   project?: string;
