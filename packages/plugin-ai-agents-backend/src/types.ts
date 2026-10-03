@@ -103,7 +103,6 @@ export interface ProbeResult {
   ok: boolean;
   status: number;
   latencyMs: number;
-  snippet?: string;
 }
 
 export interface ProbeFn {

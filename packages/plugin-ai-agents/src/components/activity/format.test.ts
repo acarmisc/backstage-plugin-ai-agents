@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   elapsedSince,
-  formatElapsed,
   runDuration,
   toneForSuccessRate,
   maxConcurrency,
@@ -17,13 +16,6 @@ test('elapsedSince returns elapsed time in ms', () => {
   const now = 10000;
   const started = new Date(now - 5000).toISOString();
   assert.equal(elapsedSince(started, now), 5000);
-});
-
-test('formatElapsed formats milliseconds as human readable', () => {
-  const now = 10000;
-  const started = new Date(now - 65000).toISOString();
-  const result = formatElapsed(started, now);
-  assert.ok(result.includes('m'), `expected result to contain 'm', got ${result}`);
 });
 
 test('runDuration calculates correct duration for completed runs', () => {

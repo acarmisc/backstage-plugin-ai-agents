@@ -64,21 +64,3 @@ export function formatPct(ratio: number): string {
 
   return `${Math.round(pct)}%`;
 }
-
-/**
- * Format a count with SI suffixes for readability.
- * Examples: 1234 -> "1.2k", 1500000 -> "1.5M"
- */
-export function formatCount(n: number): string {
-  if (n < 1000) return n.toString();
-  if (n < 1_000_000) {
-    const k = n / 1000;
-    return `${k.toFixed(1).replace(/\.0$/, '')}k`;
-  }
-  if (n < 1_000_000_000) {
-    const m = n / 1_000_000;
-    return `${m.toFixed(1).replace(/\.0$/, '')}M`;
-  }
-  const g = n / 1_000_000_000;
-  return `${g.toFixed(1).replace(/\.0$/, '')}G`;
-}

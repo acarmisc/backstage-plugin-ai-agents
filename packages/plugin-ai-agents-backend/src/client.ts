@@ -19,12 +19,11 @@ export function readProbeConfig(config: import('@backstage/config').Config): Pro
  */
 function originPattern(pattern: string): string {
   const schemeIdx = pattern.indexOf('://');
-  if (schemeIdx === -1) return pattern.replace(/\/.*$/, '');
-  const pathIdx = pattern.indexOf('/', schemeIdx + 3);
+  const pathIdx = pattern.indexOf('/', schemeIdx === -1 ? 0 : schemeIdx + 3);
   return pathIdx === -1 ? pattern : pattern.slice(0, pathIdx);
 }
 
-function matchesAllowlist(url: string, allowlist: string[]): boolean {
+export function isAllowed(url: string, allowlist: string[]): boolean {
   if (!allowlist.length) return false;
   try {
     const u = new URL(url);
@@ -58,13 +57,9 @@ export function buildProbeFn(globalFetch: typeof fetch): ProbeFn {
         headers,
       });
       const latencyMs = Date.now() - start;
-      let snippet: string | undefined;
-      try {
-        snippet = (await res.text()).slice(0, 200);
-      } catch {
-        // ignore body read errors
-      }
-      return { ok: res.ok, status: res.status, latencyMs, snippet };
+      // Only the status matters; don't buffer an arbitrarily large body.
+      await res.body?.cancel().catch(() => {});
+      return { ok: res.ok, status: res.status, latencyMs };
     } finally {
       clearTimeout(timer);
     }
@@ -86,8 +81,4 @@ export function mapProbeResult(
   }
   // 4xx / non-2xx but not 5xx → degraded
   return { state: 'degraded', lastChecked, message: `HTTP ${result.status}` };
-}
-
-export function isAllowed(url: string, allowlist: string[]): boolean {
-  return matchesAllowlist(url, allowlist);
 }

@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] - 2026-10-03
+
+### Security
+
+- Reject a `region` (annotation or config) that is not an AWS region id: it
+  is interpolated into the hostname the bearer token is sent to.
+
 ## [0.5.0] - 2026-10-01
 
 ### Changed

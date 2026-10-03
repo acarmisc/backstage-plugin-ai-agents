@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.1] - 2026-10-03
+
+### Security
+
+- `authHeader` is only sent to the configured `baseUrl` origin, never to a
+  per-agent `endpoint` annotation pointing elsewhere.
+
 ## [0.3.0] - 2026-10-01
 
 ### Changed

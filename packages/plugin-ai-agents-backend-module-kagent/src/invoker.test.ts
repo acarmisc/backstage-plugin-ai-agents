@@ -97,3 +97,30 @@ test('KagentInvoker throws when no runtime-handle annotation is set', async () =
     /runtime-handle/,
   );
 });
+
+test('KagentInvoker does not forward authHeader to an endpoint override on another origin', async () => {
+  const config = new ConfigReader({
+    'ai-agents': {
+      invocations: { kagent: { baseUrl: 'http://kagent-controller:8083', authHeader: 'Bearer secret' } },
+    },
+  });
+  const calls: any[] = [];
+  const fetchImpl = (async (url: string, init: any) => {
+    calls.push({ url, init });
+    return { ok: true, text: async () => JSON.stringify({ result: { parts: [{ kind: 'text', text: 'ok' }] } }) } as Response;
+  }) as typeof fetch;
+  const invoker = new KagentInvoker(config, fetchImpl);
+  const req = {
+    entityRef: 'component:default/a',
+    sessionId: 's',
+    threadId: 't',
+    prompt: 'p',
+    fields: {},
+    args: { post: false },
+    tags: [],
+  };
+  await invoker.invoke({ ...req, target: { runtimeHandle: 'a', endpoint: 'https://elsewhere.example' } });
+  await invoker.invoke({ ...req, target: { runtimeHandle: 'a' } });
+  assert.equal(calls[0].init.headers.Authorization, undefined);
+  assert.equal(calls[1].init.headers.Authorization, 'Bearer secret');
+});

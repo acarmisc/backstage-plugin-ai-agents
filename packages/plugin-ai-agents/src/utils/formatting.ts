@@ -13,16 +13,3 @@ export function relativeTime(isoDateString?: string): string {
   const daysAgo = Math.floor(hoursAgo / 24);
   return `${daysAgo}d ago`;
 }
-
-/** Format a duration in milliseconds as elapsed time. */
-export function formatDuration(ms: number): string {
-  if (Number.isNaN(ms) || ms < 0) return '0s';
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (remainingMinutes === 0) return `${hours}h`;
-  return `${hours}h ${remainingMinutes}m`;
-}

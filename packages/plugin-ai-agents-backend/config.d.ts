@@ -18,6 +18,19 @@ export interface Config {
      * Use to restrict what the backend will fetch on behalf of users.
      */
     probeAllowlist?: string[];
+    /** Proxy `http(s)` avatars through the backend with integration credentials. */
+    avatarProxy?: {
+      /** @default false */
+      enabled?: boolean;
+      /** Allowed avatar URL origin globs; off-list URLs are redirected to directly. */
+      allowlist?: string[];
+      /** Positive cache lifetime in milliseconds. @default 86400000 */
+      ttlMs?: number;
+      /** Negative (failed fetch) cache lifetime in milliseconds. @default 3600000 */
+      negativeTtlMs?: number;
+      /** Largest avatar accepted, in bytes. @default 524288 */
+      maxBytes?: number;
+    };
     invocations?: {
       /** Enable the POST /invocations endpoint. Default true. */
       enabled?: boolean;
@@ -59,7 +72,8 @@ export interface Config {
          */
         namespace?: string;
         /**
-         * Static Authorization header injected into every A2A request.
+         * Static Authorization header injected into A2A requests sent to
+         * `baseUrl`'s origin (never to a per-agent `endpoint` elsewhere).
          * @visibility secret
          */
         authHeader?: string;

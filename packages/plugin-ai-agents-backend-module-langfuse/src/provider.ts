@@ -146,25 +146,14 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
 
   async getRuns(telemetryId: string, limit = 5): Promise<AgentRun[]> {
     const [invokes, recentTools] = await Promise.all([
-      this.query([eq('type', 'AGENT'), eq('name', `${telemetryId}-invoke`)], 1),
-      this.query(
-        [
-          eq('type', 'TOOL'),
-          { type: 'stringObject', column: 'metadata', key: SERVICE_KEY, operator: 'contains', value: `${this.cfg.servicePrefix}${telemetryId}` },
-        ],
-        1,
-        RUNNING_LOOKBACK_MS,
-      ),
+      this.query(this.invokeFilters(telemetryId), 1),
+      this.query(this.toolFilters(telemetryId), 1, RUNNING_LOOKBACK_MS),
     ]);
 
     const finished = new Set(invokes.map(o => o.traceId));
     const runs: AgentRun[] = invokes.map(o => this.finishedRun(telemetryId, o));
 
-    const live = new Map<string, Observation[]>();
-    for (const t of recentTools) {
-      if (finished.has(t.traceId)) continue;
-      live.set(t.traceId, [...(live.get(t.traceId) ?? []), t]);
-    }
+    const live = this.groupByTrace(recentTools, finished);
     for (const [traceId, tools] of live) runs.push(this.liveRun(telemetryId, traceId, tools));
 
     runs.sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''));
@@ -210,23 +199,12 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
     const clampedHours = Math.min(Math.max(hours, 1), 72);
     const withinMs = clampedHours * 3600_000;
 
-    // Fetch invoke observations and tool observations in parallel
     const [invokes, tools] = await Promise.all([
-      this.query([eq('type', 'AGENT'), eq('name', `${telemetryId}-invoke`)], MAX_PAGES, withinMs),
-      this.query(
-        [
-          eq('type', 'TOOL'),
-          { type: 'stringObject', column: 'metadata', key: SERVICE_KEY, operator: 'contains', value: `${this.cfg.servicePrefix}${telemetryId}` },
-        ],
-        MAX_PAGES,
-        withinMs,
-      ),
+      this.query(this.invokeFilters(telemetryId), MAX_PAGES, withinMs),
+      this.query(this.toolFilters(telemetryId), MAX_PAGES, withinMs),
     ]);
 
-    // Build a set of finished trace IDs (those with invoke observations)
     const finishedTraces = new Set(invokes.map(o => o.traceId));
-
-    // Categorize runs: finished (from invokes) and live/unknown (from tools without invokes)
     const finished: Array<{ traceId: string; startTime: string; endTime: string; state: 'completed' | 'failed' }> = invokes.map(o => ({
       traceId: o.traceId,
       startTime: o.startTime,
@@ -234,27 +212,10 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       state: o.level === 'ERROR' ? 'failed' : 'completed',
     }));
 
-    // Group tools by trace to find live/unknown runs
-    const liveTraces = new Map<string, Observation[]>();
-    for (const tool of tools) {
-      if (finishedTraces.has(tool.traceId)) continue; // Skip traces with invoke observations
-      liveTraces.set(tool.traceId, [...(liveTraces.get(tool.traceId) ?? []), tool]);
-    }
+    const live = [...this.groupByTrace(tools, finishedTraces)].map(([traceId, traceTools]) =>
+      this.liveRun(telemetryId, traceId, traceTools),
+    );
 
-    const live: Array<{ traceId: string; startTime: string; state: 'running' | 'unknown' }> = [];
-    for (const [traceId, traceTools] of liveTraces) {
-      const sorted = [...traceTools].sort((a, b) => a.startTime.localeCompare(b.startTime));
-      const last = sorted[sorted.length - 1];
-      const lastEnd = last.endTime ?? last.startTime;
-      const active = this.now() - Date.parse(lastEnd) < this.cfg.runningWindowSeconds * 1000;
-      live.push({
-        traceId,
-        startTime: sorted[0].startTime,
-        state: active ? 'running' : 'unknown',
-      });
-    }
-
-    // Calculate totals
     const totals = {
       runs: finished.length + live.length,
       completed: finished.filter(r => r.state === 'completed').length,
@@ -263,31 +224,23 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       unknown: live.filter(r => r.state === 'unknown').length,
     };
 
-    // Calculate duration stats for finished runs
     const durations = finished
       .map(r => Date.parse(r.endTime) - Date.parse(r.startTime))
       .filter(d => d > 0);
     const durationMs = {
-      p50: durations.length ? percentile(durations, 50) : 0,
-      p95: durations.length ? percentile(durations, 95) : 0,
+      p50: percentile(durations, 50),
+      p95: percentile(durations, 95),
     };
 
-    // Build histogram: exactly clampedHours buckets, oldest first
-    // Each bucket represents a UTC hour: bucket start = UTC hour start for each of the last clampedHours hours INCLUDING current hour
     const now = this.now();
     const buckets = [];
     for (let i = clampedHours - 1; i >= 0; i--) {
-      const bucketTime = now - i * 3600_000;
-      const bucketDate = new Date(bucketTime);
-      bucketDate.setUTCMinutes(0, 0, 0);
-      const isoStr = bucketDate.toISOString();
-      // Remove milliseconds to match expected format (HH:MM:00Z instead of HH:MM:00.000Z)
-      const bucketStart = isoStr.replace(/\.\d{3}Z$/, 'Z');
-      const bucketEnd = new Date(Date.parse(bucketStart) + 3600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      const bucketStartMs = Math.floor((now - i * 3600_000) / 3600_000) * 3600_000;
+      const bucketStart = new Date(bucketStartMs).toISOString().replace('.000Z', 'Z');
 
       const runsInBucket = finished.filter(r => {
         const runStart = Date.parse(r.startTime);
-        return runStart >= Date.parse(bucketStart) && runStart < Date.parse(bucketEnd);
+        return runStart >= bucketStartMs && runStart < bucketStartMs + 3600_000;
       });
 
       buckets.push({
@@ -297,7 +250,6 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       });
     }
 
-    // Aggregate tools: group by name, calculate stats
     const toolStats = new Map<string, { calls: number; errors: number; latencies: number[] }>();
     for (const tool of tools) {
       const name = toolName(tool);
@@ -305,12 +257,11 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       stat.calls++;
       if (toolFailed(tool)) stat.errors++;
       if (typeof tool.latency === 'number') {
-        stat.latencies.push(tool.latency * 1000); // Convert seconds to ms
+        stat.latencies.push(tool.latency * 1000);
       }
       toolStats.set(name, stat);
     }
 
-    // Convert to array and sort by calls descending, take top 10
     const topTools = Array.from(toolStats.entries())
       .map(([name, stat]) => ({
         name,
@@ -358,6 +309,26 @@ export class LangfuseTelemetryProvider implements TelemetryProvider {
       updatedAt: lastEnd,
       currentActivity: active ? `after ${toolName(last)}` : undefined,
     };
+  }
+
+  private invokeFilters(telemetryId: string): Filter[] {
+    return [eq('type', 'AGENT'), eq('name', `${telemetryId}-invoke`)];
+  }
+
+  private toolFilters(telemetryId: string): Filter[] {
+    return [
+      eq('type', 'TOOL'),
+      { type: 'stringObject', column: 'metadata', key: SERVICE_KEY, operator: 'contains', value: `${this.cfg.servicePrefix}${telemetryId}` },
+    ];
+  }
+
+  private groupByTrace(obs: Observation[], excludeTraceIds: Set<string>): Map<string, Observation[]> {
+    const grouped = new Map<string, Observation[]>();
+    for (const o of obs) {
+      if (excludeTraceIds.has(o.traceId)) continue;
+      grouped.set(o.traceId, [...(grouped.get(o.traceId) ?? []), o]);
+    }
+    return grouped;
   }
 
   private query(filters: Filter[], pages = MAX_PAGES, withinMs?: number): Promise<Observation[]> {
