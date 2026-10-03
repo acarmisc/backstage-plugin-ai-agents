@@ -43,6 +43,14 @@ export interface AgentRun {
   events?: RunEvent[];
 }
 
+export interface AgentActivity {
+  entityRef: string;      // stringifyEntityRef(entity), e.g. "component:default/dinesh"
+  telemetryId: string;    // value of the ai-agent.io/telemetry-id annotation
+  title?: string;         // entity.metadata.title ?? entity.metadata.name
+  runs: AgentRun[];       // newest first, at most `limit`, WITHOUT the `events` field (strip it)
+  error?: string;         // set (and runs = []) when the provider call for THIS agent failed
+}
+
 /**
  * Server-side adapter for an OTel store. The router resolves the catalog
  * entity's telemetry id before calling this interface, keeping catalog access

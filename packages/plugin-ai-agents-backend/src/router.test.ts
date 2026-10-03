@@ -41,9 +41,10 @@ function makeConfig(over: Record<string, unknown> = {}) {
   } as any;
 }
 
-function stubCatalog(items: (Entity | undefined)[]) {
+function stubCatalog(items: (Entity | undefined)[], allEntities?: Entity[]) {
   return {
     getEntitiesByRefs: async (_r: { entityRefs: string[] }) => ({ items }),
+    getEntities: async (_f: { filter: Record<string, string> }) => ({ items: allEntities ?? [] }),
   };
 }
 
@@ -921,6 +922,203 @@ test('GET /avatar 302s when upstream is not an image', async () => {
   try {
     const res = await fetch(`${url}/avatar/${encodeURIComponent("component:default/triage")}`, { redirect: 'manual' });
     assert.equal(res.status, 302);
+  } finally {
+    await close();
+  }
+});
+
+// --- Activity endpoint tests ---
+
+test('GET /activity returns 501 without a telemetry provider', async () => {
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([], []),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    assert.equal((await fetch(`${url}/activity`)).status, 501);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /activity returns only agents with telemetry-id, strips events, and clamps limit', async () => {
+  const agent1 = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const agent2 = makeEntity('gilfoyle', { 'ai-agent.io/telemetry-id': 'gilfoyle' });
+  const noTelemetry = makeEntity('richard');
+
+  const getRuns: any[] = [];
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async (telemetryId, limit) => {
+      getRuns.push({ telemetryId, limit });
+      return [
+        { runId: 'run-1', agent: telemetryId, state: 'completed', startedAt: '2026-10-03T10:00:00Z', events: [{ seq: 1, name: 'step1', event: 'start' }] },
+      ];
+    },
+    getRunTimeline: async () => [],
+  };
+
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([], [agent1, agent2, noTelemetry]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/activity?limit=999`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+
+    // Only 2 agents with telemetry-id
+    assert.equal(body.length, 2);
+
+    // Runs have no events field
+    for (const activity of body) {
+      assert.ok(activity.runs);
+      for (const run of activity.runs) {
+        assert.equal(run.events, undefined);
+        assert.ok(run.runId);
+      }
+    }
+
+    // Limit was clamped to 30
+    assert.deepEqual(getRuns, [
+      { telemetryId: 'dinesh', limit: 30 },
+      { telemetryId: 'gilfoyle', limit: 30 },
+    ]);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /activity handles one agent failure gracefully', async () => {
+  const agent1 = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const agent2 = makeEntity('gilfoyle', { 'ai-agent.io/telemetry-id': 'gilfoyle' });
+
+  const errors: string[] = [];
+  const errorLogger = { ...noopLogger, error: (msg: string) => errors.push(msg) };
+
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async (telemetryId) => {
+      if (telemetryId === 'gilfoyle') throw new Error('backend down');
+      return [{ runId: 'run-1', agent: telemetryId, state: 'completed' }];
+    },
+    getRunTimeline: async () => [],
+  };
+
+  const router = await createRouter({
+    config: makeConfig(), logger: errorLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([], [agent1, agent2]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/activity`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+
+    // Both agents returned
+    assert.equal(body.length, 2);
+
+    // dinesh succeeded
+    const dinesh = body.find((a: any) => a.telemetryId === 'dinesh');
+    assert.ok(dinesh);
+    assert.equal(dinesh.runs.length, 1);
+    assert.equal(dinesh.error, undefined);
+
+    // gilfoyle failed
+    const gilfoyle = body.find((a: any) => a.telemetryId === 'gilfoyle');
+    assert.ok(gilfoyle);
+    assert.equal(gilfoyle.runs.length, 0);
+    assert.equal(gilfoyle.error, 'telemetry query failed');
+
+    // Error was logged
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /component:default\/gilfoyle/);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /activity sorts with running agents first, then by most recent startedAt, then by title', async () => {
+  const agent1 = makeEntity('alice', { 'ai-agent.io/telemetry-id': 'alice' });
+  const agent2 = makeEntity('bob', { 'ai-agent.io/telemetry-id': 'bob' });
+  const agent3 = makeEntity('charlie', { 'ai-agent.io/telemetry-id': 'charlie' });
+
+  const telemetryProvider: TelemetryProvider = {
+    getRuns: async (telemetryId) => {
+      if (telemetryId === 'alice') {
+        return [
+          { runId: 'run-1', agent: telemetryId, state: 'completed', startedAt: '2026-10-03T12:00:00Z' },
+        ];
+      }
+      if (telemetryId === 'bob') {
+        return [
+          { runId: 'run-2', agent: telemetryId, state: 'running', startedAt: '2026-10-03T10:00:00Z' },
+        ];
+      }
+      // charlie
+      return [
+        { runId: 'run-3', agent: telemetryId, state: 'completed', startedAt: '2026-10-03T11:00:00Z' },
+      ];
+    },
+    getRunTimeline: async () => [],
+  };
+
+  const router = await createRouter({
+    config: makeConfig(), logger: noopLogger, auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([], [agent1, agent2, agent3]), telemetryProvider,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/activity`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+
+    assert.equal(body.length, 3);
+
+    // bob (running) first
+    assert.equal(body[0].telemetryId, 'bob');
+    assert.equal(body[0].runs[0].state, 'running');
+
+    // alice (most recent startedAt) second
+    assert.equal(body[1].telemetryId, 'alice');
+
+    // charlie (older startedAt) third
+    assert.equal(body[2].telemetryId, 'charlie');
+  } finally {
+    await close();
+  }
+});
+
+test('catalog calls for /activity and /runs carry the plugin service token', async () => {
+  const entity = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const tokens: Array<string | undefined> = [];
+  const catalogClient = {
+    getEntitiesByRefs: async (_r: { entityRefs: string[] }, o?: { token: string }) => {
+      tokens.push(o?.token);
+      return { items: [entity] };
+    },
+    getEntities: async (_r: unknown, o?: { token: string }) => {
+      tokens.push(o?.token);
+      return { items: [entity] };
+    },
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient,
+    telemetryProvider: { getRuns: async () => [], getRunTimeline: async () => [] },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    await fetch(`${url}/activity`);
+    await fetch(`${url}/runs/${encodeURIComponent('component:default/dinesh')}`);
+    assert.deepEqual(tokens, ['tok', 'tok']);
   } finally {
     await close();
   }

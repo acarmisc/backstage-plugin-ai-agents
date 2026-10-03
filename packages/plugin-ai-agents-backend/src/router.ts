@@ -2,7 +2,7 @@ import express, { Router, Request, Response } from 'express';
 import { Config } from '@backstage/config';
 import { AuthService, DiscoveryService, HttpAuthService, LoggerService, DatabaseService, PermissionsService } from '@backstage/backend-plugin-api';
 import { CatalogClient } from '@backstage/catalog-client';
-import { Entity } from '@backstage/catalog-model';
+import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import { AuthorizeResult } from '@backstage/plugin-permission-common';
 import type { Permission, ResourcePermission } from '@backstage/plugin-permission-common';
 import { aiAgentInvokePermission, aiAgentHistoryReadPermission } from './permissions';
@@ -10,6 +10,7 @@ import {
   AI_AGENT_ANNOTATION_PREFIX,
   AI_AGENT_ANNOTATION_PREFIX_LEGACY,
   AI_AGENT_TYPE,
+  AgentActivity,
   AgentInvocationRequest,
   AgentInvoker,
   AgentStatus,
@@ -57,7 +58,13 @@ export interface RouterOptions {
   /** Override the probe function (tests). Defaults to fetch-based. */
   probe?: ProbeFn;
   /** Override the catalog client (tests). Defaults to one built from discovery. */
-  catalogClient?: { getEntitiesByRefs: (r: { entityRefs: string[] }) => Promise<{ items: (Entity | undefined)[] }> };
+  catalogClient?: {
+    getEntitiesByRefs: (r: { entityRefs: string[] }) => Promise<{ items: (Entity | undefined)[] }>;
+    getEntities?: (
+      r: { filter: Record<string, string> },
+      o?: { token: string },
+    ) => Promise<{ items: Entity[] }>;
+  };
   /** Override the reviews store (tests). Defaults to one built from database. */
   reviews?: {
     insert(rec: ReviewRecord): Promise<number>;
@@ -167,12 +174,119 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     res.json({ status: 'ok', enabled: cfg.enabled });
   });
 
+  router.get('/activity', async (req: Request, res: Response) => {
+    if (!telemetryProvider) {
+      res.status(501).json({ error: 'telemetry not configured' });
+      return;
+    }
+
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 30);
+
+    try {
+      // Get all ai-agent entities
+      const entities = await listAgentEntities();
+
+      // Filter to only agents with telemetry-id annotation
+      const agentsWithTelemetry = entities.filter((e: Entity) => {
+        const telemetryId = annotation(e, 'telemetry-id');
+        return !!telemetryId;
+      });
+
+      // Helper to strip events from runs
+      const stripEvents = (runs: any[]) =>
+        runs.map(run => {
+          const { events, ...rest } = run;
+          return rest;
+        });
+
+      const formatEntityRef = (entity: Entity): string => stringifyEntityRef(entity);
+
+      // Fetch runs with 8 concurrent agents at a time
+      const CONCURRENCY = 8;
+      const activities: AgentActivity[] = [];
+
+      for (let i = 0; i < agentsWithTelemetry.length; i += CONCURRENCY) {
+        const chunk = agentsWithTelemetry.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(
+          chunk.map(async (entity: Entity) => {
+            const entityRef = formatEntityRef(entity);
+            const telemetryId = annotation(entity, 'telemetry-id')!;
+            const title = entity.metadata.title ?? entity.metadata.name;
+
+            const runs = await telemetryProvider!.getRuns(telemetryId, limit);
+            return {
+              entityRef,
+              telemetryId,
+              title,
+              runs: stripEvents(runs),
+            };
+          }),
+        );
+
+        for (let j = 0; j < results.length; j++) {
+          const result = results[j];
+          const entity = chunk[j];
+
+          if (result.status === 'fulfilled') {
+            activities.push(result.value);
+          } else {
+            const entityRef = formatEntityRef(entity);
+            const telemetryId = annotation(entity, 'telemetry-id')!;
+            const title = entity.metadata.title ?? entity.metadata.name;
+
+            logger.error(`Failed to fetch runs for ${entityRef}: ${(result.reason as any)?.message ?? result.reason}`);
+            activities.push({
+              entityRef,
+              telemetryId,
+              title,
+              runs: [],
+              error: 'telemetry query failed',
+            });
+          }
+        }
+      }
+
+      // Sort: running first, then by most recent startedAt desc, then by title
+      activities.sort((a, b) => {
+        // Check if either has a running run
+        const aHasRunning = a.runs.some(r => r.state === 'running');
+        const bHasRunning = b.runs.some(r => r.state === 'running');
+
+        if (aHasRunning && !bHasRunning) return -1;
+        if (!aHasRunning && bHasRunning) return 1;
+
+        // Sort by most recent startedAt
+        const aStartedAt = a.runs[0]?.startedAt ? new Date(a.runs[0].startedAt).getTime() : 0;
+        const bStartedAt = b.runs[0]?.startedAt ? new Date(b.runs[0].startedAt).getTime() : 0;
+        if (aStartedAt !== bStartedAt) return bStartedAt - aStartedAt;
+
+        // Sort by title
+        return (a.title ?? '').localeCompare(b.title ?? '');
+      });
+
+      res.json(activities);
+    } catch (err: any) {
+      logger.error('Failed to fetch fleet activity', err);
+      res.status(500).json({ error: err?.message ?? 'unknown error' });
+    }
+  });
+
   async function resolveEntities(refs: string[]): Promise<{ items: (Entity | undefined)[] }> {
     const { token } = await auth.getPluginRequestToken({
       onBehalfOf: await auth.getOwnServiceCredentials(),
       targetPluginId: 'catalog',
     });
     return catalogClient.getEntitiesByRefs({ entityRefs: refs }, { token });
+  }
+
+  async function listAgentEntities(): Promise<Entity[]> {
+    if (!catalogClient.getEntities) throw new Error('catalog client cannot list entities');
+    const { token } = await auth.getPluginRequestToken({
+      onBehalfOf: await auth.getOwnServiceCredentials(),
+      targetPluginId: 'catalog',
+    });
+    const { items } = await catalogClient.getEntities({ filter: { 'spec.type': AI_AGENT_TYPE } }, { token });
+    return items;
   }
 
   async function probeAndCache(ref: string, entity: Entity | undefined): Promise<AgentStatus | undefined> {
@@ -538,7 +652,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
-    const [entity] = (await catalogClient.getEntitiesByRefs({ entityRefs: [ref] })).items;
+    const [entity] = (await resolveEntities([ref])).items;
     const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
       ? annotation(entity, 'telemetry-id')
       : undefined;
@@ -561,7 +675,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
-    const [entity] = (await catalogClient.getEntitiesByRefs({ entityRefs: [ref] })).items;
+    const [entity] = (await resolveEntities([ref])).items;
     const telemetryId = entity && entity.spec?.type === AI_AGENT_TYPE
       ? annotation(entity, 'telemetry-id')
       : undefined;
