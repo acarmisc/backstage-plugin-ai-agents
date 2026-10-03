@@ -4,7 +4,7 @@ export interface Config {
       agentCore?: {
         /**
          * OAuth2 token endpoint issuing JWTs accepted by the AgentCore
-         * runtimes (e.g. a Keycloak client_credentials endpoint).
+         * runtimes, e.g. a Keycloak client-credentials endpoint.
          */
         tokenUrl: string;
         clientId: string;
