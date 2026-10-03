@@ -145,10 +145,10 @@ export const KpiTile: React.FC<KpiTileProps> = ({
           <Typography
             variant="h6"
             sx={{
-              fontFamily: 'ui-monospace, "Courier New", monospace',
               fontVariantNumeric: 'tabular-nums',
               fontWeight: 600,
-              fontSize: '20px',
+              fontSize: '26px',
+              lineHeight: 1.2,
               color: valueColor,
             }}
           >

@@ -84,13 +84,11 @@ test('StatusDot: failed state has correct aria-label', () => {
 
 test('StatusPill: small and medium sizes render differently and keep the label', () => {
   const small = renderWithTheme(<StatusPill state="running" size="small" />);
-  const smallFont = getComputedStyle(small.container.querySelector('[aria-label="Running"]') as Element).fontSize;
   const smallHtml = small.container.innerHTML;
   cleanup();
   const medium = renderWithTheme(<StatusPill state="running" size="medium" />);
   assert.notStrictEqual(medium.container.innerHTML, smallHtml, 'size must change the rendered output');
   assert.ok(medium.container.textContent?.includes('Running'));
-  assert.ok(smallFont !== undefined);
 });
 
 // ============================================================================
@@ -145,15 +143,18 @@ test('HourlyBars: empty buckets show empty message', () => {
   assert.ok(container.textContent?.includes('No activity in this window'));
 });
 
-test('HourlyBars: renders correct number of bars', () => {
+test('HourlyBars: one bar per bucket, heights proportional to the busiest hour', () => {
   const buckets: HourBucket[] = [
-    { start: '2024-01-01T00:00:00Z', runs: 5, failed: 1 },
-    { start: '2024-01-01T01:00:00Z', runs: 3, failed: 0 },
-    { start: '2024-01-01T02:00:00Z', runs: 8, failed: 2 },
+    { start: '2024-01-01T00:00:00Z', runs: 10, failed: 0 },
+    { start: '2024-01-01T01:00:00Z', runs: 5, failed: 0 },
+    { start: '2024-01-01T02:00:00Z', runs: 0, failed: 0 },
   ];
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  const bars = container.querySelectorAll('[title]');
-  assert.ok(bars.length >= 3, `Should render at least 3 bars, got ${bars.length}`);
+  const bars = [...container.querySelectorAll('[data-testid="hour-bar"]')];
+  assert.strictEqual(bars.length, 3);
+  assert.deepEqual(bars.map(b => b.getAttribute('data-height-pct')), ['100', '50', '0']);
+  // an empty hour draws no stacked segment at all
+  assert.strictEqual(bars[2].querySelectorAll('[data-segment]').length, 0);
 });
 
 test('HourlyBars: aria-label contains total runs and failed', () => {
@@ -162,20 +163,31 @@ test('HourlyBars: aria-label contains total runs and failed', () => {
     { start: '2024-01-01T01:00:00Z', runs: 3, failed: 0 },
   ];
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  const chart = container.querySelector('[role="img"]');
-  const ariaLabel = chart?.getAttribute('aria-label') || '';
-  assert.ok(ariaLabel.includes('8'), 'Should include total runs (5+3)');
-  assert.ok(ariaLabel.includes('1'), 'Should include total failed');
+  assert.strictEqual(container.querySelector('[role="img"]')?.getAttribute('aria-label'), 'Hourly runs: 8 total, 1 failed');
 });
 
-test('HourlyBars: bucket with failed count shows error segment', () => {
+test('HourlyBars: failed segment only on buckets with failures, sized by failure count', () => {
   const buckets: HourBucket[] = [
-    { start: '2024-01-01T00:00:00Z', runs: 5, failed: 2 },
+    { start: '2024-01-01T00:00:00Z', runs: 4, failed: 1 },
+    { start: '2024-01-01T01:00:00Z', runs: 4, failed: 0 },
   ];
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  // The bar contains both success and failed segments
-  const bar = container.querySelector('[title]');
-  assert.ok(bar);
+  const [withFail, clean] = [...container.querySelectorAll('[data-testid="hour-bar"]')];
+  assert.strictEqual(withFail.querySelectorAll('[data-segment="failed"]').length, 1);
+  assert.strictEqual(withFail.querySelectorAll('[data-segment="success"]').length, 1);
+  assert.strictEqual(clean.querySelectorAll('[data-segment="failed"]').length, 0);
+  assert.match(withFail.getAttribute('title') ?? '', /4 runs · 1 failed/);
+});
+
+test('HourlyBars: x labels are thinned for long windows', () => {
+  const buckets: HourBucket[] = Array.from({ length: 72 }, (_, i) => ({
+    start: new Date(Date.UTC(2024, 0, 1, i)).toISOString(),
+    runs: 1,
+    failed: 0,
+  }));
+  const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
+  const labels = [...container.querySelectorAll('span.MuiTypography-caption')].filter(n => /^\d\d:00$/.test(n.textContent ?? ''));
+  assert.strictEqual(labels.length, 6, '72 buckets -> a label every 12 hours');
 });
 
 // ============================================================================
@@ -193,21 +205,32 @@ test('ToolBars: renders rows for each tool', () => {
     { name: 'tool-b', calls: 20, errors: 0, avgMs: 50, p95Ms: 100 },
   ];
   const { container } = renderWithTheme(<ToolBars tools={tools} />);
-  const buttons = container.querySelectorAll('button');
-  assert.strictEqual(buttons.length, 2, 'Should render 2 tool rows');
+  assert.strictEqual(container.querySelectorAll('button').length, 2);
+  assert.ok(container.textContent?.includes('tool-a'));
+  assert.ok(container.textContent?.includes('100ms avg · 200ms p95'));
 });
 
-test('ToolBars: error pill only shows when errors > 0', () => {
+test('ToolBars: bar widths are proportional to calls and carry the error share', () => {
+  const tools: ToolStat[] = [
+    { name: 'busy', calls: 20, errors: 5, avgMs: 100, p95Ms: 200 },
+    { name: 'quiet', calls: 5, errors: 0, avgMs: 100, p95Ms: 200 },
+  ];
+  const { container } = renderWithTheme(<ToolBars tools={tools} />);
+  const bars = [...container.querySelectorAll('[data-testid="tool-bar"]')];
+  assert.deepEqual(bars.map(b => b.getAttribute('data-calls-pct')), ['100', '25']);
+  assert.deepEqual(bars.map(b => b.getAttribute('data-error-pct')), ['25', '0']);
+});
+
+test('ToolBars: error pill only on tools with errors and shows the count', () => {
   const tools: ToolStat[] = [
     { name: 'tool-err', calls: 10, errors: 2, avgMs: 100, p95Ms: 200 },
     { name: 'tool-ok', calls: 10, errors: 0, avgMs: 100, p95Ms: 200 },
   ];
   const { container } = renderWithTheme(<ToolBars tools={tools} />);
-  const chips = container.querySelectorAll('[class*="MuiChip"]');
-  assert.ok(chips.length > 0, 'Should show error pill for tool with errors');
-  // tool-ok should not have an error pill
-  const rows = container.querySelectorAll('button');
-  assert.strictEqual(rows.length, 2);
+  const pills = container.querySelectorAll('[data-testid="error-pill"]');
+  assert.strictEqual(pills.length, 1);
+  assert.strictEqual(pills[0].textContent, '2 err');
+  assert.match(pills[0].getAttribute('title') ?? '', /20%/);
 });
 
 test('ToolBars: clicking a row calls onSelect', () => {
@@ -226,20 +249,13 @@ test('ToolBars: clicking a row calls onSelect', () => {
   assert.deepEqual(selections, ['test-tool']);
 });
 
-test('ToolBars: pressing Enter on a row calls onSelect', () => {
-  const tools: ToolStat[] = [
-    { name: 'test-tool', calls: 5, errors: 0, avgMs: 100, p95Ms: 200 },
-  ];
-  const selections: string[] = [];
-  const handleSelect = (name: string) => selections.push(name);
-
-  const { container } = renderWithTheme(
-    <ToolBars tools={tools} onSelect={handleSelect} />
-  );
-  const button = container.querySelector('button');
-  assert.ok(button);
-  fireEvent.keyDown(button, { key: 'Enter' });
-  assert.deepEqual(selections, ['test-tool']);
+test('ToolBars: rows are native buttons so Enter/Space activate them in browsers', () => {
+  const tools: ToolStat[] = [{ name: 'test-tool', calls: 5, errors: 0, avgMs: 100, p95Ms: 200 }];
+  const { container } = renderWithTheme(<ToolBars tools={tools} onSelect={() => undefined} />);
+  const button = container.querySelector('button') as HTMLButtonElement;
+  assert.strictEqual(button.tagName, 'BUTTON');
+  assert.strictEqual(button.type, 'button');
+  assert.notStrictEqual(button.tabIndex, -1);
 });
 
 // ============================================================================

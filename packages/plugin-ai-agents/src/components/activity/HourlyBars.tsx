@@ -1,149 +1,137 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
-import { HourBucket } from '../../types';
+import { alpha, useTheme } from '@mui/material/styles';
+import type { HourBucket } from '../../types';
 
 export interface HourlyBarsProps {
   buckets: HourBucket[];
+  /** Height of the plot area in px. */
   height?: number;
 }
 
+function hourLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getHours().toString().padStart(2, '0')}:00`;
+}
+
+/** Spacing between x-axis labels so they never collide (≈ 8 labels max). */
+function labelStep(count: number): number {
+  if (count <= 8) return 1;
+  if (count <= 16) return 2;
+  if (count <= 30) return 6;
+  return 12;
+}
+
 /**
- * A stacked vertical bar chart showing hourly run counts and failures.
- * Displays local HH:00 labels every 6th bucket.
- * Each bar is clickable with a tooltip showing run details.
+ * Stacked bars (completed / failed) per hour. Pure CSS grid: one column per
+ * bucket, so it scales to any width and window size without layout maths.
  */
-export const HourlyBars: React.FC<HourlyBarsProps> = ({
-  buckets,
-  height = 96,
-}) => {
+export const HourlyBars: React.FC<HourlyBarsProps> = ({ buckets, height = 96 }) => {
   const theme = useTheme();
 
   if (buckets.length === 0) {
     return (
       <Box
-        sx={{
-          height,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.palette.text.disabled,
-          fontSize: '14px',
-        }}
+        sx={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        No activity in this window
+        <Typography variant="body2" color="text.disabled">
+          No activity in this window
+        </Typography>
       </Box>
     );
   }
 
-  const maxRuns = Math.max(...buckets.map(b => b.runs), 1);
-  const barGap = buckets.length > 1 ? 2 : 0;
-  const barWidth = buckets.length > 0 ? `${(100 / buckets.length) - (barGap * 100) / 200}%` : '100%';
-
-  // Compute total runs and failures for aria-label
-  const totalRuns = buckets.reduce((sum, b) => sum + b.runs, 0);
-  const totalFailed = buckets.reduce((sum, b) => sum + b.failed, 0);
+  const max = Math.max(...buckets.map(b => b.runs), 1);
+  const totalRuns = buckets.reduce((s, b) => s + b.runs, 0);
+  const totalFailed = buckets.reduce((s, b) => s + b.failed, 0);
+  const step = labelStep(buckets.length);
+  const columns = `repeat(${buckets.length}, minmax(0, 1fr))`;
 
   return (
     <Box
       role="img"
       aria-label={`Hourly runs: ${totalRuns} total, ${totalFailed} failed`}
-      sx={{
-        height,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-around',
-        gap: `${barGap}px`,
-        position: 'relative',
-      }}
+      sx={{ width: '100%' }}
     >
-      {buckets.map((bucket, index) => {
-        const successRuns = bucket.runs - bucket.failed;
-        const successPct = bucket.runs > 0 ? (successRuns / bucket.runs) * 100 : 100;
-        const failedPct = bucket.runs > 0 ? (bucket.failed / bucket.runs) * 100 : 0;
-
-        const barHeight = bucket.runs > 0 ? (bucket.runs / maxRuns) * (height - 4) : 1;
-        const successHeight = (successPct / 100) * barHeight;
-        const failedHeight = (failedPct / 100) * barHeight;
-
-        // Format time from ISO string
-        const timeStr = formatHourLabel(bucket.start);
-
-        return (
-          <Box key={`${bucket.start}-${index}`}>
-            {/* Bar */}
-            <Box
-              title={`${timeStr} · ${bucket.runs} runs · ${bucket.failed} failed`}
-              sx={{
-                width: barWidth,
-                height: barHeight || 1,
-                display: 'flex',
-                flexDirection: 'column-reverse',
-                borderRadius: '2px',
-                overflow: 'hidden',
-                backgroundColor: theme.palette.action.disabled,
-                cursor: 'pointer',
-                transition: 'opacity 0.2s ease',
-                '&:hover': {
-                  opacity: 0.8,
-                },
-              }}
-            >
-              {/* Success part */}
-              {successHeight > 0 && (
-                <Box
-                  sx={{
-                    height: `${(successHeight / barHeight) * 100}%`,
-                    backgroundColor: theme.palette.success.main,
-                  }}
-                />
-              )}
-              {/* Failed part */}
-              {failedHeight > 0 && (
-                <Box
-                  sx={{
-                    height: `${(failedHeight / barHeight) * 100}%`,
-                    backgroundColor: theme.palette.error.main,
-                  }}
-                />
-              )}
-            </Box>
-
-            {/* X-axis label (every 6th bucket) */}
-            {index % 6 === 0 && (
-              <Typography
-                variant="caption"
+      <Box sx={{ position: 'relative', height, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography
+          variant="caption"
+          color="text.disabled"
+          sx={{ position: 'absolute', top: 0, left: 0, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}
+        >
+          {max}
+        </Typography>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            gridTemplateColumns: columns,
+            gap: buckets.length > 36 ? '1px' : '3px',
+          }}
+        >
+          {buckets.map(bucket => {
+            const ok = Math.max(bucket.runs - bucket.failed, 0);
+            const pct = bucket.runs > 0 ? Math.max((bucket.runs / max) * 100, 2) : 0;
+            return (
+              <Box
+                key={bucket.start}
+                data-testid="hour-bar"
+                data-runs={bucket.runs}
+                data-failed={bucket.failed}
+                data-height-pct={Math.round(pct)}
+                title={`${hourLabel(bucket.start)} · ${bucket.runs} run${bucket.runs === 1 ? '' : 's'} · ${bucket.failed} failed`}
                 sx={{
-                  marginTop: '4px',
-                  fontSize: '11px',
-                  color: theme.palette.text.secondary,
-                  textAlign: 'center',
-                  minWidth: 0,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  borderRadius: '3px 3px 0 0',
+                  '&:hover': { backgroundColor: alpha(theme.palette.text.primary, 0.06) },
                 }}
               >
-                {timeStr}
-              </Typography>
-            )}
-          </Box>
-        );
-      })}
+                {bucket.runs > 0 && (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: `${pct}%`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: '3px 3px 0 0',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {bucket.failed > 0 && (
+                      <Box
+                        data-segment="failed"
+                        sx={{ flex: bucket.failed, backgroundColor: theme.palette.error.main }}
+                      />
+                    )}
+                    {ok > 0 && (
+                      <Box
+                        data-segment="success"
+                        sx={{ flex: ok, backgroundColor: alpha(theme.palette.success.main, 0.85) }}
+                      />
+                    )}
+                  </Box>
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: columns, mt: 0.5 }}>
+        {buckets.map((bucket, i) => (
+          <Typography
+            key={bucket.start}
+            variant="caption"
+            color="text.secondary"
+            sx={{ whiteSpace: 'nowrap', overflow: 'visible', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}
+          >
+            {i % step === 0 ? hourLabel(bucket.start) : ''}
+          </Typography>
+        ))}
+      </Box>
     </Box>
   );
 };
-
-/**
- * Format the hour label from an ISO date string, showing "HH:00" in local time.
- * Shows label only every 6th bucket to avoid clutter.
- */
-function formatHourLabel(isoString: string): string {
-  try {
-    const date = new Date(isoString);
-    const hour = date.getHours().toString().padStart(2, '0');
-    return `${hour}:00`;
-  } catch {
-    return '';
-  }
-}

@@ -2,9 +2,8 @@ import React, { useMemo, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
-import ErrorIcon from '@mui/icons-material/Error';
 import FlagIcon from '@mui/icons-material/Flag';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
 import { RunEvent } from '../../types';
 import { formatMs } from '../../utils/stats';
@@ -139,7 +138,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
   const eventEndMs = eventTs;
 
   let barLeft = 0;
-  let barWidth = 3; // Minimum width for visibility
+  let barWidth = 0.5; // Minimum width in % (CSS minWidth keeps it visible)
 
   if (
     eventStartMs !== undefined &&
@@ -148,7 +147,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
   ) {
     barLeft = ((eventStartMs - timeline.startMs) / (timeline.endMs - timeline.startMs)) * 100;
     barWidth = Math.max(
-      3,
+      0.5,
       ((eventEndMs - eventStartMs) / (timeline.endMs - timeline.startMs)) * 100,
     );
   }
@@ -198,6 +197,7 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
           textAlign: 'left',
+          color: isFailed ? theme.palette.error.main : theme.palette.text.primary,
         }}
         title={toolName}
       >
@@ -211,41 +211,35 @@ const WaterfallToolRow: React.FC<WaterfallToolRowProps> = ({
             position: 'absolute',
             left: `${barLeft}%`,
             width: `${barWidth}%`,
-            height: '100%',
+            top: '50%',
+            height: '14px',
+            transform: 'translateY(-50%)',
             backgroundColor: isFailed ? theme.palette.error.main : theme.palette.primary.main,
-            borderRadius: '3px',
-            minWidth: '3px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            paddingRight: '4px',
-            opacity: isSelected ? 1 : 0.7,
-            transition: 'opacity 0.2s ease',
+            borderRadius: '7px',
+            minWidth: '5px',
+            opacity: isSelected ? 1 : 0.8,
+            boxShadow: isSelected ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.35)}` : 'none',
+          }}
+        />
+        {/* Duration, placed beside the bar (left of it when the bar is near the right edge) */}
+        <Typography
+          component="span"
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            whiteSpace: 'nowrap',
+            fontSize: '11px',
+            fontVariantNumeric: 'tabular-nums',
+            color: isFailed ? theme.palette.error.main : theme.palette.text.secondary,
+            ...(barLeft + barWidth < 85
+              ? { left: `calc(${barLeft + barWidth}% + 8px)` }
+              : { right: `calc(${100 - barLeft}% + 8px)` }),
           }}
         >
-          {/* Duration text */}
-          {barWidth > 20 && (
-            <Typography
-              sx={{
-                fontSize: '10px',
-                color: theme.palette.common.white,
-                fontFamily: 'ui-monospace, "Courier New", monospace',
-              }}
-            >
-              {formatMs(event.durationMs ?? 0)}
-            </Typography>
-          )}
-
-          {/* Error icon */}
-          {isFailed && (
-            <ErrorIcon
-              sx={{
-                fontSize: '12px',
-                marginLeft: '4px',
-              }}
-            />
-          )}
-        </Box>
+          {isFailed ? 'error · ' : ''}
+          {formatMs(event.durationMs ?? 0)}
+        </Typography>
       </Box>
     </Box>
   );

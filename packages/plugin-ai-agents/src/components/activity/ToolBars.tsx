@@ -1,192 +1,31 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import ErrorIcon from '@mui/icons-material/Error';
-import { useTheme } from '@mui/material/styles';
-import type { Theme } from '@mui/material/styles';
-import { ToolStat } from '../../types';
-import { formatMs, formatPct, formatCount } from '../../utils/stats';
-
-interface ToolRowProps {
-  tool: ToolStat;
-  maxCalls: number;
-  onSelect?: (toolName: string) => void;
-  theme: Theme;
-}
-
-/**
- * A single tool row with name, bar chart, and metrics.
- */
-const ToolRow: React.FC<ToolRowProps> = ({ tool, maxCalls, onSelect, theme }) => {
-  const handleClick = useCallback(() => {
-    onSelect?.(tool.name);
-  }, [tool.name, onSelect]);
-
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onSelect?.(tool.name);
-      }
-    },
-    [tool.name, onSelect],
-  );
-
-  const errorPct = tool.calls > 0 ? tool.errors / tool.calls : 0;
-  const barWidth = (tool.calls / maxCalls) * 100;
-  const errorBarWidth = (tool.errors / tool.calls) * 100;
-
-  return (
-    <Box
-      component="button"
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: '180px 1fr 60px 60px 60px',
-        gap: '12px',
-        alignItems: 'center',
-        padding: '8px 12px',
-        border: `1px solid ${theme.palette.divider}`,
-        borderRadius: '6px',
-        backgroundColor: theme.palette.background.paper,
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          backgroundColor:
-            theme.palette.mode === 'dark'
-              ? theme.palette.action.hover
-              : theme.palette.action.hover,
-          borderColor: theme.palette.primary.main,
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: '2px',
-        },
-      }}
-    >
-      {/* Tool name (fixed width, ellipsis) */}
-      <Typography
-        sx={{
-          fontFamily: 'ui-monospace, "Courier New", monospace',
-          fontSize: '13px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          textAlign: 'left',
-        }}
-        title={tool.name}
-      >
-        {tool.name}
-      </Typography>
-
-      {/* Call bar chart */}
-      <Box sx={{ position: 'relative', height: '24px', display: 'flex', alignItems: 'center' }}>
-        <Box
-          sx={{
-            width: `${barWidth}%`,
-            height: '100%',
-            borderRadius: '4px',
-            backgroundColor: theme.palette.success.main,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          {/* Error portion overlay */}
-          {tool.errors > 0 && (
-            <Box
-              sx={{
-                height: '100%',
-                width: `${errorBarWidth}%`,
-                backgroundColor: theme.palette.error.main,
-                borderRadius: '4px 0 0 4px',
-              }}
-            />
-          )}
-        </Box>
-      </Box>
-
-      {/* Call count */}
-      <Typography
-        sx={{
-          fontFamily: 'ui-monospace, "Courier New", monospace',
-          fontSize: '12px',
-          color: theme.palette.text.secondary,
-          textAlign: 'right',
-        }}
-      >
-        {formatCount(tool.calls)}
-      </Typography>
-
-      {/* Error pill (only if errors > 0) */}
-      <Box>
-        {tool.errors > 0 && (
-          <Chip
-            icon={<ErrorIcon />}
-            label={`${tool.errors} err · ${formatPct(errorPct)}`}
-            size="small"
-            color="error"
-            variant="filled"
-            sx={{
-              fontFamily: 'ui-monospace, "Courier New", monospace',
-              fontSize: '11px',
-              height: '24px',
-            }}
-          />
-        )}
-      </Box>
-
-      {/* Metrics (avg, p95) */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-        <Typography
-          sx={{
-            fontFamily: 'ui-monospace, "Courier New", monospace',
-            fontSize: '11px',
-            color: theme.palette.text.secondary,
-          }}
-        >
-          avg: {formatMs(tool.avgMs)}
-        </Typography>
-        <Typography
-          sx={{
-            fontFamily: 'ui-monospace, "Courier New", monospace',
-            fontSize: '11px',
-            color: theme.palette.text.secondary,
-          }}
-        >
-          p95: {formatMs(tool.p95Ms)}
-        </Typography>
-      </Box>
-    </Box>
-  );
-};
+import { alpha, useTheme } from '@mui/material/styles';
+import type { ToolStat } from '../../types';
+import { formatMs, formatPct } from '../../utils/stats';
 
 export interface ToolBarsProps {
   tools: ToolStat[];
   onSelect?: (toolName: string) => void;
 }
 
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+
 /**
- * A list of tool statistics displayed as horizontal bars.
- * Each row shows tool name, call count bar (with error portion highlighted),
- * error pill, and performance metrics (avg, p95).
- * Rows are clickable buttons (keyboard operable).
+ * Tool usage list: name, a bar proportional to the call count (the error
+ * share painted in the error colour), call count, an error pill when
+ * relevant, and avg / p95 latency. Rows are buttons (keyboard operable).
  */
 export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
   const theme = useTheme();
 
   if (tools.length === 0) {
     return (
-      <Box
-        sx={{
-          padding: '16px',
-          color: theme.palette.text.disabled,
-          textAlign: 'center',
-          fontSize: '14px',
-        }}
-      >
-        No tool calls in this window
+      <Box sx={{ py: 3, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.disabled">
+          No tool calls in this window
+        </Typography>
       </Box>
     );
   }
@@ -194,16 +33,84 @@ export const ToolBars: React.FC<ToolBarsProps> = ({ tools, onSelect }) => {
   const maxCalls = Math.max(...tools.map(t => t.calls), 1);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {tools.map(tool => (
-        <ToolRow
-          key={tool.name}
-          tool={tool}
-          maxCalls={maxCalls}
-          onSelect={onSelect}
-          theme={theme}
-        />
-      ))}
+    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+      {tools.map(tool => {
+        const widthPct = (tool.calls / maxCalls) * 100;
+        const errorShare = tool.calls > 0 ? tool.errors / tool.calls : 0;
+        return (
+          <Box
+            key={tool.name}
+            component="button"
+            type="button"
+            onClick={() => onSelect?.(tool.name)}
+            sx={{
+              all: 'unset',
+              boxSizing: 'border-box',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(150px, 1.3fr) minmax(60px, 0.8fr) 40px 60px auto',
+              alignItems: 'center',
+              columnGap: 1.5,
+              minHeight: 36,
+              px: 1,
+              borderRadius: 1,
+              cursor: onSelect ? 'pointer' : 'default',
+              '&:hover': { backgroundColor: theme.palette.action.hover },
+              '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 },
+            }}
+          >
+            <Typography
+              title={tool.name}
+              sx={{ fontFamily: MONO, fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {tool.name}
+            </Typography>
+            <Box sx={{ height: 8, borderRadius: 4, backgroundColor: theme.palette.action.hover, overflow: 'hidden' }}>
+              <Box
+                data-testid="tool-bar"
+                data-calls-pct={Math.round(widthPct)}
+                data-error-pct={Math.round(errorShare * 100)}
+                sx={{ height: '100%', width: `${widthPct}%`, display: 'flex', borderRadius: 4, overflow: 'hidden' }}
+              >
+                {tool.errors > 0 && (
+                  <Box sx={{ flex: tool.errors, backgroundColor: theme.palette.error.main }} />
+                )}
+                <Box sx={{ flex: Math.max(tool.calls - tool.errors, 0), backgroundColor: alpha(theme.palette.primary.main, 0.75) }} />
+              </Box>
+            </Box>
+            <Typography variant="body2" sx={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              {tool.calls}
+            </Typography>
+            <Box sx={{ minHeight: 20, display: 'flex', alignItems: 'center' }}>
+              {tool.errors > 0 && (
+                <Box
+                  data-testid="error-pill"
+                  title={`${tool.errors} errors · ${formatPct(errorShare)} of calls`}
+                  sx={{
+                    px: 0.75,
+                    py: '1px',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    lineHeight: 1.5,
+                    whiteSpace: 'nowrap',
+                    color: theme.palette.error.main,
+                    backgroundColor: alpha(theme.palette.error.main, 0.12),
+                  }}
+                >
+                  {tool.errors} err
+                </Box>
+              )}
+            </Box>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}
+            >
+              {formatMs(tool.avgMs)} avg · {formatMs(tool.p95Ms)} p95
+            </Typography>
+          </Box>
+        );
+      })}
     </Box>
   );
 };
