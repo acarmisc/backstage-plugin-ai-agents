@@ -233,6 +233,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
                 entityRef: stringifyEntityRef(entity),
                 telemetryId,
                 title: entity.metadata.title ?? entity.metadata.name,
+                avatarUrl: annotation(entity, 'avatar'),
               },
             ]
           : [];

@@ -8,6 +8,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { alpha, useTheme } from '@mui/material/styles';
 import { AgentAvatar } from '../AgentAvatar';
+import { useAvatarSrc } from '../../hooks/useAvatarBlob';
 import { relativeTime } from '../../utils/formatting';
 import { StatusDot } from './StatusPill';
 import type { AgentActivity, AgentRun } from '../../types';
@@ -21,6 +22,18 @@ export interface AgentRailProps {
 }
 
 const ITEM_HEIGHT = 56;
+
+/** Rail avatar resolved through the backend proxy, like the agent cards. */
+function ProxiedAvatar({
+  activity,
+  name,
+}: {
+  activity: AgentActivity;
+  name: string;
+}) {
+  const src = useAvatarSrc(activity.entityRef, activity.avatarUrl);
+  return <AgentAvatar name={name} avatarUrl={src} size={28} />;
+}
 
 function secondaryLine(activity: AgentActivity): string {
   const [latest] = activity.runs;
@@ -271,7 +284,11 @@ export function AgentRail({
               onFocus={() => setFocus(index)}
               sx={itemSx(selected)}
             >
-              <AgentAvatar name={title} size={28} />
+              {activity.avatarUrl ? (
+                <ProxiedAvatar activity={activity} name={title} />
+              ) : (
+                <AgentAvatar name={title} size={28} />
+              )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
                   noWrap

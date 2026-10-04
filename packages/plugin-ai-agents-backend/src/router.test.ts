@@ -1236,7 +1236,10 @@ test('GET /activity returns 501 without a telemetry provider', async () => {
 });
 
 test('GET /activity returns only agents with telemetry-id, strips events, and clamps limit', async () => {
-  const agent1 = makeEntity('dinesh', { 'ai-agent.io/telemetry-id': 'dinesh' });
+  const agent1 = makeEntity('dinesh', {
+    'ai-agent.io/telemetry-id': 'dinesh',
+    'ai-agent.io/avatar': 'https://git.example.com/dinesh.png',
+  });
   const agent2 = makeEntity('gilfoyle', {
     'ai-agent.io/telemetry-id': 'gilfoyle',
   });
@@ -1275,6 +1278,11 @@ test('GET /activity returns only agents with telemetry-id, strips events, and cl
 
     // Only 2 agents with telemetry-id
     assert.equal(body.length, 2);
+
+    // The avatar annotation rides along so the activity view can render it
+    const byId = Object.fromEntries(body.map((a: any) => [a.telemetryId, a]));
+    assert.equal(byId.dinesh.avatarUrl, 'https://git.example.com/dinesh.png');
+    assert.equal(byId.gilfoyle.avatarUrl, undefined);
 
     // Runs have no events field
     for (const activity of body) {

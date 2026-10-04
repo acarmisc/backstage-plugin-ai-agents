@@ -27,6 +27,39 @@ async function toDataUrl(blob: Blob): Promise<string> {
 /** Entity refs whose proxy fetch failed this session — never retried. */
 const failedRefs = new Set<string>();
 
+/** In-flight proxy requests, so avatars mounted together share one fetch. */
+const pending = new Map<string, Promise<string | undefined>>();
+
+/**
+ * Fetches one agent's avatar through the proxy and records the outcome in
+ * the module caches. Resolves to the `data:` URL, or undefined on failure.
+ */
+function loadAvatar(
+  api: { getAvatar(entityRef: string): Promise<Blob | undefined> },
+  entityRef: string,
+): Promise<string | undefined> {
+  let request = pending.get(entityRef);
+  if (!request) {
+    request = api
+      .getAvatar(entityRef)
+      .then(async blob => {
+        if (!blob) return undefined;
+        const url = await toDataUrl(blob);
+        // Only image types `AgentAvatar` accepts; anything else falls back.
+        return isSafeUrl(url) ? url : undefined;
+      })
+      .catch(() => undefined)
+      .then(url => {
+        if (url) blobUrls.set(entityRef, url);
+        else failedRefs.add(entityRef);
+        pending.delete(entityRef);
+        return url;
+      });
+    pending.set(entityRef, request);
+  }
+  return request;
+}
+
 /**
  * Resolves the best `src` for an agent's avatar, safe to call with
  * `undefined` while the entity is still resolving (all hooks run
@@ -35,7 +68,8 @@ const failedRefs = new Set<string>();
  * Absolute http(s) avatar URLs are fetched through the backend proxy
  * (`fetchApi` attaches the Backstage identity token; the backend resolves
  * the image with its integration credentials, e.g. the GitLab token, and
- * caches it) and rendered as a `data:` URL. `data:` URIs and app-relative paths are used directly since
+ * caches it) and rendered as a `data:` URL; agents mounted together share
+ * one request. `data:` URIs and app-relative paths are used directly since
  * they need no credentials. While the proxy request is in flight nothing is
  * returned (the avatar shows its initials) so the browser never hits the
  * upstream host directly — for private repos that request can only fail.
@@ -54,10 +88,6 @@ export function useAvatarSrc(
   );
   // Bumped when a proxy fetch fails so the hook re-renders and falls back.
   const [, setFailureTick] = useState(0);
-  const markFailed = (ref: string) => {
-    failedRefs.add(ref);
-    setFailureTick(t => t + 1);
-  };
 
   useEffect(() => {
     if (!entityRef || !needsProxy) return undefined;
@@ -70,24 +100,11 @@ export function useAvatarSrc(
       return undefined;
     }
     let alive = true;
-    api
-      .getAvatar(entityRef)
-      .then(async blob => {
-        if (!blob) {
-          if (alive) markFailed(entityRef);
-          else failedRefs.add(entityRef);
-          return;
-        }
-        const url = await toDataUrl(blob);
-        // Only image types `AgentAvatar` accepts; anything else falls back.
-        if (!isSafeUrl(url)) throw new Error('not an image');
-        blobUrls.set(entityRef, url);
-        if (alive) setBlobSrc(url);
-      })
-      .catch(() => {
-        if (alive) markFailed(entityRef);
-        else failedRefs.add(entityRef);
-      });
+    loadAvatar(api, entityRef).then(url => {
+      if (!alive) return;
+      if (url) setBlobSrc(url);
+      else setFailureTick(t => t + 1);
+    });
     return () => {
       alive = false;
     };

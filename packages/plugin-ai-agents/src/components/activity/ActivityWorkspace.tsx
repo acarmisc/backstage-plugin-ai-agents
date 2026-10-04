@@ -8,6 +8,7 @@ import Skeleton from '@mui/material/Skeleton';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useSearchParams } from 'react-router-dom';
+import { useAvatarSrc } from '../../hooks/useAvatarBlob';
 import { useFleetActivity } from '../../hooks/useFleetActivity';
 import { AgentRail } from './AgentRail';
 import { AgentWorkspacePanel } from './AgentWorkspacePanel';
@@ -40,6 +41,7 @@ export function ActivityWorkspace() {
       agentParam ? fleet?.find(a => a.telemetryId === agentParam) : undefined,
     [fleet, agentParam],
   );
+  const selectedAvatar = useAvatarSrc(selected?.entityRef, selected?.avatarUrl);
 
   const update = (mutate: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(params);
@@ -106,6 +108,7 @@ export function ActivityWorkspace() {
       entityRef={selected.entityRef}
       telemetryId={selected.telemetryId}
       title={selected.title}
+      avatarUrl={selectedAvatar}
       selectedRunId={runParam}
       onSelectRun={selectRun}
       hours={hours}
