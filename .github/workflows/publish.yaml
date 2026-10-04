@@ -32,6 +32,14 @@ on:
         description: 'Release tag to publish, e.g. ai-agents@0.14.1'
         required: true
         type: string
+      release_only:
+        description: >-
+          Only create the tag and GitHub Release for a version that is
+          already on npm (recovery when publishing succeeded but the
+          release step did not).
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -49,6 +57,7 @@ jobs:
       dir: ${{ steps.pkg.outputs.dir }}
       name: ${{ steps.pkg.outputs.name }}
       version: ${{ steps.pkg.outputs.version }}
+      url: ${{ steps.pkg.outputs.url }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -80,7 +89,13 @@ jobs:
             echo "tag=$TAG"
             echo "dir=$DIR"
             echo "version=${TAG#*@}"
-            echo "name=$(node -p "require('./$DIR/package.json').name")"
+            NAME=$(node -p "require('./$DIR/package.json').name")
+            echo "name=$NAME"
+            # Registry URL of this exact version: 200 when published, 404
+            # when not. Queried with curl, not `npm view`: setup-node's
+            # .npmrc needs NODE_AUTH_TOKEN, and without it every `npm view`
+            # fails, which reads as "not published".
+            echo "url=https://registry.npmjs.org/${NAME/\//%2F}/${TAG#*@}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Verify tag version matches package.json
@@ -101,14 +116,19 @@ jobs:
             exit 1
           fi
 
-      - name: Verify the version is not published yet
+      - name: Verify the version is not published yet (or is, for release_only)
         env:
+          URL: ${{ steps.pkg.outputs.url }}
           SPEC: ${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}
+          RELEASE_ONLY: ${{ inputs.release_only || false }}
         run: |
-          if npm view "$SPEC" version >/dev/null 2>&1; then
-            echo "::error::$SPEC is already on npm; bump the version."
-            exit 1
-          fi
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$URL")
+          case "$RELEASE_ONLY:$status" in
+            false:404|true:200) echo "$SPEC: registry answered $status" ;;
+            false:200) echo "::error::$SPEC is already on npm; bump the version."; exit 1 ;;
+            true:404) echo "::error::$SPEC is not on npm; release_only needs a published version."; exit 1 ;;
+            *) echo "::error::Unexpected registry answer $status for $SPEC"; exit 1 ;;
+          esac
 
   checks:
     name: CI
@@ -136,6 +156,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
+        if: ${{ !inputs.release_only }}
         # Install from the repo root so intra-repo workspace deps
         # (e.g. the agentcore module depending on the backend core) resolve.
         run: npm ci --no-audit --no-fund --legacy-peer-deps
@@ -143,12 +164,15 @@ jobs:
       # Build every workspace in dependency order so intra-repo deps have
       # their dist/ ready before tsc type-checks against them.
       - name: Build
+        if: ${{ !inputs.release_only }}
         run: npm run build --workspaces --if-present
 
       - name: Check package contents
+        if: ${{ !inputs.release_only }}
         run: node scripts/check-packages.mjs "${{ needs.resolve.outputs.dir }}"
 
       - name: Publish to npm
+        if: ${{ !inputs.release_only }}
         working-directory: ${{ needs.resolve.outputs.dir }}
         # --ignore-scripts: the build above already produced dist/, and the
         # tarball checked in the previous step is exactly what is published.
@@ -158,16 +182,18 @@ jobs:
 
       - name: Verify the release on npm
         env:
+          URL: ${{ needs.resolve.outputs.url }}
           SPEC: ${{ needs.resolve.outputs.name }}@${{ needs.resolve.outputs.version }}
         run: |
-          for i in 1 2 3 4 5 6; do
-            if npm view "$SPEC" version >/dev/null 2>&1; then
+          # The registry can take a few minutes to serve a new version.
+          for i in $(seq 1 30); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' "$URL")" = 200 ]; then
               echo "$SPEC is live on npm"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::$SPEC was published but is not visible on npm yet"
+          echo "::error::$SPEC is not visible on npm after 5 minutes"
           exit 1
 
       - name: Create GitHub Release

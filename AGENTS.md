@@ -208,6 +208,9 @@ git push origin ai-agents@X.Y.Z
 
 When a tag can't be pushed, run the **Publish to npm** workflow on `main` with
 the tag as its `tag` input; it creates the tag with the release.
+If a version reached npm but its tag/GitHub Release did not (a later step
+failed), re-run the workflow with the same `tag` and `release_only: true`:
+it requires the version to be on npm and only creates the release.
 
 The release workflow first checks the tag (version matches `package.json`,
 commit is on `main`, version not on npm yet), then runs the full `ci.yaml`
