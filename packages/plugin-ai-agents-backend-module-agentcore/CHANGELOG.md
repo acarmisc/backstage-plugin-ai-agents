@@ -3,6 +3,14 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- The published package no longer contains compiled tests, nor the
+  unbundled per-file JavaScript `tsc` emitted next to the bundle (the entry
+  point is the self-contained `dist/index.cjs.js`).
+
 ## [0.5.2] - 2026-10-03
 
 ### Fixed

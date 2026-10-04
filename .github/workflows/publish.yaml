@@ -9,7 +9,11 @@ name: Publish to npm
 #
 # The tag prefix selects which workspace package gets published, and its
 # version must match the version already committed in that package's
-# package.json.
+# package.json. The full CI (quality, cleanliness, security) runs first;
+# publishing only starts when every check passes.
+#
+# Requires the NPM_TOKEN repository secret (an npm granular access token
+# with read/write on the @acarmisc packages).
 
 on:
   push:
@@ -30,18 +34,27 @@ on:
         type: string
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
+
+concurrency:
+  group: publish-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  resolve:
+    name: Resolve release
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pkg.outputs.tag }}
+      dir: ${{ steps.pkg.outputs.dir }}
+      name: ${{ steps.pkg.outputs.name }}
+      version: ${{ steps.pkg.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # to check the commit is on main
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
@@ -52,33 +65,23 @@ jobs:
           INPUT_TAG: ${{ inputs.tag }}
         run: |
           TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           case "$TAG" in
-            ai-agents-backend@*)
-              echo "dir=packages/plugin-ai-agents-backend" >> "$GITHUB_OUTPUT"
-              echo "version=${TAG#ai-agents-backend@}" >> "$GITHUB_OUTPUT"
-              ;;
-            ai-agents-backend-module-agentcore@*)
-              echo "dir=packages/plugin-ai-agents-backend-module-agentcore" >> "$GITHUB_OUTPUT"
-              echo "version=${TAG#ai-agents-backend-module-agentcore@}" >> "$GITHUB_OUTPUT"
-              ;;
-            ai-agents-backend-module-kagent@*)
-              echo "dir=packages/plugin-ai-agents-backend-module-kagent" >> "$GITHUB_OUTPUT"
-              echo "version=${TAG#ai-agents-backend-module-kagent@}" >> "$GITHUB_OUTPUT"
-              ;;
-            ai-agents-backend-module-langfuse@*)
-              echo "dir=packages/plugin-ai-agents-backend-module-langfuse" >> "$GITHUB_OUTPUT"
-              echo "version=${TAG#ai-agents-backend-module-langfuse@}" >> "$GITHUB_OUTPUT"
-              ;;
-            ai-agents@*)
-              echo "dir=packages/plugin-ai-agents" >> "$GITHUB_OUTPUT"
-              echo "version=${TAG#ai-agents@}" >> "$GITHUB_OUTPUT"
-              ;;
+            ai-agents-backend-module-agentcore@*) DIR=packages/plugin-ai-agents-backend-module-agentcore ;;
+            ai-agents-backend-module-kagent@*)    DIR=packages/plugin-ai-agents-backend-module-kagent ;;
+            ai-agents-backend-module-langfuse@*)  DIR=packages/plugin-ai-agents-backend-module-langfuse ;;
+            ai-agents-backend@*)                  DIR=packages/plugin-ai-agents-backend ;;
+            ai-agents@*)                          DIR=packages/plugin-ai-agents ;;
             *)
               echo "::error::Unrecognized tag pattern: $TAG"
               exit 1
               ;;
           esac
+          {
+            echo "tag=$TAG"
+            echo "dir=$DIR"
+            echo "version=${TAG#*@}"
+            echo "name=$(node -p "require('./$DIR/package.json').name")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Verify tag version matches package.json
         run: |
@@ -89,11 +92,52 @@ jobs:
             exit 1
           fi
 
+      - name: Verify the commit is on main
+        # Releases come from reviewed code only, never from a side branch.
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_SHA is not on main; merge the release first."
+            exit 1
+          fi
+
+      - name: Verify the version is not published yet
+        env:
+          SPEC: ${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}
+        run: |
+          if npm view "$SPEC" version >/dev/null 2>&1; then
+            echo "::error::$SPEC is already on npm; bump the version."
+            exit 1
+          fi
+
+  checks:
+    name: CI
+    needs: resolve
+    uses: ./.github/workflows/ci.yaml
+    permissions:
+      contents: read
+      pull-requests: write
+
+  publish:
+    name: Publish ${{ needs.resolve.outputs.tag }}
+    needs: [resolve, checks]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHub Release + tag
+      id-token: write # npm provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Install dependencies
         # Install from the repo root so intra-repo workspace deps
         # (e.g. the agentcore module depending on the backend core) resolve.
-        # Backstage's MUI4 theme has a react@^17 peer dep; --legacy-peer-deps
-        # mirrors local install behaviour and avoids npm@7+ ERESOLVE failures.
         run: npm ci --no-audit --no-fund --legacy-peer-deps
 
       # Build every workspace in dependency order so intra-repo deps have
@@ -101,16 +145,35 @@ jobs:
       - name: Build
         run: npm run build --workspaces --if-present
 
+      - name: Check package contents
+        run: node scripts/check-packages.mjs "${{ needs.resolve.outputs.dir }}"
+
       - name: Publish to npm
-        working-directory: ${{ steps.pkg.outputs.dir }}
-        run: npm publish --access public --provenance
+        working-directory: ${{ needs.resolve.outputs.dir }}
+        # --ignore-scripts: the build above already produced dist/, and the
+        # tarball checked in the previous step is exactly what is published.
+        run: npm publish --access public --provenance --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify the release on npm
+        env:
+          SPEC: ${{ needs.resolve.outputs.name }}@${{ needs.resolve.outputs.version }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if npm view "$SPEC" version >/dev/null 2>&1; then
+              echo "$SPEC is live on npm"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$SPEC was published but is not visible on npm yet"
+          exit 1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.pkg.outputs.tag }}
-          name: ${{ steps.pkg.outputs.tag }}
+          tag_name: ${{ needs.resolve.outputs.tag }}
+          name: ${{ needs.resolve.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
