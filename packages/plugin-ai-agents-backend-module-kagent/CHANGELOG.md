@@ -3,7 +3,7 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.3.3] - 2026-10-04
 
 ### Fixed
 
