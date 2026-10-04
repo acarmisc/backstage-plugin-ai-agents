@@ -9,7 +9,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 
 const MAX_UNPACKED_BYTES = 5 * 1024 * 1024;
 const FORBIDDEN = [
@@ -23,9 +23,20 @@ const FORBIDDEN = [
   [/\.(tgz|log)$/, 'build leftovers'],
 ];
 
-const dirs = process.argv.slice(2).length
-  ? process.argv.slice(2)
-  : readdirSync('packages').map(d => join('packages', d));
+// Arguments only select among the known workspaces; paths always come from
+// this listing, never from the command line.
+const workspaces = readdirSync('packages').map(d => join('packages', d));
+const requested = process.argv
+  .slice(2)
+  .map(a => normalize(a).replace(/\/$/, ''));
+const unknown = requested.filter(a => !workspaces.includes(a));
+if (unknown.length) {
+  console.error(`::error::Not a workspace: ${unknown.join(', ')}`);
+  process.exit(1);
+}
+const dirs = requested.length
+  ? workspaces.filter(w => requested.includes(w))
+  : workspaces;
 
 let failed = false;
 const fail = (pkg, msg) => {
