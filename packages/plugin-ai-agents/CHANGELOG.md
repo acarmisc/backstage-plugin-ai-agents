@@ -3,6 +3,19 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- The Activity page shows agent avatars in the rail and in the selected
+  agent's header (it always showed initials). Needs
+  `@acarmisc/backstage-plugin-ai-agents-backend` with `avatarUrl` in
+  `GET /activity`; older backends keep the initials.
+- `useAvatarSrc` shares one in-flight proxy request per agent, so avatars
+  mounted at the same time (rail and header, cards) no longer fetch twice.
+- The test script now runs the tests in nested folders
+  (`components/activity`), which the shell's `**` glob silently skipped.
+
 ## [0.16.3] - 2026-10-04
 
 ### Fixed

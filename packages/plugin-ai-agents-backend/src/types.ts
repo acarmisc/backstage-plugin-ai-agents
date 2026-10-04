@@ -107,6 +107,8 @@ export interface AgentActivity {
   /** Value of the `ai-agent.io/telemetry-id` annotation. */
   telemetryId: string;
   title?: string;
+  /** Value of the `ai-agent.io/avatar` annotation. */
+  avatarUrl?: string;
   /** Newest first, without `events`. */
   runs: AgentRun[];
   /** Set, with empty `runs`, when the telemetry query for this agent failed. */

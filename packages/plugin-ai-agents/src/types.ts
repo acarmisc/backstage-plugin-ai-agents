@@ -234,6 +234,8 @@ export interface AgentActivity {
   entityRef: string;
   telemetryId: string;
   title?: string;
+  /** `ai-agent.io/avatar` of the entity (sent by backend 0.9.7+). */
+  avatarUrl?: string;
   runs: AgentRun[];
   error?: string;
 }
