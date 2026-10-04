@@ -9,7 +9,10 @@ import { NotModifiedError } from '@backstage/errors';
 export interface AvatarProxyConfig {
   /** Kill-switch; false answers 404 and the frontend falls back to direct URLs. */
   enabled: boolean;
-  /** Origin allowlist for upstream fetches, same matching as probeAllowlist. */
+  /**
+   * Origin allowlist for upstream fetches, same matching as probeAllowlist.
+   * Defaults to the hosts of the configured `integrations.*` entries.
+   */
   allowlist: string[];
   /** How long a successfully fetched avatar may be served from cache. */
   ttlMs: number;
@@ -19,17 +22,51 @@ export interface AvatarProxyConfig {
   maxBytes: number;
 }
 
+/**
+ * Origins of the SCM integrations (`integrations.gitlab`, `.github`, ...).
+ * These are exactly the hosts the UrlReader holds credentials for, so they
+ * are the natural default for what the proxy may fetch: a private GitLab
+ * avatar renders as soon as the GitLab integration is configured.
+ */
+export function integrationOrigins(
+  config: import('@backstage/config').Config,
+): string[] {
+  const origins = new Set<string>();
+  try {
+    const integrations = config.getOptionalConfig('integrations');
+    for (const provider of integrations?.keys() ?? []) {
+      for (const entry of integrations!.getOptionalConfigArray(provider) ??
+        []) {
+        const host = entry.getOptionalString('host');
+        if (host) origins.add(`https://${host}`);
+        const baseUrl = entry.getOptionalString('baseUrl');
+        if (baseUrl) {
+          try {
+            origins.add(new URL(baseUrl).origin);
+          } catch {
+            // Not a URL: the host entry above still covers the integration.
+          }
+        }
+      }
+    }
+  } catch {
+    // Malformed integrations config: fall back to an explicit allowlist only.
+  }
+  return [...origins];
+}
+
 export function readAvatarProxyConfig(
   config: import('@backstage/config').Config,
 ): AvatarProxyConfig {
   const cfg = config.getOptionalConfig('ai-agents');
   const proxy = cfg?.getOptionalConfig('avatarProxy');
   return {
-    enabled: proxy?.getOptionalBoolean('enabled') ?? false,
-    allowlist: proxy?.getOptionalStringArray('allowlist') ?? [],
+    enabled: proxy?.getOptionalBoolean('enabled') ?? true,
+    allowlist:
+      proxy?.getOptionalStringArray('allowlist') ?? integrationOrigins(config),
     ttlMs: proxy?.getOptionalNumber('ttlMs') ?? 86_400_000,
     negativeTtlMs: proxy?.getOptionalNumber('negativeTtlMs') ?? 3_600_000,
-    maxBytes: proxy?.getOptionalNumber('maxBytes') ?? 524_288,
+    maxBytes: proxy?.getOptionalNumber('maxBytes') ?? 2_097_152,
   };
 }
 
@@ -223,9 +260,12 @@ export async function resolveAvatar(
   try {
     const response = await urlReader.readUrl(fetchUrl, { etag: cached?.etag });
     const buf = await response.buffer();
-    if (buf.length === 0 || buf.length > config.maxBytes) {
+    if (buf.length === 0) {
+      throw new Error('upstream returned an empty body');
+    }
+    if (buf.length > config.maxBytes) {
       throw new Error(
-        `avatar size ${buf.length} exceeds limit ${config.maxBytes}`,
+        `avatar size ${buf.length} exceeds avatarProxy.maxBytes ${config.maxBytes}`,
       );
     }
     const contentType = sniffImageType(buf);

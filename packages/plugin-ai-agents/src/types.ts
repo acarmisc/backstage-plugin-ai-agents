@@ -355,7 +355,7 @@ function parseHireSchema(raw: string | undefined): HireField[] | undefined {
 
 /** Image MIME types accepted in `data:` URLs (script execution is disabled for SVG in <img> context). */
 const SAFE_DATA_IMAGE_RE =
-  /^data:image\/(?:png|jpe?g|webp|gif|avif|svg\+xml)[;,]/i;
+  /^data:image\/(?:png|jpe?g|webp|gif|avif|bmp|svg\+xml)[;,]/i;
 
 /**
  * Guards annotation-sourced URLs before they reach `src`/`href` attributes.

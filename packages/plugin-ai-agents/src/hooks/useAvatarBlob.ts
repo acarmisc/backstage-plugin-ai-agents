@@ -4,11 +4,25 @@ import { aiAgentsApiRef } from '../api';
 import { isSafeUrl } from '../types';
 
 /**
- * Object URLs minted from proxied avatar blobs, keyed by entity ref and kept
- * for the lifetime of the page: cards, the overview card, and the detail
- * drawer share one blob per agent and never re-request it.
+ * `data:` URLs of proxied avatars, keyed by entity ref and kept for the
+ * lifetime of the page: cards, the overview card, and the detail drawer
+ * share one image per agent and never re-request it.
+ *
+ * `data:` rather than `blob:` object URLs because Backstage's default CSP
+ * (`img-src 'self' data:`) blocks `blob:` images, which would make every
+ * proxied avatar fall back to initials in a production app.
  */
 const blobUrls = new Map<string, string>();
+
+async function toDataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  const type = (blob.type || 'application/octet-stream').split(';')[0];
+  return `data:${type};base64,${btoa(binary)}`;
+}
 
 /** Entity refs whose proxy fetch failed this session — never retried. */
 const failedRefs = new Set<string>();
@@ -21,7 +35,7 @@ const failedRefs = new Set<string>();
  * Absolute http(s) avatar URLs are fetched through the backend proxy
  * (`fetchApi` attaches the Backstage identity token; the backend resolves
  * the image with its integration credentials, e.g. the GitLab token, and
- * caches it). `data:` URIs and app-relative paths are used directly since
+ * caches it) and rendered as a `data:` URL. `data:` URIs and app-relative paths are used directly since
  * they need no credentials. While the proxy request is in flight nothing is
  * returned (the avatar shows its initials) so the browser never hits the
  * upstream host directly — for private repos that request can only fail.
@@ -58,15 +72,17 @@ export function useAvatarSrc(
     let alive = true;
     api
       .getAvatar(entityRef)
-      .then(blob => {
-        if (!alive) return;
+      .then(async blob => {
         if (!blob) {
-          markFailed(entityRef);
+          if (alive) markFailed(entityRef);
+          else failedRefs.add(entityRef);
           return;
         }
-        const url = URL.createObjectURL(blob);
+        const url = await toDataUrl(blob);
+        // Only image types `AgentAvatar` accepts; anything else falls back.
+        if (!isSafeUrl(url)) throw new Error('not an image');
         blobUrls.set(entityRef, url);
-        setBlobSrc(url);
+        if (alive) setBlobSrc(url);
       })
       .catch(() => {
         if (alive) markFailed(entityRef);

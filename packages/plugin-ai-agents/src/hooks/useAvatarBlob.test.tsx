@@ -33,18 +33,18 @@ afterEach(() => {
   resetHolder();
 });
 
-let blobCounter = 0;
 let createObjectURLCalls = 0;
 
 beforeEach(() => {
-  blobCounter = 0;
   createObjectURLCalls = 0;
-  (globalThis.URL as any).createObjectURL = (_blob: Blob) => {
+  // Must stay unused: Backstage's default CSP blocks blob: images.
+  (globalThis.URL as any).createObjectURL = () => {
     createObjectURLCalls++;
-    blobCounter++;
-    return `blob:http://localhost/mock-${blobCounter}`;
+    return 'blob:http://localhost/unexpected';
   };
 });
+
+const PNG_DATA = /^data:image\/png;base64,/;
 
 function stubApi(blobs: Record<string, Blob | undefined>) {
   const calls: string[] = [];
@@ -99,7 +99,7 @@ test('returns data: and relative URLs directly without touching the proxy', asyn
   assert.equal(calls.length, 0, 'proxy must not be consulted');
 });
 
-test('fetches http(s) avatars through the proxy and shares the blob', async () => {
+test('fetches http(s) avatars through the proxy as a data: URL and shares it', async () => {
   const blob = new Blob(['fake-png'], { type: 'image/png' });
   const calls = stubApi({ 'component:default/hook-share': blob });
   const first = renderProbe(
@@ -109,12 +109,7 @@ test('fetches http(s) avatars through the proxy and shares the blob', async () =
   // While the proxy fetch is in flight nothing is shown: the browser must
   // not hit the upstream host directly.
   assert.equal(srcOf(first.container), '(none)');
-  await waitFor(() =>
-    assert.match(
-      srcOf(first.container) ?? '',
-      /^blob:http:\/\/localhost\/mock-/,
-    ),
-  );
+  await waitFor(() => assert.match(srcOf(first.container) ?? '', PNG_DATA));
   assert.equal(calls.length, 1);
 
   // A second mount for the same agent reuses the cached blob, no refetch.
@@ -123,12 +118,9 @@ test('fetches http(s) avatars through the proxy and shares the blob', async () =
     'component:default/hook-share',
     'https://git.example.com/a.png',
   );
-  assert.match(
-    srcOf(second.container) ?? '',
-    /^blob:http:\/\/localhost\/mock-/,
-  );
-  assert.equal(calls.length, 1, 'cached blob must be reused');
-  assert.equal(createObjectURLCalls, 1, 'object URL minted once');
+  assert.match(srcOf(second.container) ?? '', PNG_DATA);
+  assert.equal(calls.length, 1, 'cached image must be reused');
+  assert.equal(createObjectURLCalls, 0, 'no blob: URL (blocked by CSP)');
 });
 
 test('switching agents clears the stale blob instead of flashing it', async () => {
@@ -142,12 +134,7 @@ test('switching agents clears the stale blob instead of flashing it', async () =
     'component:default/hook-old',
     'https://git.example.com/old.png',
   );
-  await waitFor(() =>
-    assert.match(
-      srcOf(rendered.container) ?? '',
-      /^blob:http:\/\/localhost\/mock-/,
-    ),
-  );
+  await waitFor(() => assert.match(srcOf(rendered.container) ?? '', PNG_DATA));
   const oldSrc = srcOf(rendered.container);
 
   // Reuse the same hook instance for a different agent (e.g. list
@@ -164,17 +151,26 @@ test('switching agents clears the stale blob instead of flashing it', async () =
     oldSrc,
     'stale blob of the previous agent must be cleared',
   );
-  await waitFor(() =>
-    assert.match(
-      srcOf(rendered.container) ?? '',
-      /^blob:http:\/\/localhost\/mock-/,
-    ),
-  );
+  await waitFor(() => assert.match(srcOf(rendered.container) ?? '', PNG_DATA));
   assert.notEqual(srcOf(rendered.container), oldSrc);
   assert.deepEqual(calls, [
     'component:default/hook-old',
     'component:default/hook-new',
   ]);
+});
+
+test('a non-image proxy answer falls back to the direct URL', async () => {
+  const calls = stubApi({
+    'component:default/hook-html': new Blob(['<html>'], { type: 'text/html' }),
+  });
+  const { container } = renderProbe(
+    'component:default/hook-html',
+    'https://git.example.com/page',
+  );
+  await waitFor(() => assert.equal(calls.length, 1));
+  await waitFor(() =>
+    assert.equal(srcOf(container), 'https://git.example.com/page'),
+  );
 });
 
 test('proxy failure falls back to the direct URL', async () => {

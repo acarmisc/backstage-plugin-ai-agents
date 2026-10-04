@@ -1579,3 +1579,44 @@ test('POST /invocations drops non-string form values', async () => {
     await close();
   }
 });
+
+test('GET /avatar proxies GitLab avatars with no avatarProxy config', async () => {
+  const { ConfigReader } = await import('@backstage/config');
+  const entity = makeEntity('dinesh', {
+    'ai-agent.io/avatar':
+      'https://gitlab.example.com/g/p/-/raw/main/dinesh/avatar.jpg',
+  });
+  const seen: string[] = [];
+  const router = await createRouter({
+    config: new ConfigReader({
+      integrations: {
+        gitlab: [{ host: 'gitlab.example.com', token: 't' }],
+      },
+    }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    avatarProxy: {
+      urlReader: {
+        readUrl: async (u: string) => {
+          seen.push(u);
+          return { buffer: async () => PNG };
+        },
+      },
+    },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(
+      `${url}/avatar/${encodeURIComponent('component:default/dinesh')}`,
+    );
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('content-type'), 'image/png');
+    assert.deepEqual(seen, [
+      'https://gitlab.example.com/g/p/-/blob/main/dinesh/avatar.jpg',
+    ]);
+  } finally {
+    await close();
+  }
+});

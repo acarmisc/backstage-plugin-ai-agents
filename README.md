@@ -131,7 +131,7 @@ All annotations are optional. Entities that still use the old
 | `ai-agent.io/health`          | URL probed for live status.                                                                                                              |
 | `ai-agent.io/telemetry-id`    | The agent's name in the telemetry store. Enables the Activity view.                                                                      |
 | `ai-agent.io/purpose`         | Card text; defaults to `metadata.description`.                                                                                           |
-| `ai-agent.io/avatar`          | Image: `http(s)` URL, `data:image/*` URI or app-relative path. Initials otherwise.                                                       |
+| `ai-agent.io/avatar`          | Image: `http(s)` URL, `data:image/*` URI or app-relative path. Private-repo images load through the backend. Initials otherwise.         |
 | `ai-agent.io/version`         | Shown in the card footer.                                                                                                                |
 | `ai-agent.io/capabilities`    | Comma- or newline-separated chips, `label` or `label:category` (`reasoning`, `retrieval`, `tools`, `vision`, `voice`, `data`, `safety`). |
 | `ai-agent.io/billing-model`   | `per-invocation`, `per-token`, `subscription` or `free` (default).                                                                       |
@@ -194,6 +194,9 @@ sees, probes and runs agents their catalog permissions let them read.
 
 - Status probing is deny-by-default: the backend only fetches URLs whose origin
   matches `ai-agents.probeAllowlist`.
+- Agent avatars are fetched through the backend with the integrations'
+  credentials, only from the integrations' hosts (or
+  `ai-agents.avatarProxy.allowlist`), and only image content is served.
 - Catalog authors control annotations, so annotation values are treated as
   untrusted: links are rendered only for `http(s)`, the AgentCore region must
   be a valid AWS region, and the kagent `authHeader` is only sent to the

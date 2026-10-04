@@ -20,15 +20,18 @@ export interface Config {
     probeAllowlist?: string[];
     /** Proxy `http(s)` avatars through the backend with integration credentials. */
     avatarProxy?: {
-      /** @default false */
+      /** @default true */
       enabled?: boolean;
-      /** Allowed avatar URL origin globs; off-list URLs are redirected to directly. */
+      /**
+       * Allowed avatar URL origin globs; off-list URLs are redirected to
+       * directly. Defaults to the hosts of the configured `integrations`.
+       */
       allowlist?: string[];
       /** Positive cache lifetime in milliseconds. @default 86400000 */
       ttlMs?: number;
       /** Negative (failed fetch) cache lifetime in milliseconds. @default 3600000 */
       negativeTtlMs?: number;
-      /** Largest avatar accepted, in bytes. @default 524288 */
+      /** Largest avatar accepted, in bytes. @default 2097152 */
       maxBytes?: number;
     };
     invocations?: {
