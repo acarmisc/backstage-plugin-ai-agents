@@ -118,6 +118,10 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   probing happens; the backend only fetches origins on the allowlist. Probe
   URL is the `health` annotation, falling back to `endpoint`. Results cached
   in-memory for `statusCacheTtlMs`.
+- **Avatars go through the backend proxy** (`GET /avatar/:ref`, `avatar.ts`).
+  On by default; with no `avatarProxy.allowlist` it allows the hosts of the
+  `integrations.*` config, read with the UrlReader's credentials. That is what
+  makes private GitLab `/-/raw/` avatars render — the browser can't fetch them.
 - **The `AgentCore` CLI preview is runtime-gated.** `HireAgentDialog` only
   renders the `aws bedrock-agentcore invoke-agent-runtime` command when
   `agent.runtime.runtime === 'bedrock-agentcore'`; other runtimes would be

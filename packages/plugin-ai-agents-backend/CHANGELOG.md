@@ -3,6 +3,20 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- The avatar proxy is on by default, and without an
+  `ai-agents.avatarProxy.allowlist` it fetches from the hosts of the
+  configured `integrations`. Avatars stored in a private GitLab (or GitHub)
+  repository now render without extra configuration; previously they showed
+  initials unless `avatarProxy` was enabled and allowlisted by hand. Set
+  `avatarProxy.enabled: false` to restore the old behavior.
+- `avatarProxy.maxBytes` defaults to 2 MiB (was 512 KiB), so typical JPEG
+  avatars are no longer rejected.
+- The backend logs the avatar proxy's effective allowlist at startup.
+
 ## [0.9.5] - 2026-10-03
 
 ### Changed

@@ -174,6 +174,13 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   // Avatar proxy: fetches agent avatars through the integrations' credentials
   // (e.g. the GitLab token) and caches them, so private-repo images render.
   const avatarCfg = readAvatarProxyConfig(config);
+  if (avatarCfg.enabled && options.avatarProxy?.urlReader) {
+    logger.info(
+      avatarCfg.allowlist.length
+        ? `avatar proxy enabled for ${avatarCfg.allowlist.join(', ')}`
+        : 'avatar proxy has no allowlist and no integrations: avatars load directly',
+    );
+  }
   const avatarProxy = {
     config: avatarCfg,
     urlReader: options.avatarProxy?.urlReader,

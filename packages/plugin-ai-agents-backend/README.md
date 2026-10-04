@@ -38,7 +38,7 @@ ai-agents:
   #   enabled: true
   # avatarProxy:
   #   enabled: true
-  #   allowlist:
+  #   allowlist:                 # defaults to the integrations' hosts
   #     - https://gitlab.example.com
 ```
 
@@ -50,11 +50,20 @@ ai-agents:
 | `statusCacheTtlMs`          | `15000`    | How long a status is cached in memory.                                                              |
 | `probeAuthHeader`           | none       | `Authorization` header sent with probes. Secret.                                                    |
 | `invocations.enabled`       | `true`     | `false` turns `POST /invocations` off (404).                                                        |
-| `avatarProxy.enabled`       | `false`    | Fetch `http(s)` avatars through the backend's URL reader, so images in private repositories render. |
-| `avatarProxy.allowlist`     | `[]`       | Origin globs the proxy may fetch. Other avatars are redirected to.                                  |
+| `avatarProxy.enabled`       | `true`     | Fetch `http(s)` avatars through the backend's URL reader, so images in private repositories render. |
+| `avatarProxy.allowlist`     | see below  | Origin globs the proxy may fetch. Other avatars are redirected to.                                  |
 | `avatarProxy.ttlMs`         | `86400000` | Cache lifetime of a fetched avatar.                                                                 |
 | `avatarProxy.negativeTtlMs` | `3600000`  | How long a failed fetch is remembered.                                                              |
-| `avatarProxy.maxBytes`      | `524288`   | Largest avatar accepted.                                                                            |
+| `avatarProxy.maxBytes`      | `2097152`  | Largest avatar accepted.                                                                            |
+
+Without an `avatarProxy.allowlist`, the proxy fetches from the hosts of the
+configured `integrations` (`gitlab`, `github`, ...), using their credentials.
+An avatar such as
+`https://gitlab.example.com/group/repo/-/raw/main/agent/avatar.jpg` in a
+private repository then renders as soon as `integrations.gitlab` lists
+`gitlab.example.com` with a token that can read the repository. GitLab
+`/-/raw/` links are read as `/-/blob/`, and `?token=` parameters are dropped.
+Failed fetches are logged as `avatar fetch failed for <url>`.
 
 All keys are under `ai-agents`. Spend needs the LiteLLM connection that the
 LiteLLM backend plugin also reads:
