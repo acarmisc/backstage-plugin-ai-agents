@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.5] - 2026-10-04
+
+### Fixed
+
+- The published package no longer contains compiled tests, test typings or
+  test fixtures.
+
 ## [0.16.4] - 2026-10-04
 
 ### Fixed

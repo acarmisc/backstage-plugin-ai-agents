@@ -209,10 +209,19 @@ git push origin ai-agents@X.Y.Z
 When a tag can't be pushed, run the **Publish to npm** workflow on `main` with
 the tag as its `tag` input; it creates the tag with the release.
 
-CI verifies the version match, builds all workspaces in dependency order,
-publishes with provenance, and creates a GitHub Release. `NPM_TOKEN` repo
-secret is required. Do not run `npm publish` locally — CI is the source of
-truth.
+The release workflow first checks the tag (version matches `package.json`,
+commit is on `main`, version not on npm yet), then runs the full `ci.yaml`
+(called as a reusable workflow), and only then builds, checks the tarball
+and publishes with provenance, verifies the version on npm and creates a
+GitHub Release. `NPM_TOKEN` repo secret is required. Do not run
+`npm publish` locally — CI is the source of truth.
+
+`ci.yaml` gates (PRs, `main`, releases): lint, `prettier:check`, build,
+typecheck, test on Node 22 and 24; `scripts/check-packages.mjs` (tarball
+has its entry points and no sources/tests/fixtures/env files); clean working
+tree after the run; `npm audit --omit=dev --audit-level=critical`;
+`npm audit signatures`; gitleaks over the full history; dependency review on
+PRs. Run `node scripts/check-packages.mjs` after `npm run build` locally.
 
 ## Common traps
 

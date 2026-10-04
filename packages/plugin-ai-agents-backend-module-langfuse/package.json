@@ -1,6 +1,6 @@
 {
   "name": "@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Langfuse telemetry provider for the ai-agents Backstage backend plugin: live/recent agent runs derived from the Langfuse public observations API.",
   "keywords": [
     "backstage",

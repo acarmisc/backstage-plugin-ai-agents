@@ -3,6 +3,14 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-langfuse`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.1] - 2026-10-04
+
+### Fixed
+
+- The published package no longer contains compiled tests, nor the
+  unbundled per-file JavaScript `tsc` emitted next to the bundle (the entry
+  point is the self-contained `dist/index.cjs.js`).
+
 ## [0.3.0] - 2026-10-03
 
 ### Changed
