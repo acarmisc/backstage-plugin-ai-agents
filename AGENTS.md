@@ -122,6 +122,8 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   On by default; with no `avatarProxy.allowlist` it allows the hosts of the
   `integrations.*` config, read with the UrlReader's credentials. That is what
   makes private GitLab `/-/raw/` avatars render — the browser can't fetch them.
+  The frontend renders the proxied bytes as a `data:` URL: Backstage's default
+  CSP (`img-src 'self' data:`) blocks `blob:`, so never go back to object URLs.
 - **The `AgentCore` CLI preview is runtime-gated.** `HireAgentDialog` only
   renders the `aws bedrock-agentcore invoke-agent-runtime` command when
   `agent.runtime.runtime === 'bedrock-agentcore'`; other runtimes would be

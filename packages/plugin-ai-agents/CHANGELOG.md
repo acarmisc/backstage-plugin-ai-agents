@@ -3,6 +3,17 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.3] - 2026-10-04
+
+### Fixed
+
+- Proxied avatars render in apps served with Backstage's default CSP
+  (`img-src 'self' data:`). `useAvatarSrc` now turns the proxied image into a
+  `data:` URL instead of a `blob:` object URL, which that CSP blocks, so
+  private-repo avatars no longer fall back to initials in production.
+- `data:image/bmp` avatars are accepted, matching what the backend proxy
+  serves.
+
 ## [0.16.2] - 2026-10-03
 
 ### Changed
