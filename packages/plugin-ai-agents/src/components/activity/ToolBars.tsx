@@ -1,7 +1,5 @@
 import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { alpha, useTheme } from '@mui/material/styles';
+import { Text } from '@backstage/ui';
 import type { ToolStat } from '../../types';
 import { formatMs, formatPct } from '../../utils/stats';
 
@@ -10,83 +8,91 @@ export interface ToolBarsProps {
   onSelect?: (toolName: string) => void;
 }
 
-const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+const MONO = 'var(--bui-font-monospace)';
 
 /**
  * Tool usage list: name, a bar proportional to the call count (the error
- * share painted in the error colour), call count, an error pill when
+ * share painted in the danger color), call count, an error pill when
  * relevant, and avg / p95 latency. Rows are buttons (keyboard operable).
  */
 export function ToolBars({ tools, onSelect }: ToolBarsProps) {
-  const theme = useTheme();
-
   if (tools.length === 0) {
     return (
-      <Box sx={{ py: 3, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.disabled">
+      <div style={{ padding: 'var(--bui-space-4) 0', textAlign: 'center' }}>
+        <Text variant="body-medium" color="secondary">
           No tool calls in this window
-        </Typography>
-      </Box>
+        </Text>
+      </div>
     );
   }
 
   const maxCalls = Math.max(...tools.map(t => t.calls), 1);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       {tools.map(tool => {
         const widthPct = (tool.calls / maxCalls) * 100;
         const errorShare = tool.calls > 0 ? tool.errors / tool.calls : 0;
         return (
-          <Box
+          <button
             key={tool.name}
-            component="button"
             type="button"
             onClick={() => onSelect?.(tool.name)}
-            sx={{
+            style={{
               all: 'unset',
               boxSizing: 'border-box',
               display: 'grid',
               gridTemplateColumns:
-                'minmax(150px, 1.3fr) minmax(60px, 0.8fr) 40px 60px auto',
+                'minmax(0, 1.4fr) minmax(40px, 1fr) 36px 52px',
               alignItems: 'center',
-              columnGap: 1.5,
-              minHeight: 36,
-              px: 1,
-              borderRadius: 1,
+              columnGap: 'var(--bui-space-3)',
+              minHeight: 44,
+              padding: '0 var(--bui-space-2)',
+              borderRadius: 'var(--bui-radius-2)',
               cursor: onSelect ? 'pointer' : 'default',
-              '&:hover': { backgroundColor: theme.palette.action.hover },
-              '&:focus-visible': {
-                outline: `2px solid ${theme.palette.primary.main}`,
-                outlineOffset: -2,
-              },
             }}
           >
-            <Typography
-              title={tool.name}
-              sx={{
-                fontFamily: MONO,
-                fontSize: 12.5,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {tool.name}
-            </Typography>
-            <Box
-              sx={{
+            <div style={{ minWidth: 0 }}>
+              <span
+                title={tool.name}
+                style={{
+                  display: 'block',
+                  fontFamily: MONO,
+                  fontSize: 'var(--bui-font-size-3)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  color: 'var(--bui-fg-primary)',
+                }}
+              >
+                {tool.name}
+              </span>
+              <Text
+                as="span"
+                variant="body-x-small"
+                color="secondary"
+                style={{
+                  display: 'block',
+                  whiteSpace: 'nowrap',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {formatMs(tool.avgMs)} avg · {formatMs(tool.p95Ms)} p95
+              </Text>
+            </div>
+            <div
+              style={{
                 height: 8,
                 borderRadius: 4,
-                backgroundColor: theme.palette.action.hover,
+                background: 'var(--bui-bg-neutral-2)',
                 overflow: 'hidden',
               }}
             >
-              <Box
+              <div
                 data-testid="tool-bar"
                 data-calls-pct={Math.round(widthPct)}
                 data-error-pct={Math.round(errorShare * 100)}
-                sx={{
+                style={{
                   height: '100%',
                   width: `${widthPct}%`,
                   display: 'flex',
@@ -95,66 +101,50 @@ export function ToolBars({ tools, onSelect }: ToolBarsProps) {
                 }}
               >
                 {tool.errors > 0 && (
-                  <Box
-                    sx={{
+                  <div
+                    style={{
                       flex: tool.errors,
-                      backgroundColor: theme.palette.error.main,
+                      background: 'var(--bui-fg-danger)',
                     }}
                   />
                 )}
-                <Box
-                  sx={{
+                <div
+                  style={{
                     flex: Math.max(tool.calls - tool.errors, 0),
-                    backgroundColor: alpha(theme.palette.primary.main, 0.75),
+                    background: 'var(--bui-bg-solid)',
                   }}
                 />
-              </Box>
-            </Box>
-            <Typography
-              variant="body2"
-              sx={{
-                textAlign: 'right',
-                fontVariantNumeric: 'tabular-nums',
-                fontWeight: 600,
-              }}
+              </div>
+            </div>
+            <Text
+              variant="body-medium"
+              weight="bold"
+              style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}
             >
               {tool.calls}
-            </Typography>
-            <Box sx={{ minHeight: 20, display: 'flex', alignItems: 'center' }}>
+            </Text>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               {tool.errors > 0 && (
-                <Box
+                <span
                   data-testid="error-pill"
                   title={`${tool.errors} errors · ${formatPct(errorShare)} of calls`}
-                  sx={{
-                    px: 0.75,
-                    py: '1px',
+                  style={{
+                    padding: '1px var(--bui-space-2)',
                     borderRadius: 10,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    lineHeight: 1.5,
+                    fontSize: 'var(--bui-font-size-2)',
+                    fontWeight: 'var(--bui-font-weight-bold)',
                     whiteSpace: 'nowrap',
-                    color: theme.palette.error.main,
-                    backgroundColor: alpha(theme.palette.error.main, 0.12),
+                    color: 'var(--bui-fg-danger)',
+                    background: 'var(--bui-bg-danger)',
                   }}
                 >
                   {tool.errors} err
-                </Box>
+                </span>
               )}
-            </Box>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                whiteSpace: 'nowrap',
-                fontVariantNumeric: 'tabular-nums',
-                textAlign: 'right',
-              }}
-            >
-              {formatMs(tool.avgMs)} avg · {formatMs(tool.p95Ms)} p95
-            </Typography>
-          </Box>
+            </div>
+          </button>
         );
       })}
-    </Box>
+    </div>
   );
 }

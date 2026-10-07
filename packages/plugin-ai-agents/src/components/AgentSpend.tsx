@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
+import { Badge, Flex, Text } from '@backstage/ui';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
 import type { SpendSummary } from '../api';
@@ -56,49 +53,31 @@ export function AgentSpend({
     .slice(0, 3);
 
   return (
-    <Box sx={{ mt: 2 }} data-testid="agent-spend">
-      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+    <Flex direction="column" gap="2" data-testid="agent-spend">
+      <Text variant="body-medium" weight="bold">
         {threadId ? 'Conversation cost' : `Cost (last ${days}d)`}
-      </Typography>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+      </Text>
+      <Flex align="center" gap="2">
+        <Text variant="body-large" weight="bold">
           {formatUsd(summary.spend)}
-        </Typography>
-        <Chip
-          size="small"
-          variant="outlined"
-          label={`${summary.requests} calls`}
-          sx={{ height: 18, fontSize: '0.65rem' }}
-        />
-        <Chip
-          size="small"
-          variant="outlined"
-          label={`${formatTokens(summary.totalTokens)} tok`}
-          sx={{ height: 18, fontSize: '0.65rem' }}
-        />
-      </Stack>
+        </Text>
+        <Badge size="small">{`${summary.requests} calls`}</Badge>
+        <Badge size="small">{`${formatTokens(summary.totalTokens)} tok`}</Badge>
+      </Flex>
       {models.length > 0 && (
-        <Stack spacing={0.25}>
+        <Flex direction="column" gap="0.5">
           {models.map(([model, spend]) => (
-            <Box
-              key={model}
-              sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                noWrap
-                sx={{ flexGrow: 1, minWidth: 0 }}
-              >
+            <Flex key={model} align="center" justify="between" gap="2">
+              <Text variant="body-small" color="secondary" truncate>
                 {model}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
+              </Text>
+              <Text variant="body-small" color="secondary">
                 {formatUsd(spend)}
-              </Typography>
-            </Box>
+              </Text>
+            </Flex>
           ))}
-        </Stack>
+        </Flex>
       )}
-    </Box>
+    </Flex>
   );
 }

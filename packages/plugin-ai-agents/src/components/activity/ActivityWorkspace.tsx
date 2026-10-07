@@ -1,33 +1,43 @@
-import React, { useMemo } from 'react';
-import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import Skeleton from '@mui/material/Skeleton';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Flex, Select, Skeleton } from '@backstage/ui';
 import { useSearchParams } from 'react-router-dom';
 import { useAvatarSrc } from '../../hooks/useAvatarBlob';
 import { useFleetActivity } from '../../hooks/useFleetActivity';
+import { EmptyState } from '../../ui';
 import { AgentRail } from './AgentRail';
 import { AgentWorkspacePanel } from './AgentWorkspacePanel';
 import { FleetOverview } from './FleetOverview';
 
 const HOURS = [6, 24, 72];
 const ALL = '__all__';
+const COMPACT_QUERY = '(max-width: 899.95px)';
+
+/** True below the breakpoint where the agent rail no longer fits. */
+function useCompact(): boolean {
+  const [compact, setCompact] = useState(
+    () => window.matchMedia?.(COMPACT_QUERY).matches ?? false,
+  );
+  useEffect(() => {
+    const query = window.matchMedia?.(COMPACT_QUERY);
+    if (!query) return undefined;
+    const onChange = () => setCompact(query.matches);
+    onChange();
+    query.addEventListener?.('change', onChange);
+    return () => query.removeEventListener?.('change', onChange);
+  }, []);
+  return compact;
+}
 
 /**
  * Master-detail workspace: agents in a left rail, the selected agent (or the
  * fleet overview) in the body. Selection lives in the URL so views can be
  * shared and the back button works: `agent` (telemetry id), `run`, `hours`.
- * Below the `md` breakpoint the rail becomes a select.
+ * Below 900px the rail becomes a select.
  *
  * @public
  */
 export function ActivityWorkspace() {
-  const theme = useTheme();
-  const compact = useMediaQuery(theme.breakpoints.down('md'));
+  const compact = useCompact();
   const [params, setParams] = useSearchParams();
   const { data: fleet, error, loading, refresh } = useFleetActivity(5000, 30);
 
@@ -69,36 +79,35 @@ export function ActivityWorkspace() {
 
   if (!fleet && loading) {
     return (
-      <Box
-        sx={{
+      <div
+        aria-busy="true"
+        style={{
           display: 'grid',
           gridTemplateColumns: compact ? '1fr' : '300px 1fr',
-          gap: 3,
+          gap: 'var(--bui-space-5)',
         }}
-        aria-busy="true"
       >
-        {!compact && <Skeleton variant="rounded" height={420} />}
-        <Box sx={{ display: 'grid', gap: 2 }}>
-          <Skeleton variant="rounded" height={96} />
-          <Skeleton variant="rounded" height={160} />
-          <Skeleton variant="rounded" height={280} />
-        </Box>
-      </Box>
+        {!compact && <Skeleton height={420} rounded />}
+        <Flex direction="column" gap="4">
+          <Skeleton height={96} rounded />
+          <Skeleton height={160} rounded />
+          <Skeleton height={280} rounded />
+        </Flex>
+      </div>
     );
   }
 
   if (!fleet) {
     return (
       <Alert
-        severity="error"
-        action={
-          <Button color="inherit" size="small" onClick={refresh}>
+        status="danger"
+        title={`Failed to load fleet activity${error ? `: ${error.message}` : ''}`}
+        customActions={
+          <Button size="small" variant="secondary" onPress={refresh}>
             Retry
           </Button>
         }
-      >
-        Failed to load fleet activity{error ? `: ${error.message}` : ''}
-      </Alert>
+      />
     );
   }
 
@@ -118,67 +127,57 @@ export function ActivityWorkspace() {
     <FleetOverview fleet={fleet} onSelectRun={selectFleetRun} />
   );
 
+  const options = [
+    { value: ALL, label: 'All agents' },
+    ...[...fleet]
+      .sort((a, b) =>
+        (a.title ?? a.telemetryId).localeCompare(b.title ?? b.telemetryId),
+      )
+      .map(a => ({ value: a.telemetryId, label: a.title ?? a.telemetryId })),
+  ];
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Flex direction="column" gap="4">
       {error && (
-        <Alert severity="warning">
-          Showing last known data — the latest refresh failed
-        </Alert>
+        <Alert
+          status="warning"
+          title="Showing last known data — the latest refresh failed"
+        />
       )}
       {fleet.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
-          <Box sx={{ typography: 'h6', mb: 1 }}>No fleet activity</Box>
-          <Box sx={{ typography: 'body2', color: 'text.secondary' }}>
-            Agents need the ai-agent.io/telemetry-id annotation and a telemetry
-            module to show activity.
-          </Box>
-        </Box>
+        <EmptyState
+          title="No fleet activity"
+          description="Agents need the ai-agent.io/telemetry-id annotation and a telemetry module to show activity."
+        />
       ) : (
-        <Box
-          sx={{
+        <div
+          style={{
             display: 'grid',
             gridTemplateColumns: compact
               ? 'minmax(0, 1fr)'
               : '300px minmax(0, 1fr)',
-            gap: compact ? 2 : 3,
+            gap: compact ? 'var(--bui-space-4)' : 'var(--bui-space-5)',
             alignItems: 'start',
           }}
         >
           {compact ? (
             <Select
-              size="small"
-              fullWidth
-              value={selected?.telemetryId ?? ALL}
-              onChange={e =>
-                selectAgent(
-                  e.target.value === ALL ? undefined : String(e.target.value),
-                )
+              aria-label="Agent"
+              options={options}
+              selectedKey={selected?.telemetryId ?? ALL}
+              onSelectionChange={key =>
+                selectAgent(key === ALL ? undefined : String(key))
               }
-              inputProps={{ 'aria-label': 'Agent' }}
-            >
-              <MenuItem value={ALL}>All agents</MenuItem>
-              {[...fleet]
-                .sort((a, b) =>
-                  (a.title ?? a.telemetryId).localeCompare(
-                    b.title ?? b.telemetryId,
-                  ),
-                )
-                .map(a => (
-                  <MenuItem key={a.telemetryId} value={a.telemetryId}>
-                    {a.title ?? a.telemetryId}
-                  </MenuItem>
-                ))}
-            </Select>
+            />
           ) : (
-            <Box
-              sx={{
+            <div
+              style={{
                 position: 'sticky',
                 top: 0,
                 maxHeight: 'calc(100vh - 160px)',
                 minHeight: 320,
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 2,
+                border: '1px solid var(--bui-border-2)',
+                borderRadius: 'var(--bui-radius-3)',
                 overflow: 'hidden',
               }}
             >
@@ -187,11 +186,11 @@ export function ActivityWorkspace() {
                 selectedTelemetryId={selected?.telemetryId}
                 onSelectAgent={selectAgent}
               />
-            </Box>
+            </div>
           )}
-          <Box sx={{ minWidth: 0 }}>{body}</Box>
-        </Box>
+          <div style={{ minWidth: 0 }}>{body}</div>
+        </div>
       )}
-    </Box>
+    </Flex>
   );
 }

@@ -1,26 +1,26 @@
 import React, { useState } from 'react';
-import Accordion from '@mui/material/Accordion';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import Drawer from '@mui/material/Drawer';
-import IconButton from '@mui/material/IconButton';
-import Link from '@mui/material/Link';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-import CloseIcon from '@mui/icons-material/Close';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import WorkIcon from '@mui/icons-material/Work';
+import {
+  Accordion,
+  AccordionGroup,
+  AccordionPanel,
+  AccordionTrigger,
+  Badge,
+  Button,
+  ButtonIcon,
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  Flex,
+  Link,
+  Text,
+} from '@backstage/ui';
+import type { Key } from '@backstage/ui';
+import {
+  RiBriefcaseLine,
+  RiFileCopyLine,
+  RiPulseLine,
+  RiRefreshLine,
+} from '@remixicon/react';
 import { useNavigate } from 'react-router-dom';
 import type { AiAgent } from '../types';
 import { isSafeUrl } from '../types';
@@ -62,16 +62,20 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ minWidth: 110, flexShrink: 0 }}
+    <Flex gap="3" align="start" style={{ padding: 'var(--bui-space-1) 0' }}>
+      <Text
+        variant="body-small"
+        color="secondary"
+        style={{ minWidth: 100, flexShrink: 0 }}
       >
         {label}
-      </Typography>
-      <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
-    </Box>
+      </Text>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Text variant="body-medium" as="div">
+          {children}
+        </Text>
+      </div>
+    </Flex>
   );
 }
 
@@ -80,11 +84,17 @@ function SafeLink({ text }: { text: string }) {
   const [ns, name] = (rest ?? 'default/').split('/');
   return (
     <Link href={`/catalog/${ns ?? 'default'}/${kind}/${name}`}>
-      Open in catalog{' '}
-      <OpenInNewIcon sx={{ fontSize: 12, verticalAlign: 'middle' }} />
+      Open in catalog
     </Link>
   );
 }
+
+const DESCRIPTION_CLAMP = {
+  display: '-webkit-box',
+  WebkitLineClamp: 3,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+} as const;
 
 export function AgentDetailDrawer({
   agent,
@@ -98,9 +108,7 @@ export function AgentDetailDrawer({
   const navigate = useNavigate();
   const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<
-    Record<string, boolean>
-  >({});
+  const [expanded, setExpanded] = useState<Set<Key>>(new Set());
 
   if (!agent) return null;
   const title = agent.title ?? agent.name;
@@ -117,159 +125,120 @@ export function AgentDetailDrawer({
     }
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
   const descriptionText =
     agent.purpose || agent.description || 'No description provided.';
   const isDescriptionLong =
     descriptionText.split('\n').length > 3 || descriptionText.length > 150;
 
   const safeLinks = agent.links.filter(l => isSafeUrl(l.url));
+  const canHire = Boolean(
+    onHire && agent.hireSchema && agent.hireSchema.length > 0,
+  );
 
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: { width: { xs: '100%', sm: 480 }, overflowX: 'hidden' },
+    <Dialog
+      isOpen={open}
+      onOpenChange={isOpen => {
+        if (!isOpen) onClose();
       }}
+      width={600}
+      height="85vh"
     >
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Compact header (always visible) */}
-        <Box
-          sx={{
-            p: 2,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 1.5,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={56} />
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="h6">{title}</Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                cursor: 'pointer',
-              }}
-              onClick={copyRef}
+      <DialogHeader>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+          <span aria-hidden="true">
+            <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={40} />
+          </span>
+          {title}
+        </span>
+      </DialogHeader>
+      <DialogBody>
+        <Flex direction="column" gap="4">
+          <Flex direction="column" gap="2" align="start">
+            <Button
+              variant="tertiary"
+              size="small"
+              iconEnd={<RiFileCopyLine size={14} />}
+              aria-label={`Copy ${agent.entityRef}`}
+              onPress={copyRef}
             >
               {agent.entityRef}
-              <ContentCopyIcon sx={{ fontSize: 12 }} />
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            </Button>
+            <Flex align="center" gap="3" style={{ flexWrap: 'wrap' }}>
               <AgentStatusBadge status={agent.status} />
               {agent.runtime && (
                 <RuntimeBadge runtime={agent.runtime.runtime} />
               )}
               {agent.billing && <BillingBadge billing={agent.billing} />}
-            </Box>
-          </Box>
-          <IconButton size="small" onClick={onClose} aria-label="Close">
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
+              {onRefreshStatus && (
+                <ButtonIcon
+                  aria-label="Refresh status"
+                  variant="tertiary"
+                  size="small"
+                  icon={<RiRefreshLine size={16} />}
+                  onPress={() => onRefreshStatus(agent.entityRef)}
+                />
+              )}
+            </Flex>
+          </Flex>
 
-        {/* Refresh button (always visible) */}
-        {onRefreshStatus && (
-          <Box
-            sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'flex-end' }}
-          >
-            <IconButton
-              size="small"
-              title="Refresh status"
-              onClick={() => onRefreshStatus(agent.entityRef)}
+          <Flex direction="column" gap="1" align="start">
+            <Text
+              variant="body-medium"
+              style={{
+                whiteSpace: 'pre-wrap',
+                ...(descriptionExpanded ? {} : DESCRIPTION_CLAMP),
+              }}
             >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
+              {descriptionText}
+            </Text>
+            {isDescriptionLong && (
+              <Button
+                variant="tertiary"
+                size="small"
+                onPress={() => setDescriptionExpanded(!descriptionExpanded)}
+              >
+                {descriptionExpanded ? 'Show less' : 'Show more'}
+              </Button>
+            )}
+          </Flex>
 
-        {/* Description with "Show more" toggle */}
-        <Box sx={{ px: 2, pb: 1 }}>
-          <Typography
-            variant="body2"
-            sx={{
-              display: '-webkit-box',
-              WebkitLineClamp: descriptionExpanded ? 'unset' : 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: descriptionExpanded ? 'visible' : 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {descriptionText}
-          </Typography>
-          {isDescriptionLong && (
-            <Button
-              size="small"
-              onClick={() => setDescriptionExpanded(!descriptionExpanded)}
-              sx={{ mt: 0.5, textTransform: 'none' }}
-            >
-              {descriptionExpanded ? 'Show less' : 'Show more'}
-            </Button>
+          {(canHire || agent.runtime.telemetryId) && (
+            <Flex gap="2">
+              {canHire && (
+                <Button
+                  variant="primary"
+                  size="small"
+                  iconStart={<RiBriefcaseLine size={16} />}
+                  onPress={() => onHire?.(agent)}
+                >
+                  Hire Agent
+                </Button>
+              )}
+              {agent.runtime.telemetryId && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  iconStart={<RiPulseLine size={16} />}
+                  onPress={handleActivityClick}
+                  data-testid="open-activity-button"
+                >
+                  Open activity
+                </Button>
+              )}
+            </Flex>
           )}
-        </Box>
 
-        {/* Primary action row */}
-        <Box sx={{ px: 2, pb: 2, display: 'flex', gap: 1 }}>
-          {onHire && agent.hireSchema && agent.hireSchema.length > 0 && (
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<WorkIcon />}
-              onClick={() => onHire(agent)}
-            >
-              Hire Agent
-            </Button>
-          )}
-          {agent.runtime.telemetryId && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<TimelineIcon />}
-              onClick={handleActivityClick}
-              data-testid="open-activity-button"
-            >
-              Open activity
-            </Button>
-          )}
-        </Box>
-
-        {/* Scrollable accordion sections */}
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 1 }}>
-          {/* Runtime & billing section */}
-          <Accordion
-            disableGutters
-            elevation={0}
-            square
-            expanded={expandedSections.runtime ?? false}
-            onChange={() => toggleSection('runtime')}
-            sx={{ border: '1px solid', borderColor: 'divider' }}
+          <AccordionGroup
+            allowsMultiple
+            expandedKeys={expanded}
+            onExpandedChange={setExpanded}
           >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="runtime-content"
-              id="runtime-header"
-            >
-              <Typography variant="subtitle2">Runtime & billing</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box>
+            <Accordion id="runtime">
+              <AccordionTrigger title="Runtime & billing" />
+              <AccordionPanel>
                 <Row label="Runtime">
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Flex align="center" gap="2" style={{ flexWrap: 'wrap' }}>
                     <RuntimeBadge runtime={agent.runtime.runtime} />
                     {agent.runtime.endpoint &&
                       isSafeUrl(agent.runtime.endpoint) && (
@@ -277,25 +246,20 @@ export function AgentDetailDrawer({
                           href={agent.runtime.endpoint}
                           target="_blank"
                           rel="noopener noreferrer"
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                          }}
                         >
-                          endpoint <OpenInNewIcon sx={{ fontSize: 12 }} />
+                          endpoint
                         </Link>
                       )}
-                  </Stack>
+                  </Flex>
                   {agent.runtime.runtimeHandle && (
-                    <Typography
-                      variant="caption"
-                      display="block"
-                      color="text.secondary"
-                      sx={{ mt: 0.5, wordBreak: 'break-all' }}
+                    <Text
+                      variant="body-small"
+                      color="secondary"
+                      as="div"
+                      style={{ wordBreak: 'break-all' }}
                     >
                       {agent.runtime.runtimeHandle}
-                    </Typography>
+                    </Text>
                   )}
                 </Row>
                 <Row label="Billing">
@@ -308,208 +272,125 @@ export function AgentDetailDrawer({
                 <Row label="Catalog">
                   <SafeLink text={agent.entityRef} />
                 </Row>
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-
-          {/* Capabilities section */}
-          <Accordion
-            disableGutters
-            elevation={0}
-            square
-            expanded={expandedSections.capabilities ?? false}
-            onChange={() => toggleSection('capabilities')}
-            sx={{ border: '1px solid', borderColor: 'divider', mt: 0 }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="capabilities-content"
-              id="capabilities-header"
-            >
-              <Typography variant="subtitle2">Capabilities</Typography>
-              {agent.capabilities.length > 0 && (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ ml: 'auto' }}
-                >
-                  {agent.capabilities.length}
-                </Typography>
-              )}
-            </AccordionSummary>
-            <AccordionDetails>
-              {agent.capabilities.length ? (
-                <AgentCapabilities capabilities={agent.capabilities} max={20} />
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No capabilities defined.
-                </Typography>
-              )}
-            </AccordionDetails>
-          </Accordion>
-
-          {/* Links section */}
-          {safeLinks.length > 0 && (
-            <Accordion
-              disableGutters
-              elevation={0}
-              square
-              expanded={expandedSections.links ?? false}
-              onChange={() => toggleSection('links')}
-              sx={{ border: '1px solid', borderColor: 'divider', mt: 0 }}
-            >
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls="links-content"
-                id="links-header"
-              >
-                <Typography variant="subtitle2">Links</Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ ml: 'auto' }}
-                >
-                  {safeLinks.length}
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <List dense disablePadding>
-                  {safeLinks.map((l, i) => (
-                    <ListItem
-                      key={i}
-                      component="a"
-                      href={l.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{
-                        color: 'text.primary',
-                        borderRadius: 1,
-                        '&:hover': { bgcolor: 'action.hover' },
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 28 }}>
-                        {getLinkIcon(l.icon)}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={l.title}
-                        secondary={l.url}
-                        secondaryTypographyProps={{
-                          sx: { fontSize: '0.7rem' } as const,
-                          noWrap: true,
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </AccordionDetails>
+              </AccordionPanel>
             </Accordion>
-          )}
 
-          {/* Tags section */}
-          {agent.tags.length > 0 && (
-            <Accordion
-              disableGutters
-              elevation={0}
-              square
-              expanded={expandedSections.tags ?? false}
-              onChange={() => toggleSection('tags')}
-              sx={{ border: '1px solid', borderColor: 'divider', mt: 0 }}
-            >
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls="tags-content"
-                id="tags-header"
-              >
-                <Typography variant="subtitle2">Tags</Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ ml: 'auto' }}
-                >
-                  {agent.tags.length}
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {agent.tags.map(t => (
-                    <Chip key={t} size="small" label={t} variant="outlined" />
-                  ))}
-                </Box>
-              </AccordionDetails>
-            </Accordion>
-          )}
-
-          {/* Spend section (lazy loaded) */}
-          <Accordion
-            disableGutters
-            elevation={0}
-            square
-            expanded={expandedSections.spend ?? false}
-            onChange={() => toggleSection('spend')}
-            sx={{ border: '1px solid', borderColor: 'divider', mt: 0 }}
-            TransitionProps={{ unmountOnExit: true }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="spend-content"
-              id="spend-header"
-            >
-              <Typography variant="subtitle2">Spend</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <AgentSpend entityRef={agent.entityRef} />
-            </AccordionDetails>
-          </Accordion>
-
-          {/* Recent invocations section (lazy loaded) */}
-          <Accordion
-            disableGutters
-            elevation={0}
-            square
-            expanded={expandedSections.invocations ?? false}
-            onChange={() => toggleSection('invocations')}
-            sx={{ border: '1px solid', borderColor: 'divider', mt: 0 }}
-            TransitionProps={{ unmountOnExit: true }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="invocations-content"
-              id="invocations-header"
-            >
-              <Typography variant="subtitle2">Recent invocations</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <InvocationHistory
-                entityRef={agent.entityRef}
-                limit={8}
-                reloadKey={historyReloadKey}
+            <Accordion id="capabilities">
+              <AccordionTrigger
+                title="Capabilities"
+                subtitle={
+                  agent.capabilities.length
+                    ? `(${agent.capabilities.length})`
+                    : undefined
+                }
               />
-            </AccordionDetails>
-          </Accordion>
+              <AccordionPanel>
+                {agent.capabilities.length ? (
+                  <AgentCapabilities
+                    capabilities={agent.capabilities}
+                    max={20}
+                  />
+                ) : (
+                  <Text variant="body-medium" color="secondary">
+                    No capabilities defined.
+                  </Text>
+                )}
+              </AccordionPanel>
+            </Accordion>
 
-          {/* Reviews section (lazy loaded) */}
-          <Accordion
-            disableGutters
-            elevation={0}
-            square
-            expanded={expandedSections.reviews ?? false}
-            onChange={() => toggleSection('reviews')}
-            sx={{ border: '1px solid', borderColor: 'divider', mt: 0 }}
-            TransitionProps={{ unmountOnExit: true }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="reviews-content"
-              id="reviews-header"
-            >
-              <Typography variant="subtitle2">Reviews</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <AgentReviews entityRef={agent.entityRef} />
-            </AccordionDetails>
-          </Accordion>
-        </Box>
-      </Box>
-    </Drawer>
+            {safeLinks.length > 0 && (
+              <Accordion id="links">
+                <AccordionTrigger
+                  title="Links"
+                  subtitle={`(${safeLinks.length})`}
+                />
+                <AccordionPanel>
+                  <Flex direction="column" gap="2">
+                    {safeLinks.map((l, i) => (
+                      <Link
+                        key={i}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--bui-space-2)',
+                        }}
+                      >
+                        {getLinkIcon(l.icon)}
+                        <span style={{ minWidth: 0 }}>
+                          <Text variant="body-medium" as="div">
+                            {l.title}
+                          </Text>
+                          <Text
+                            variant="body-small"
+                            color="secondary"
+                            as="div"
+                            truncate
+                          >
+                            {l.url}
+                          </Text>
+                        </span>
+                      </Link>
+                    ))}
+                  </Flex>
+                </AccordionPanel>
+              </Accordion>
+            )}
+
+            {agent.tags.length > 0 && (
+              <Accordion id="tags">
+                <AccordionTrigger
+                  title="Tags"
+                  subtitle={`(${agent.tags.length})`}
+                />
+                <AccordionPanel>
+                  <Flex gap="1" style={{ flexWrap: 'wrap' }}>
+                    {agent.tags.map(t => (
+                      <Badge key={t}>{t}</Badge>
+                    ))}
+                  </Flex>
+                </AccordionPanel>
+              </Accordion>
+            )}
+
+            {/* Lazy sections: they fetch on mount, so mount them only once
+                the section is open. */}
+            <Accordion id="spend">
+              <AccordionTrigger title="Spend" />
+              <AccordionPanel>
+                {expanded.has('spend') && (
+                  <AgentSpend entityRef={agent.entityRef} />
+                )}
+              </AccordionPanel>
+            </Accordion>
+
+            <Accordion id="invocations">
+              <AccordionTrigger title="Recent invocations" />
+              <AccordionPanel>
+                {expanded.has('invocations') && (
+                  <InvocationHistory
+                    entityRef={agent.entityRef}
+                    limit={8}
+                    reloadKey={historyReloadKey}
+                    hideTitle
+                  />
+                )}
+              </AccordionPanel>
+            </Accordion>
+
+            <Accordion id="reviews">
+              <AccordionTrigger title="Reviews" />
+              <AccordionPanel>
+                {expanded.has('reviews') && (
+                  <AgentReviews entityRef={agent.entityRef} />
+                )}
+              </AccordionPanel>
+            </Accordion>
+          </AccordionGroup>
+        </Flex>
+      </DialogBody>
+    </Dialog>
   );
 }

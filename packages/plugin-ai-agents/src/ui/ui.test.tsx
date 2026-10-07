@@ -2,8 +2,14 @@ import '../setupTests';
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { render, cleanup, screen } from '@testing-library/react';
-import { Hint, Meter, StatusDot, TONE_FG } from '.';
+import {
+  render,
+  cleanup,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+import { CodeBlock, EmptyState, Hint, Meter, StatusDot, TONE_FG } from '.';
 
 afterEach(cleanup);
 
@@ -56,4 +62,43 @@ test('Hint keeps its child and makes it a tooltip trigger', () => {
     </Hint>,
   );
   assert.ok(screen.getByText('trigger'));
+});
+
+// --- CodeBlock / EmptyState --------------------------------------------------
+
+test('CodeBlock shows the text and copies it', async () => {
+  const written: string[] = [];
+  Object.defineProperty(globalThis.navigator, 'clipboard', {
+    value: { writeText: async (t: string) => void written.push(t) },
+    configurable: true,
+  });
+  render(<CodeBlock text={'aws bedrock\n  --region x'} language="bash" />);
+  const pre = document.querySelector('pre');
+  assert.equal(pre?.getAttribute('data-language'), 'bash');
+  assert.equal(pre?.textContent, 'aws bedrock\n  --region x');
+  fireEvent.click(screen.getByRole('button', { name: 'Copy to clipboard' }));
+  await waitFor(() => assert.deepEqual(written, ['aws bedrock\n  --region x']));
+  assert.ok(await screen.findByRole('button', { name: 'Copied' }));
+});
+
+test('CodeBlock wraps by default and can scroll instead', () => {
+  const { container, rerender } = render(<CodeBlock text="x" />);
+  assert.equal(container.querySelector('pre')?.style.whiteSpace, 'pre-wrap');
+  rerender(<CodeBlock text="x" wrap={false} />);
+  assert.equal(container.querySelector('pre')?.style.whiteSpace, 'pre');
+});
+
+test('EmptyState shows title, description and action', () => {
+  let pressed = 0;
+  render(
+    <EmptyState
+      title="Nothing here"
+      description="Add something."
+      action={<button onClick={() => (pressed += 1)}>Add</button>}
+    />,
+  );
+  assert.ok(screen.getByRole('heading', { name: 'Nothing here' }));
+  assert.ok(screen.getByText('Add something.'));
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  assert.equal(pressed, 1);
 });

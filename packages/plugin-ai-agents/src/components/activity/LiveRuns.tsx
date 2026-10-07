@@ -1,8 +1,5 @@
 import React from 'react';
-import Box from '@mui/material/Box';
-import LinearProgress from '@mui/material/LinearProgress';
-import Typography from '@mui/material/Typography';
-import { alpha, useTheme } from '@mui/material/styles';
+import { Flex, Grid, Text } from '@backstage/ui';
 import { useNow } from '../../hooks/useNow';
 import { formatMs } from '../../utils/stats';
 import { elapsedSince } from './format';
@@ -16,14 +13,13 @@ export interface LiveRunsProps {
   onSelect?: (runId: string) => void;
 }
 
-const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+const MONO = 'var(--bui-font-monospace)';
 
 /**
  * Every run currently in progress, side by side. Cards have a fixed size so a
  * run starting or finishing never shifts the others; selection is an outline.
  */
 export function LiveRuns({ runs, selectedRunId, onSelect }: LiveRunsProps) {
-  const theme = useTheme();
   const running = runs.filter(r => r.state === 'running');
   const now = useNow(1000, running.length > 0);
 
@@ -32,145 +28,109 @@ export function LiveRuns({ runs, selectedRunId, onSelect }: LiveRunsProps) {
       data-testid="live-runs"
       title={
         <>
-          Running now
-          <Box
-            component="span"
-            sx={{
-              ml: 1,
-              color: running.length ? 'info.main' : 'text.disabled',
+          Running now{' '}
+          <span
+            style={{
+              color: running.length
+                ? 'var(--bui-fg-info)'
+                : 'var(--bui-fg-disabled)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
             {running.length}
-          </Box>
+          </span>
         </>
       }
       subtitle={running.length > 1 ? 'concurrent executions' : undefined}
     >
       {running.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Text variant="body-medium" color="secondary">
           No runs in progress
-        </Typography>
+        </Text>
       ) : (
-        <Box
-          sx={{
-            display: 'grid',
+        <Grid.Root
+          gap="3"
+          style={{
             gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: 1.5,
           }}
         >
           {running.map(run => {
             const selected = run.runId === selectedRunId;
             return (
-              <Box
+              <button
                 key={run.runId}
-                component="button"
                 type="button"
                 data-testid="live-run"
                 data-run-id={run.runId}
                 aria-pressed={selected}
                 onClick={() => onSelect?.(run.runId)}
-                sx={{
+                style={{
                   all: 'unset',
                   boxSizing: 'border-box',
                   cursor: 'pointer',
-                  height: 104,
-                  p: 1.5,
-                  borderRadius: 1.5,
-                  border: 1,
-                  borderColor: alpha(theme.palette.info.main, 0.35),
-                  backgroundColor: alpha(theme.palette.info.main, 0.05),
+                  height: 96,
+                  padding: 'var(--bui-space-3)',
+                  borderRadius: 'var(--bui-radius-3)',
+                  border: '1px solid var(--bui-border-info)',
+                  background: 'var(--bui-bg-info)',
                   outline: selected
-                    ? `2px solid ${theme.palette.primary.main}`
+                    ? '2px solid var(--bui-ring)'
                     : '2px solid transparent',
                   outlineOffset: -1,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   overflow: 'hidden',
-                  position: 'relative',
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.info.main, 0.1),
-                  },
-                  '&:focus-visible': {
-                    outline: `2px solid ${theme.palette.primary.main}`,
-                    outlineOffset: -1,
-                  },
                 }}
               >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    minWidth: 0,
-                  }}
-                >
+                <Flex align="center" gap="2" style={{ minWidth: 0 }}>
                   <StatusDot state="running" size={10} />
-                  <Typography
-                    noWrap
-                    sx={{
+                  <span
+                    title={run.target}
+                    style={{
                       fontFamily: MONO,
-                      fontWeight: 700,
-                      fontSize: 15,
+                      fontWeight: 'var(--bui-font-weight-bold)',
                       flex: 1,
                       minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: 'var(--bui-fg-primary)',
                     }}
-                    title={run.target}
                   >
                     {run.target || 'run'}
-                  </Typography>
-                  <Typography
+                  </span>
+                  <span
                     data-testid="live-elapsed"
-                    sx={{
-                      fontSize: 13,
-                      fontWeight: 600,
+                    style={{
                       fontVariantNumeric: 'tabular-nums',
-                      color: 'info.main',
+                      color: 'var(--bui-fg-info)',
+                      fontWeight: 'var(--bui-font-weight-bold)',
                     }}
                   >
                     {formatMs(elapsedSince(run.startedAt, now))}
-                  </Typography>
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
+                  </span>
+                </Flex>
+                <div style={{ minWidth: 0 }}>
                   {run.project && (
-                    <Typography
-                      noWrap
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: 'block' }}
+                    <Text
+                      as="div"
+                      variant="body-small"
+                      color="secondary"
+                      truncate
                       title={run.project}
                     >
                       {run.project}
-                    </Typography>
+                    </Text>
                   )}
-                  <Typography
-                    noWrap
-                    variant="body2"
-                    sx={{ color: 'text.primary' }}
-                  >
+                  <Text as="div" variant="body-medium" truncate>
                     {run.currentActivity ?? 'working…'}
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  sx={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 3,
-                    '@media (prefers-reduced-motion: reduce)': {
-                      '& .MuiLinearProgress-bar': {
-                        animation: 'none',
-                        width: '35%',
-                      },
-                    },
-                  }}
-                />
-              </Box>
+                  </Text>
+                </div>
+              </button>
             );
           })}
-        </Box>
+        </Grid.Root>
       )}
     </SectionCard>
   );

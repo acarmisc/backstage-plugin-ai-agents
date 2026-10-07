@@ -139,14 +139,28 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   as the sibling litellm/litellm-chat plugins and correct in production
   (same origin behind ingress). Not a bug; don't "fix" it with
   `discoveryApi` unless you also fix the siblings.
-- **The `AgentDetailDrawer` uses `@mui/material` v5 `Drawer`** while the host
-  app pins `@material-ui/core` v4; both coexist. The v5 Drawer renders
-  `.MuiDrawer-paper` but may not expose `role="dialog"` — assert via DOM text
-  search, not class selector alone.
-- **The `@material-ui/icons/SmartToy` icon does not exist in v4.** Host
-  sidebars use v4 `@material-ui/icons`; use `Extension` there. Inside the
-  plugin source `@mui/icons-material` (v5) is fine (and `SmartToy` is used
-  for the page icon).
+- **The UI is BUI (`@backstage/ui`), not MUI.** Never import `@mui/*` or
+  `@material-ui/*` in the plugin; style with `--bui-*` tokens only (no hex).
+  Where BUI lacks a widget use the primitives in `src/ui` (`StatusDot`,
+  `Meter`, `Hint`, `CodeBlock`, `EmptyState`, `tone.ts`). Icons: `@remixicon/react`.
+  `@backstage/core-components` is deliberately not used in components: it
+  cannot load under `node --test`, so entity cards are split into pure
+  `*View` components that tests render directly. Keep `@backstage/ui`,
+  `frontend-plugin-api` and `plugin-app` pinned to the host's 1.53 manifest
+  versions, or the lockfile grows duplicate copies.
+- **BUI test gotchas.** `Avatar` shows an image only after a real `Image`
+  load (use `installImageStub`); `Select` options need `id` to keep
+  `leadingIcon`; `Tag href` is not an anchor (use `Link`); `Table` requires
+  `pagination` (`{ type: 'none' }`); react-aria presses in jsdom: Space on
+  list rows, Enter on table rows (`press` helper in the activity tests); the
+  toggle groups expose `role="radio"` + `aria-checked`.
+- **Page structure.** `page:ai-agents` has no loader; `SubPageBlueprint`s
+  `agents` and `activity` give header tabs (`/ai-agents/agents`,
+  `/ai-agents/activity`). The standalone `AgentsPage` (legacy apps) keeps
+  `?tab=` instead. `npm start` in the package is the NFS dev app,
+  `start:legacy` the old one.
+- **The detail panel is a BUI `Dialog`** with an `AccordionGroup`; lazy
+  sections mount only when expanded.
 
 ## Catalog model (don't change without coordination)
 

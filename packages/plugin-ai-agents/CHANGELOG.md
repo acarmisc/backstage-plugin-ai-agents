@@ -3,6 +3,39 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.17.0] - 2026-10-07
+
+### Changed
+
+- The whole UI now uses Backstage's own design system, `@backstage/ui` (BUI),
+  instead of Material UI v5, so it looks native in the New Frontend System
+  shell: cards, filters, dialogs, accordions, tables, tags, badges, tooltips
+  and form fields are BUI components styled only with `--bui-*` tokens (no
+  hard-coded colors; light/dark and custom themes follow the host). Where BUI
+  has no widget the plugin ships a small primitive (`StatusDot`, `Meter`,
+  `Hint`, `CodeBlock`, `EmptyState`). Icons come from `@remixicon/react`.
+- The agent detail panel is a BUI dialog with accordion sections (it was an
+  MUI drawer).
+- The `/ai-agents` page is split into `Agents` and `Activity` sub-pages shown
+  as tabs in the app header. **URL change:** `/ai-agents?tab=activity` is now
+  `/ai-agents/activity`; `/ai-agents` redirects to `/ai-agents/agents`.
+- Capability badges are neutral (one color) with a category icon, instead of
+  a rainbow of chips.
+- The standalone dev app (`npm start`) runs on the New Frontend System; the
+  previous one is `npm run start:legacy`.
+
+### Added
+
+- `AgentsGallery` (exported): the agent grid with filters, detail dialog and
+  Hire flow, for apps that compose their own page. Takes an optional
+  `activityHref`.
+
+### Removed
+
+- `@mui/material`, `@mui/icons-material` and `@emotion/*` dependencies. Apps
+  need `@backstage/ui` styles loaded, which the New Frontend System app
+  shell already does.
+
 ## [0.16.5] - 2026-10-04
 
 ### Fixed

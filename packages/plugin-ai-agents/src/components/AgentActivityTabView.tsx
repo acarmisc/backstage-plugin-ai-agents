@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import { useAvatarSrc } from '../hooks/useAvatarBlob';
+import { EmptyState } from '../ui';
 import type { AiAgent } from '../types';
 import { AgentWorkspacePanel } from './activity/AgentWorkspacePanel';
 
@@ -15,19 +14,18 @@ export function AgentActivityTabView({ agent }: { agent?: AiAgent }) {
   const telemetryId = agent.runtime.telemetryId;
   if (!telemetryId) {
     return (
-      <Box
-        sx={{ textAlign: 'center', py: 8, px: 2 }}
-        data-testid="activity-tab-hint"
-      >
-        <Typography variant="h6" gutterBottom>
-          Activity is not enabled for this agent
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Add the <code>ai-agent.io/telemetry-id</code> annotation (the
-          agent&apos;s name in your telemetry store) to see its runs, tool calls
-          and statistics here.
-        </Typography>
-      </Box>
+      <div data-testid="activity-tab-hint">
+        <EmptyState
+          title="Activity is not enabled for this agent"
+          description={
+            <>
+              Add the <code>ai-agent.io/telemetry-id</code> annotation (the
+              agent&apos;s name in your telemetry store) to see its runs, tool
+              calls and statistics here.
+            </>
+          }
+        />
+      </div>
     );
   }
 

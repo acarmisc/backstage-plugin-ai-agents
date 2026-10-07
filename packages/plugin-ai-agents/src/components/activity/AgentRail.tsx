@@ -1,15 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import Box from '@mui/material/Box';
-import InputBase from '@mui/material/InputBase';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
-import SearchIcon from '@mui/icons-material/Search';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import { alpha, useTheme } from '@mui/material/styles';
-import { AgentAvatar } from '../AgentAvatar';
+import React, { useMemo, useState } from 'react';
+import { Badge, Flex, List, ListRow, SearchField, Text } from '@backstage/ui';
+import { RiAlertLine, RiLayoutGridLine } from '@remixicon/react';
 import { useAvatarSrc } from '../../hooks/useAvatarBlob';
 import { relativeTime } from '../../utils/formatting';
+import { AgentAvatar } from '../AgentAvatar';
+import { Hint, TONE_BG, TONE_FG } from '../../ui';
 import { StatusDot } from './StatusPill';
 import type { AgentActivity, AgentRun } from '../../types';
 
@@ -21,19 +16,8 @@ export interface AgentRailProps {
   onSelectAgent: (telemetryId: string | undefined) => void;
 }
 
-const ITEM_HEIGHT = 56;
-
-/** Rail avatar resolved through the backend proxy, like the agent cards. */
-function ProxiedAvatar({
-  activity,
-  name,
-}: {
-  activity: AgentActivity;
-  name: string;
-}) {
-  const src = useAvatarSrc(activity.entityRef, activity.avatarUrl);
-  return <AgentAvatar name={name} avatarUrl={src} size={28} />;
-}
+/** Key of the "All agents" row. */
+const ALL = '__all__';
 
 function secondaryLine(activity: AgentActivity): string {
   const [latest] = activity.runs;
@@ -50,26 +34,18 @@ function aggregateState(activity: AgentActivity): AgentRun['state'] {
 
 function RunningChip({ count, label }: { count: number; label?: string }) {
   return (
-    <Box
+    <Badge
       data-testid="running-chip"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.5,
-        height: 20,
-        px: 0.75,
-        borderRadius: 10,
-        fontSize: 11,
-        fontWeight: 700,
+      size="small"
+      style={{
+        background: TONE_BG.info,
+        color: TONE_FG.info,
         fontVariantNumeric: 'tabular-nums',
-        color: 'info.main',
-        backgroundColor: theme => alpha(theme.palette.info.main, 0.14),
-        whiteSpace: 'nowrap',
       }}
     >
       {count}
       {label ? ` ${label}` : ''}
-    </Box>
+    </Badge>
   );
 }
 
@@ -82,32 +58,45 @@ function RailStatus({
 }) {
   if (activity.error) {
     return (
-      <Tooltip title="Telemetry unavailable">
-        <WarningAmberIcon
+      <Hint label="Telemetry unavailable">
+        <span
+          role="img"
+          tabIndex={0}
           aria-label="Telemetry unavailable"
-          sx={{ fontSize: 18, color: 'text.disabled' }}
-        />
-      </Tooltip>
+          style={{ display: 'inline-flex', color: 'var(--bui-fg-disabled)' }}
+        >
+          <RiAlertLine size={18} />
+        </span>
+      </Hint>
     );
   }
   if (running > 0) return <RunningChip count={running} />;
   return <StatusDot state={aggregateState(activity)} size={8} />;
 }
 
+/** Avatar through the backend proxy, like the cards (private-repo images). */
+function RailAvatar({
+  activity,
+  name,
+}: {
+  activity: AgentActivity;
+  name: string;
+}) {
+  const src = useAvatarSrc(activity.entityRef, activity.avatarUrl);
+  return <AgentAvatar name={name} avatarUrl={src} size={28} />;
+}
+
 /**
  * Left rail: "All agents" followed by the agents in a STABLE alphabetical
- * order (state changes never reorder it). Items have a fixed height and
- * selection only changes colours, so nothing moves when you click.
+ * order (state changes never reorder it). A BUI list: selection and arrow-key
+ * navigation come from the component.
  */
 export function AgentRail({
   fleet,
   selectedTelemetryId,
   onSelectAgent,
 }: AgentRailProps) {
-  const theme = useTheme();
   const [search, setSearch] = useState('');
-  const [focus, setFocus] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const agents = useMemo(() => {
     const sorted = [...fleet].sort((a, b) =>
@@ -127,212 +116,75 @@ export function AgentRail({
     (n, a) => n + a.runs.filter(r => r.state === 'running').length,
     0,
   );
-  const itemCount = agents.length + 1;
-
-  const choose = useCallback(
-    (index: number) =>
-      onSelectAgent(index === 0 ? undefined : agents[index - 1].telemetryId),
-    [agents, onSelectAgent],
-  );
-
-  const moveFocus = (next: number) => {
-    const clamped = Math.max(0, Math.min(itemCount - 1, next));
-    setFocus(clamped);
-    (
-      listRef.current?.querySelectorAll('[role="option"]')[clamped] as
-        HTMLElement | undefined
-    )?.focus();
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      moveFocus(focus + 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      moveFocus(focus - 1);
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      choose(focus);
-    }
-  };
-
-  const itemSx = (selected: boolean) => ({
-    boxSizing: 'border-box' as const,
-    height: ITEM_HEIGHT,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1.25,
-    px: 1.5,
-    borderRadius: 1.5,
-    cursor: 'pointer',
-    // Selection = background + inset accent. Nothing changes size or padding.
-    backgroundColor: selected
-      ? alpha(theme.palette.primary.main, 0.1)
-      : 'transparent',
-    boxShadow: selected
-      ? `inset 3px 0 0 ${theme.palette.primary.main}`
-      : 'none',
-    '&:hover': {
-      backgroundColor: selected
-        ? alpha(theme.palette.primary.main, 0.14)
-        : theme.palette.action.hover,
-    },
-    '&:focus-visible': {
-      outline: `2px solid ${theme.palette.primary.main}`,
-      outlineOffset: -2,
-    },
-  });
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: 1,
-        borderColor: 'divider',
-        backgroundColor: 'background.paper',
-      }}
-    >
-      <Box sx={{ p: 1.5, pb: 1 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            px: 1.25,
-            height: 36,
-            borderRadius: 1.5,
-            backgroundColor: theme.palette.action.hover,
-            '&:focus-within': {
-              boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.5)}`,
-            },
-          }}
-        >
-          <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-          <InputBase
-            fullWidth
-            placeholder="Search agents"
-            value={search}
-            onChange={e => {
-              setSearch(e.target.value);
-              setFocus(0);
-            }}
-            inputProps={{ 'aria-label': 'Search agents' }}
-            sx={{ fontSize: 13 }}
-          />
-        </Box>
-      </Box>
+    <Flex direction="column" gap="2" p="2" style={{ height: '100%' }}>
+      <SearchField
+        aria-label="Search agents"
+        placeholder="Search agents"
+        size="small"
+        value={search}
+        onChange={setSearch}
+      />
 
-      <Box
-        ref={listRef}
-        role="listbox"
+      <List
         aria-label="Agents"
-        onKeyDown={onKeyDown}
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          px: 1,
-          pb: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0.25,
+        selectionMode="single"
+        disallowEmptySelection
+        selectedKeys={[selectedTelemetryId ?? ALL]}
+        onSelectionChange={keys => {
+          const [key] = keys === 'all' ? [] : Array.from(keys);
+          if (key === undefined) return;
+          onSelectAgent(key === ALL ? undefined : String(key));
         }}
       >
-        <Box
-          role="option"
-          aria-selected={selectedTelemetryId === undefined}
-          tabIndex={focus === 0 ? 0 : -1}
-          onClick={() => onSelectAgent(undefined)}
-          onFocus={() => setFocus(0)}
-          sx={itemSx(selectedTelemetryId === undefined)}
+        <ListRow
+          id={ALL}
+          icon={<RiLayoutGridLine size={18} />}
+          description={`${fleet.length} monitored`}
+          customActions={
+            totalRunning > 0 ? (
+              <RunningChip count={totalRunning} label="running" />
+            ) : undefined
+          }
         >
-          <DashboardOutlinedIcon
-            sx={{ fontSize: 22, color: 'text.secondary', mx: '3px' }}
-          />
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-              All agents
-            </Typography>
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
-              {fleet.length} monitored
-            </Typography>
-          </Box>
-          {totalRunning > 0 && (
-            <RunningChip count={totalRunning} label="running" />
-          )}
-        </Box>
-
-        {agents.map((activity, i) => {
-          const index = i + 1;
-          const selected = selectedTelemetryId === activity.telemetryId;
+          All agents
+        </ListRow>
+        {agents.map(activity => {
           const running = activity.runs.filter(
             r => r.state === 'running',
           ).length;
           const title = activity.title ?? activity.telemetryId;
           return (
-            <Box
+            <ListRow
               key={activity.telemetryId}
-              role="option"
-              aria-selected={selected}
-              aria-label={title}
+              id={activity.telemetryId}
               data-testid="rail-item"
               data-telemetry-id={activity.telemetryId}
-              tabIndex={focus === index ? 0 : -1}
-              onClick={() => onSelectAgent(activity.telemetryId)}
-              onFocus={() => setFocus(index)}
-              sx={itemSx(selected)}
+              textValue={title}
+              icon={<RailAvatar activity={activity} name={title} />}
+              description={secondaryLine(activity)}
+              customActions={
+                <RailStatus activity={activity} running={running} />
+              }
             >
-              {activity.avatarUrl ? (
-                <ProxiedAvatar activity={activity} name={title} />
-              ) : (
-                <AgentAvatar name={title} size={28} />
-              )}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  noWrap
-                  sx={{
-                    fontSize: 14,
-                    fontWeight: selected ? 600 : 500,
-                    lineHeight: 1.3,
-                  }}
-                  title={title}
-                >
-                  {title}
-                </Typography>
-                <Typography
-                  noWrap
-                  sx={{
-                    fontSize: 12,
-                    color: 'text.secondary',
-                    lineHeight: 1.3,
-                  }}
-                  title={secondaryLine(activity)}
-                >
-                  {secondaryLine(activity)}
-                </Typography>
-              </Box>
-              <RailStatus activity={activity} running={running} />
-            </Box>
+              {title}
+            </ListRow>
           );
         })}
-
-        {agents.length === 0 && (
-          <Typography
-            sx={{
-              p: 2,
-              textAlign: 'center',
-              fontSize: 12,
-              color: 'text.secondary',
-            }}
-          >
-            {fleet.length === 0
-              ? 'No agents with telemetry'
-              : 'No agent matches your search'}
-          </Typography>
-        )}
-      </Box>
-    </Box>
+      </List>
+      {agents.length === 0 && (
+        <Text
+          variant="body-small"
+          color="secondary"
+          as="div"
+          style={{ padding: 'var(--bui-space-4)', textAlign: 'center' }}
+        >
+          {fleet.length === 0
+            ? 'No agents with telemetry'
+            : 'No agent matches your search'}
+        </Text>
+      )}
+    </Flex>
   );
 }

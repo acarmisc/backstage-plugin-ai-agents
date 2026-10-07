@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Grid, Skeleton } from '@backstage/ui';
-import { EmptyState } from '@backstage/core-components';
+import { RiRobot2Line, RiSearchLine } from '@remixicon/react';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
 import type { AiAgent, AgentStatus } from '../types';
@@ -9,6 +9,7 @@ import { AgentFiltersBar } from './AgentFilters';
 import { AgentsGrid } from './AgentsGrid';
 import { AgentDetailDrawer } from './AgentDetailDrawer';
 import { HireAgentDialog } from './HireAgentDialog';
+import { EmptyState } from '../ui';
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -148,7 +149,7 @@ export function AgentsGallery({ activityHref }: AgentsGalleryProps) {
         <EmptyState
           title="No AI agents registered"
           description="Add a Component with spec.type: ai-agent to the catalog."
-          missing="content"
+          icon={<RiRobot2Line size={40} />}
           action={
             <Button variant="secondary" onPress={() => retry()}>
               Retry
@@ -160,7 +161,7 @@ export function AgentsGallery({ activityHref }: AgentsGalleryProps) {
         <EmptyState
           title="No agents match these filters"
           description="Try loosening or clearing your search and filters."
-          missing="data"
+          icon={<RiSearchLine size={40} />}
           action={
             <Button variant="secondary" onPress={() => reset()}>
               Clear filters

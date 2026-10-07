@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import Skeleton from '@mui/material/Skeleton';
-import { useTheme, alpha } from '@mui/material/styles';
+import {
+  Badge,
+  Button,
+  Cell,
+  CellText,
+  Flex,
+  SearchField,
+  Skeleton,
+  Table,
+  Text,
+  ToggleButton,
+  ToggleButtonGroup,
+  type ColumnConfig,
+} from '@backstage/ui';
 import { relativeTime } from '../../utils/formatting';
 import { StatusPill } from './StatusPill';
 import { formatRunDuration } from './format';
@@ -23,279 +25,194 @@ export interface RecentRunsProps {
   loading?: boolean;
 }
 
-/**
- * Displays recent runs in a filterable MUI Table.
- * Supports filtering by status and text search on target/project/verdict.
- */
+type StateFilter = RunState | 'all';
+const FILTERS: StateFilter[] = ['all', 'running', 'completed', 'failed'];
+const PAGE = 30;
+
+type Row = AgentRun & { id: string };
+
+/** Recent runs in a BUI Table, filterable by state and by text. */
 export function RecentRuns({
   runs,
   selectedRunId,
   onSelect,
   loading = false,
 }: RecentRunsProps) {
-  const theme = useTheme();
-  const [filterState, setFilterState] = useState<RunState | 'all'>('all');
+  const [filterState, setFilterState] = useState<StateFilter>('all');
   const [searchText, setSearchText] = useState('');
-  const [displayCount, setDisplayCount] = useState(30);
+  const [displayCount, setDisplayCount] = useState(PAGE);
 
-  // Count runs by state
-  const stateCounts = useMemo(() => {
-    return {
+  const counts = useMemo(
+    () => ({
       all: runs.length,
       running: runs.filter(r => r.state === 'running').length,
       completed: runs.filter(r => r.state === 'completed').length,
       failed: runs.filter(r => r.state === 'failed').length,
-    };
-  }, [runs]);
+      unknown: runs.filter(r => r.state === 'unknown').length,
+    }),
+    [runs],
+  );
 
-  // Filter runs
   const filtered = useMemo(() => {
     let result = runs;
-
-    // State filter
     if (filterState !== 'all') {
       result = result.filter(r => r.state === filterState);
     }
-
-    // Text search
-    if (searchText.trim()) {
-      const lowerText = searchText.toLowerCase();
+    const text = searchText.trim().toLowerCase();
+    if (text) {
       result = result.filter(
         r =>
-          (r.target?.toLowerCase() ?? '').includes(lowerText) ||
-          (r.project?.toLowerCase() ?? '').includes(lowerText) ||
-          (r.verdict?.toLowerCase() ?? '').includes(lowerText),
+          (r.target?.toLowerCase() ?? '').includes(text) ||
+          (r.project?.toLowerCase() ?? '').includes(text) ||
+          (r.verdict?.toLowerCase() ?? '').includes(text),
       );
     }
-
     return result;
   }, [runs, filterState, searchText]);
 
-  const displayedRuns = filtered.slice(0, displayCount);
-  const hasMore = filtered.length > displayCount;
+  const rows: Row[] = useMemo(
+    () => filtered.slice(0, displayCount).map(r => ({ ...r, id: r.runId })),
+    [filtered, displayCount],
+  );
+
+  const columns: ColumnConfig<Row>[] = useMemo(
+    () => [
+      {
+        id: 'status',
+        label: 'Status',
+        width: 130,
+        cell: run => (
+          <Cell>
+            <StatusPill state={run.state} size="small" />
+          </Cell>
+        ),
+      },
+      {
+        id: 'target',
+        label: 'Target',
+        isRowHeader: true,
+        defaultWidth: '3fr',
+        cell: run => (
+          <CellText title={run.target || '—'} description={run.project} />
+        ),
+      },
+      {
+        id: 'started',
+        label: 'Started',
+        width: 110,
+        cell: run => (
+          <CellText title={relativeTime(run.startedAt)} color="secondary" />
+        ),
+      },
+      {
+        id: 'duration',
+        label: 'Duration',
+        width: 100,
+        cell: run => (
+          <CellText
+            title={
+              run.state === 'running' ? 'running…' : formatRunDuration(run)
+            }
+            color="primary"
+          />
+        ),
+      },
+      {
+        id: 'verdict',
+        label: 'Verdict',
+        defaultWidth: '2fr',
+        cell: run => (
+          <Cell>
+            {run.verdict ? <Badge size="small">{run.verdict}</Badge> : null}
+          </Cell>
+        ),
+      },
+    ],
+    [],
+  );
 
   if (loading && runs.length === 0) {
     return (
-      <Box sx={{ my: 3 }}>
-        <Skeleton variant="text" width={100} height={24} />
-        <Box sx={{ mt: 2 }}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              variant="rectangular"
-              height={44}
-              sx={{ my: 0.5 }}
-            />
-          ))}
-        </Box>
-      </Box>
+      <Flex direction="column" gap="2" p="4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} height={40} />
+        ))}
+      </Flex>
     );
   }
 
   return (
-    <Box>
-      {/* Filters */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1,
-          p: 1.5,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-        }}
-      >
-        {['all', 'running', 'completed', 'failed'].map(state => (
-          <Chip
-            key={state}
-            label={`${state === 'all' ? 'All' : state.charAt(0).toUpperCase() + state.slice(1)} · ${
-              (stateCounts as any)[state]
-            }`}
-            onClick={() => setFilterState(state as any)}
-            color={filterState === state ? 'primary' : 'default'}
-            variant={filterState === state ? 'filled' : 'outlined'}
-            size="small"
-            data-filter={state}
-            aria-pressed={filterState === state}
-          />
-        ))}
-      </Box>
-
-      {/* Search box */}
-      <Box sx={{ px: 1.5, pb: 1.5 }}>
-        <input
+    <Flex direction="column" gap="3">
+      <Flex direction="column" gap="3" p="4" pb="0">
+        <ToggleButtonGroup
+          aria-label="Filter by status"
+          selectionMode="single"
+          disallowEmptySelection
+          selectedKeys={[filterState]}
+          onSelectionChange={keys => {
+            const [key] = Array.from(keys);
+            if (key !== undefined) {
+              setFilterState(key as StateFilter);
+              setDisplayCount(PAGE);
+            }
+          }}
+          style={{ flexWrap: 'wrap' }}
+        >
+          {FILTERS.map(state => (
+            <ToggleButton
+              key={state}
+              id={state}
+              size="small"
+              data-filter={state}
+            >
+              {`${state === 'all' ? 'All' : state[0].toUpperCase() + state.slice(1)} · ${counts[state]}`}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+        <SearchField
           aria-label="Filter runs"
-          type="text"
-          placeholder="Search by target, project, or verdict..."
+          placeholder="Search by target, project or verdict"
+          size="small"
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            fontFamily: 'inherit',
-            fontSize: '14px',
+          onChange={value => {
+            setSearchText(value);
+            setDisplayCount(PAGE);
           }}
         />
-      </Box>
+      </Flex>
 
-      {/* Table */}
-      {displayedRuns.length > 0 ? (
-        <TableContainer
-          sx={{
-            borderTop: `1px solid ${theme.palette.divider}`,
-            maxHeight: 560,
-          }}
-        >
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow
-                sx={{
-                  '& th': {
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.4,
-                    color: 'text.secondary',
-                    backgroundColor: theme.palette.background.paper,
-                  },
-                }}
-              >
-                <TableCell sx={{ width: 120 }}>Status</TableCell>
-                <TableCell>Target</TableCell>
-                <TableCell sx={{ width: 100 }}>Started</TableCell>
-                <TableCell sx={{ width: 90 }}>Duration</TableCell>
-                <TableCell>Verdict</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {displayedRuns.map(run => {
-                const isSelected = run.runId === selectedRunId;
-                const startedTime = run.startedAt
-                  ? new Date(run.startedAt)
-                  : null;
-                const absoluteTime = startedTime?.toLocaleString() ?? '';
+      <Table<Row>
+        columnConfig={columns}
+        data={rows}
+        pagination={{ type: 'none' }}
+        selection={{
+          mode: 'single',
+          behavior: 'replace',
+          selected: selectedRunId ? [selectedRunId] : [],
+          onSelectionChange: keys => {
+            if (keys === 'all') return;
+            const [key] = Array.from(keys);
+            if (key !== undefined) onSelect?.(String(key));
+          },
+        }}
+        emptyState={
+          <Text as="p" color="secondary" style={{ textAlign: 'center' }}>
+            No runs found
+          </Text>
+        }
+      />
 
-                return (
-                  <TableRow
-                    key={run.runId}
-                    tabIndex={0}
-                    onClick={() => onSelect?.(run.runId)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onSelect?.(run.runId);
-                      }
-                    }}
-                    aria-selected={isSelected}
-                    sx={{
-                      height: 52,
-                      cursor: 'pointer',
-                      backgroundColor: isSelected
-                        ? alpha(theme.palette.primary.main, 0.08)
-                        : 'inherit',
-                      '&:hover': {
-                        backgroundColor: alpha(theme.palette.action.hover, 0.5),
-                      },
-                      '&:focus-visible': {
-                        outline: `2px solid ${theme.palette.primary.main}`,
-                        outlineOffset: '-1px',
-                      },
-                    }}
-                  >
-                    <TableCell>
-                      <StatusPill state={run.state} size="small" />
-                    </TableCell>
-                    <TableCell sx={{ maxWidth: 240 }}>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography
-                          noWrap
-                          sx={{
-                            fontFamily:
-                              'ui-monospace, SFMono-Regular, Menlo, monospace',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {run.target || '—'}
-                        </Typography>
-                        {run.project && (
-                          <Typography
-                            noWrap
-                            title={run.project}
-                            sx={{
-                              fontSize: '12px',
-                              color: theme.palette.text.secondary,
-                            }}
-                          >
-                            {run.project}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell title={absoluteTime}>
-                      <Typography
-                        sx={{ fontSize: '13px', color: 'text.secondary' }}
-                      >
-                        {relativeTime(run.startedAt)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        sx={{
-                          fontSize: '13px',
-                          fontVariantNumeric: 'tabular-nums',
-                          color:
-                            run.state === 'running'
-                              ? 'info.main'
-                              : 'text.primary',
-                        }}
-                      >
-                        {run.state === 'running'
-                          ? 'running…'
-                          : formatRunDuration(run)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      {run.verdict && (
-                        <Chip
-                          label={run.verdict}
-                          size="small"
-                          variant="outlined"
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Typography
-          sx={{
-            py: 3,
-            color: theme.palette.text.secondary,
-            textAlign: 'center',
-          }}
-        >
-          No runs found
-        </Typography>
-      )}
-
-      {/* Show more button */}
-      {hasMore && (
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
+      {filtered.length > displayCount && (
+        <Flex justify="center" pb="3">
           <Button
-            onClick={() => setDisplayCount(prev => prev + 30)}
+            variant="tertiary"
             size="small"
+            onPress={() => setDisplayCount(n => n + PAGE)}
           >
             Show more ({filtered.length - displayCount} remaining)
           </Button>
-        </Box>
+        </Flex>
       )}
-    </Box>
+    </Flex>
   );
 }

@@ -1,3 +1,7 @@
+export { CodeBlock } from './CodeBlock';
+export type { CodeBlockProps } from './CodeBlock';
+export { EmptyState } from './EmptyState';
+export type { EmptyStateProps } from './EmptyState';
 export { Hint } from './Hint';
 export type { HintProps } from './Hint';
 export { Meter } from './Meter';
