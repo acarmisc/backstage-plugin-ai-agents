@@ -1,14 +1,12 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Fade from '@mui/material/Fade';
-import Rating from '@mui/material/Rating';
-import Typography from '@mui/material/Typography';
-import StarIcon from '@mui/icons-material/Star';
+import React, { useId, useState } from 'react';
+import { Text, VisuallyHidden } from '@backstage/ui';
+import { RiStarFill, RiStarHalfFill, RiStarLine } from '@remixicon/react';
 
 /** @public */
 export type StarVariant = 'simple' | 'fancy';
 
 const LABELS = ['Poor', 'Fair', 'Good', 'Great', 'Excellent'];
+const STARS = [1, 2, 3, 4, 5];
 
 /** @public */
 export interface StarRatingProps {
@@ -18,11 +16,40 @@ export interface StarRatingProps {
   variant?: StarVariant;
 }
 
+type Fill = 'full' | 'half' | 'empty';
+
+function fillOf(star: number, value: number): Fill {
+  if (value >= star) return 'full';
+  if (value >= star - 0.5) return 'half';
+  return 'empty';
+}
+
+function Star({ fill, size }: { fill: Fill; size: number }) {
+  const Icon = { full: RiStarFill, half: RiStarHalfFill, empty: RiStarLine }[
+    fill
+  ];
+  return (
+    <Icon
+      size={size}
+      aria-hidden="true"
+      style={{
+        display: 'block',
+        color:
+          fill === 'empty' ? 'var(--bui-fg-disabled)' : 'var(--bui-fg-warning)',
+      }}
+    />
+  );
+}
+
 /**
- * 0-5 star rating widget.
- * - `simple`: compact read-mostly stars (cards, rows).
- * - `fancy`: interactive large stars with hover animation and labels
+ * 0-5 star rating widget, built on BUI tokens and Remix icons (BUI has no
+ * rating component).
+ * - `simple`: compact stars (cards, rows); read-only unless `onChange` is set.
+ * - `fancy`: interactive large stars with hover preview and a text label
  *   (review forms).
+ *
+ * Interactive stars are native radio inputs, so keyboard and screen-reader
+ * behavior come from the platform.
  *
  * @public
  */
@@ -31,52 +58,80 @@ export function StarRating({
   onChange,
   variant = 'simple',
 }: StarRatingProps) {
-  if (variant === 'simple') {
+  const groupName = useId();
+  const [hover, setHover] = useState(0);
+  const [focused, setFocused] = useState(0);
+  const fancy = variant === 'fancy';
+  const size = fancy ? 28 : 16;
+  // Half stars only make sense for averages shown read-only.
+  const precision = fancy || onChange ? 1 : 0.5;
+  const rounded = Math.round(value / precision) * precision;
+
+  if (!onChange) {
     return (
-      <Rating
-        name="star-rating-simple"
-        value={value}
-        precision={0.5}
-        readOnly={!onChange}
-        onChange={(_, v) => onChange?.(v ?? 0)}
-        size="small"
-      />
+      <span
+        role="img"
+        aria-label={`Rated ${value} out of 5`}
+        style={{ display: 'inline-flex', gap: 2 }}
+      >
+        {STARS.map(n => (
+          <Star key={n} fill={fillOf(n, rounded)} size={size} />
+        ))}
+      </span>
     );
   }
 
+  const shown = hover || rounded;
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Rating
-        name="star-rating-fancy"
-        value={value}
-        precision={1}
-        onChange={(_, v) => onChange?.(v ?? 0)}
-        size="large"
-        icon={
-          <StarIcon
-            fontSize="inherit"
-            sx={{
-              color: 'warning.main',
-              transition: theme =>
-                `transform ${theme.transitions.duration.short}ms ${theme.transitions.easing.easeInOut}`,
-              filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.45))',
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+      <span
+        role="radiogroup"
+        aria-label="Rating"
+        tabIndex={-1}
+        style={{ display: 'inline-flex', gap: 2 }}
+        onMouseLeave={() => setHover(0)}
+      >
+        {STARS.map(n => (
+          <label
+            key={n}
+            onMouseEnter={() => setHover(n)}
+            style={{
+              position: 'relative',
+              cursor: 'pointer',
+              lineHeight: 0,
+              borderRadius: 'var(--bui-radius-2)',
+              outline: focused === n ? '2px solid var(--bui-ring)' : 'none',
+              outlineOffset: 2,
+              transition: 'transform 120ms ease-in-out',
+              transform: hover === n ? 'scale(1.15)' : undefined,
             }}
-          />
-        }
-        sx={{
-          fontSize: 34,
-          '& .MuiRating-icon': {
-            transition: theme =>
-              `transform ${theme.transitions.duration.short}ms ${theme.transitions.easing.easeInOut}`,
-          },
-          '& .MuiRating-iconHover': { transform: 'scale(1.25) rotate(-8deg)' },
-        }}
-      />
-      <Fade in={value > 0}>
-        <Typography variant="body2" fontWeight={600} sx={{ minWidth: 60 }}>
-          {value > 0 ? LABELS[value - 1] : ''}
-        </Typography>
-      </Fade>
-    </Box>
+          >
+            <VisuallyHidden>
+              <input
+                type="radio"
+                name={groupName}
+                value={n}
+                checked={Math.round(value) === n}
+                aria-label={`${n} ${n === 1 ? 'Star' : 'Stars'}`}
+                onChange={() => onChange(n)}
+                onFocus={() => setFocused(n)}
+                onBlur={() => setFocused(0)}
+              />
+            </VisuallyHidden>
+            <Star fill={fillOf(n, shown)} size={size} />
+          </label>
+        ))}
+      </span>
+      {fancy && (
+        <Text
+          as="p"
+          variant="body-medium"
+          weight="bold"
+          style={{ minWidth: 64, margin: 0 }}
+        >
+          {value > 0 ? LABELS[Math.round(value) - 1] : ''}
+        </Text>
+      )}
+    </span>
   );
 }

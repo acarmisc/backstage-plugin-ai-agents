@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import Skeleton from '@mui/material/Skeleton';
-import Typography from '@mui/material/Typography';
-import CloseIcon from '@mui/icons-material/Close';
+import {
+  Alert,
+  Button,
+  ButtonIcon,
+  Flex,
+  Grid,
+  Skeleton,
+  Text,
+} from '@backstage/ui';
+import { RiCloseLine } from '@remixicon/react';
 import { useNow } from '../../hooks/useNow';
 import { useRunTimeline } from '../../hooks/useWorkspaceData';
 import { relativeTime } from '../../utils/formatting';
@@ -32,30 +35,20 @@ function Fact({
   title?: string;
 }) {
   return (
-    <Box sx={{ minWidth: 0 }} title={title}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{
-          display: 'block',
-          textTransform: 'uppercase',
-          letterSpacing: 0.4,
-          fontSize: 10.5,
-        }}
-      >
+    <div style={{ minWidth: 0 }} title={title}>
+      <Text as="div" variant="body-small" color="secondary">
         {label}
-      </Typography>
-      <Typography
-        noWrap
-        sx={{
-          fontSize: 14,
-          fontWeight: 600,
-          fontVariantNumeric: 'tabular-nums',
-        }}
+      </Text>
+      <Text
+        as="div"
+        variant="body-medium"
+        weight="bold"
+        truncate
+        style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {children}
-      </Typography>
-    </Box>
+      </Text>
+    </div>
   );
 }
 
@@ -96,132 +89,125 @@ export function RunDetail({ entityRef, run, onClose }: RunDetailProps) {
   }, [events, selectedSeq]);
 
   return (
-    <Box ref={ref}>
+    <div ref={ref}>
       <SectionCard
         data-testid="run-detail"
         title={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Flex align="center" gap="2" style={{ display: 'inline-flex' }}>
             <StatusPill state={run.state} size="small" />
-            <Box
-              component="span"
-              sx={{
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              }}
-            >
+            <span style={{ fontFamily: 'var(--bui-font-monospace)' }}>
               {run.target ?? run.runId.slice(0, 8)}
-            </Box>
-          </Box>
+            </span>
+          </Flex>
         }
         subtitle={run.project}
         action={
           onClose && (
-            <IconButton
+            <ButtonIcon
+              variant="tertiary"
               size="small"
-              onClick={onClose}
               aria-label="Close run details"
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
+              icon={<RiCloseLine size={16} />}
+              onPress={onClose}
+            />
           )
         }
       >
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))',
-            gap: 2,
-            mb: 2,
-          }}
-        >
-          <Fact label="Started" title={run.startedAt}>
-            {relativeTime(run.startedAt)}
-          </Fact>
-          <Fact label={running ? 'Elapsed' : 'Duration'}>
-            {formatMs(runDuration(run, now))}
-          </Fact>
-          <Fact label="Tool calls">{events ? stats.calls : '—'}</Fact>
-          <Fact label="Errors">
-            <Box
-              component="span"
-              sx={{ color: stats.errors > 0 ? 'error.main' : undefined }}
-            >
-              {events ? stats.errors : '—'}
-            </Box>
-          </Fact>
-          <Fact label="Max parallel">{events ? stats.parallel : '—'}</Fact>
-        </Box>
-
-        {run.verdict && (
-          <Typography variant="body2" sx={{ mb: 1.5 }}>
-            <Box component="span" sx={{ color: 'text.secondary' }}>
-              Verdict ·{' '}
-            </Box>
-            {run.verdict}
-          </Typography>
-        )}
-        {stats.incomplete && (
-          <Alert severity="warning" sx={{ mb: 1.5 }}>
-            Run did not complete: {stats.incomplete}
-          </Alert>
-        )}
-
-        {loading && !events && <Skeleton variant="rounded" height={160} />}
-        {error && !events && (
-          <Alert
-            severity="error"
-            action={
-              <Button size="small" onClick={refresh}>
-                Retry
-              </Button>
-            }
+        <Flex direction="column" gap="3">
+          <Grid.Root
+            gap="4"
+            style={{
+              gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))',
+            }}
           >
-            Could not load the timeline
-          </Alert>
-        )}
-        {events && events.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No events recorded for this run
-          </Typography>
-        )}
-        {events && events.length > 0 && (
-          <>
-            <Waterfall
-              events={events}
-              selectedSeq={selectedSeq}
-              onSelect={setSelectedSeq}
-            />
-            {stats.selected && (
-              <Box
-                data-testid="tool-detail"
-                sx={{
-                  mt: 1.5,
-                  px: 1.5,
-                  py: 1,
-                  borderRadius: 1.5,
-                  backgroundColor: 'action.hover',
-                  fontSize: 13,
+            <Fact label="Started" title={run.startedAt}>
+              {relativeTime(run.startedAt)}
+            </Fact>
+            <Fact label={running ? 'Elapsed' : 'Duration'}>
+              {formatMs(runDuration(run, now))}
+            </Fact>
+            <Fact label="Tool calls">{events ? stats.calls : '—'}</Fact>
+            <Fact label="Errors">
+              <span
+                style={{
+                  color: stats.errors > 0 ? 'var(--bui-fg-danger)' : undefined,
                 }}
               >
-                <strong>{stats.selected.tool}</strong>
-                {' · '}
-                {formatMs(stats.selected.durationMs ?? 0)}
-                {' · '}
-                <Box
-                  component="span"
-                  sx={{
-                    color:
-                      stats.selected.outcome === 'ok'
-                        ? 'success.main'
-                        : 'error.main',
+                {events ? stats.errors : '—'}
+              </span>
+            </Fact>
+            <Fact label="Max parallel">{events ? stats.parallel : '—'}</Fact>
+          </Grid.Root>
+
+          {run.verdict && (
+            <Text as="p" variant="body-medium">
+              <Text as="span" color="secondary">
+                Verdict ·{' '}
+              </Text>
+              {run.verdict}
+            </Text>
+          )}
+          {stats.incomplete && (
+            <Alert
+              status="warning"
+              title={`Run did not complete: ${stats.incomplete}`}
+            />
+          )}
+
+          {loading && !events && <Skeleton height={160} rounded />}
+          {error && !events && (
+            <Alert
+              status="danger"
+              title="Could not load the timeline"
+              customActions={
+                <Button size="small" variant="secondary" onPress={refresh}>
+                  Retry
+                </Button>
+              }
+            />
+          )}
+          {events && events.length === 0 && (
+            <Text as="p" variant="body-medium" color="secondary">
+              No events recorded for this run
+            </Text>
+          )}
+          {events && events.length > 0 && (
+            <>
+              <Waterfall
+                events={events}
+                selectedSeq={selectedSeq}
+                onSelect={setSelectedSeq}
+              />
+              {stats.selected && (
+                <div
+                  data-testid="tool-detail"
+                  style={{
+                    padding: 'var(--bui-space-2) var(--bui-space-3)',
+                    borderRadius: 'var(--bui-radius-3)',
+                    background: 'var(--bui-bg-neutral-2)',
+                    fontSize: 'var(--bui-font-size-3)',
                   }}
                 >
-                  {stats.selected.outcome ?? 'ok'}
-                </Box>
-              </Box>
-            )}
-          </>
-        )}
+                  <strong>{stats.selected.tool}</strong>
+                  {' · '}
+                  {formatMs(stats.selected.durationMs ?? 0)}
+                  {' · '}
+                  <span
+                    style={{
+                      color:
+                        stats.selected.outcome === 'ok'
+                          ? 'var(--bui-fg-success)'
+                          : 'var(--bui-fg-danger)',
+                    }}
+                  >
+                    {stats.selected.outcome ?? 'ok'}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </Flex>
       </SectionCard>
-    </Box>
+    </div>
   );
 }

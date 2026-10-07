@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Skeleton from '@mui/material/Skeleton';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Typography from '@mui/material/Typography';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import {
+  Alert,
+  ButtonIcon,
+  Flex,
+  Grid,
+  Skeleton,
+  Text,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@backstage/ui';
+import { RiRefreshLine } from '@remixicon/react';
 import { AgentAvatar } from '../AgentAvatar';
 import { useAgentInsights, useAgentRuns } from '../../hooks/useWorkspaceData';
 import { formatMs, formatPct } from '../../utils/stats';
@@ -93,21 +96,14 @@ export function AgentWorkspacePanel({
   const hasRunDetail = selectedRun !== undefined;
 
   return (
-    <Box
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, minWidth: 0 }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-          flexWrap: 'wrap',
-        }}
+    <Flex direction="column" gap="5" style={{ minWidth: 0 }}>
+      <Flex
+        align="center"
+        justify="between"
+        gap="4"
+        style={{ flexWrap: 'wrap' }}
       >
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}
-        >
+        <Flex align="center" gap="3" style={{ minWidth: 0 }}>
           {!embedded && (
             <AgentAvatar
               name={title ?? telemetryId}
@@ -115,65 +111,61 @@ export function AgentWorkspacePanel({
               size={40}
             />
           )}
-          <Box sx={{ minWidth: 0 }}>
-            <Typography
-              variant="h6"
-              noWrap
-              sx={{ fontWeight: 600, lineHeight: 1.25 }}
-            >
+          <div style={{ minWidth: 0 }}>
+            <Text as="h2" variant="title-x-small" weight="bold" truncate>
               {title ?? telemetryId}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            </Text>
+            <Flex align="center" gap="2">
               <StatusPill state={aggregate} size="small" />
-              <Typography variant="caption" color="text.secondary">
+              <Text variant="body-small" color="secondary">
                 {telemetryId}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton
-            size="small"
+              </Text>
+            </Flex>
+          </div>
+        </Flex>
+        <Flex align="center" gap="2">
+          <ButtonIcon
             aria-label="Refresh"
-            title="Refresh"
-            onClick={() => {
+            variant="tertiary"
+            size="small"
+            icon={<RiRefreshLine size={16} />}
+            onPress={() => {
               refreshRuns();
               refreshInsights();
             }}
-          >
-            <RefreshIcon fontSize="small" />
-          </IconButton>
+          />
           {onHoursChange && (
             <ToggleButtonGroup
-              value={hours}
-              exclusive
-              size="small"
               aria-label="Time window"
-              onChange={(_, v) => v !== null && onHoursChange(v)}
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={[String(hours)]}
+              onSelectionChange={keys => {
+                const [key] = Array.from(keys);
+                if (key !== undefined) onHoursChange(Number(key));
+              }}
             >
               {[6, 24, 72].map(h => (
-                <ToggleButton
-                  key={h}
-                  value={h}
-                  sx={{ px: 1.5, py: 0.25, textTransform: 'none' }}
-                >
+                <ToggleButton key={h} id={String(h)} size="small">
                   {h}h
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           )}
-        </Box>
-      </Box>
+        </Flex>
+      </Flex>
 
       {insightsError && !insights && (
-        <Alert severity="warning">Statistics are temporarily unavailable</Alert>
+        <Alert
+          status="warning"
+          title="Statistics are temporarily unavailable"
+        />
       )}
 
-      <Box
-        sx={{
-          display: 'grid',
+      <Grid.Root
+        gap="4"
+        style={{
           gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-          gap: 2,
         }}
       >
         <KpiTile
@@ -212,23 +204,20 @@ export function AgentWorkspacePanel({
           hint={runningNow > 1 ? 'concurrent' : undefined}
           loading={runsLoading && !runs}
         />
-      </Box>
+      </Grid.Root>
 
       {runs && (
         <LiveRuns runs={runs} selectedRunId={runId} onSelect={setRunId} />
       )}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2.5,
+      <Grid.Root
+        gap="5"
+        style={{
           alignItems: 'start',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            xl: hasRunDetail
-              ? 'minmax(0, 1.15fr) minmax(0, 1fr)'
-              : 'minmax(0, 1fr)',
-          },
+          // Run detail sits beside the list when there is room for both.
+          gridTemplateColumns: hasRunDetail
+            ? 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))'
+            : 'minmax(0, 1fr)',
         }}
       >
         <SectionCard title="Recent runs" subtitle="newest first" flush>
@@ -246,17 +235,14 @@ export function AgentWorkspacePanel({
             onClose={() => setRunId(undefined)}
           />
         )}
-      </Box>
+      </Grid.Root>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2.5,
+      <Grid.Root
+        gap="5"
+        style={{
           alignItems: 'start',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            lg: 'repeat(2, minmax(0, 1fr))',
-          },
+          gridTemplateColumns:
+            'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
         }}
       >
         <SectionCard
@@ -266,17 +252,17 @@ export function AgentWorkspacePanel({
           {insights ? (
             <HourlyBars buckets={insights.histogram} height={150} />
           ) : (
-            <Skeleton variant="rounded" height={150} />
+            <Skeleton height={150} rounded />
           )}
         </SectionCard>
         <SectionCard title="Tools" subtitle="calls, errors and latency">
           {insights ? (
             <ToolBars tools={insights.tools} />
           ) : (
-            <Skeleton variant="rounded" height={150} />
+            <Skeleton height={150} rounded />
           )}
         </SectionCard>
-      </Box>
-    </Box>
+      </Grid.Root>
+    </Flex>
   );
 }

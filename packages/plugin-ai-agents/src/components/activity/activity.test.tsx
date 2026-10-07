@@ -3,8 +3,6 @@ import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { render, cleanup, fireEvent } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import { StatusPill, StatusDot } from './StatusPill';
 import { KpiTile } from './KpiTile';
 import { HourlyBars } from './HourlyBars';
@@ -15,16 +13,7 @@ import type { HourBucket, ToolStat, RunEvent } from '../../types';
 
 afterEach(cleanup);
 
-const theme = createTheme();
-
-function renderWithTheme(element: React.ReactElement) {
-  return render(
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {element}
-    </ThemeProvider>,
-  );
-}
+const renderWithTheme = (element: React.ReactElement) => render(element);
 
 // ============================================================================
 // stateColor and stateLabel tests
@@ -47,8 +36,9 @@ test('stateLabel: unknown', () => {
 });
 
 test('stateColor: returns color for each state', () => {
-  const color = stateColor(theme, 'running');
-  assert.ok(typeof color === 'string' && color.length > 0);
+  const color = stateColor('running');
+  assert.ok(color.startsWith('var(--bui-'), 'colors are BUI tokens');
+  assert.notEqual(stateColor('failed'), stateColor('completed'));
 });
 
 // ============================================================================
@@ -131,7 +121,7 @@ test('KpiTile: shows loading skeleton when loading=true', () => {
   const { container } = renderWithTheme(
     <KpiTile label="Loading" value={42} loading />,
   );
-  const skeleton = container.querySelector('[class*="MuiSkeleton"]');
+  const skeleton = container.querySelector('[class*="Skeleton"]');
   assert.ok(skeleton);
 });
 
@@ -204,9 +194,9 @@ test('HourlyBars: x labels are thinned for long windows', () => {
     failed: 0,
   }));
   const { container } = renderWithTheme(<HourlyBars buckets={buckets} />);
-  const labels = [
-    ...container.querySelectorAll('span.MuiTypography-caption'),
-  ].filter(n => /^\d\d:00$/.test(n.textContent ?? ''));
+  const labels = [...container.querySelectorAll('span')].filter(n =>
+    /^\d\d:00$/.test(n.textContent ?? ''),
+  );
   assert.strictEqual(labels.length, 6, '72 buckets -> a label every 12 hours');
 });
 

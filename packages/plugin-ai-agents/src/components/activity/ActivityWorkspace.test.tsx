@@ -6,7 +6,6 @@ import {
   render,
   cleanup,
   screen,
-  within,
   fireEvent,
   waitFor,
 } from '@testing-library/react';
@@ -18,6 +17,7 @@ import { RecentRuns } from './RecentRuns';
 import { RunDetail } from './RunDetail';
 import { AgentWorkspacePanel } from './AgentWorkspacePanel';
 import { installApi, resetApi } from '../../__fixtures__/testApi';
+import { installImageStub } from '../../__fixtures__/imageStub';
 import type {
   AgentActivity,
   AgentInsights,
@@ -80,6 +80,12 @@ const stubApi = (over: Record<string, unknown> = {}) =>
     ...over,
   });
 
+/** react-aria presses: a keyboard activation works the same in every env. */
+const press = (el: Element, key = ' ') => {
+  fireEvent.keyDown(el, { key });
+  fireEvent.keyUp(el, { key });
+};
+
 const Loc: React.FC = () => <div data-testid="loc">{useLocation().search}</div>;
 const renderAt = (ui: React.ReactElement, url = '/') =>
   render(
@@ -97,6 +103,7 @@ const railOrder = (container: HTMLElement) =>
   );
 
 test('rail: alphabetical by title and stable when states and input order change', () => {
+  stubApi();
   const calm = [
     agent('z', 'Zed', [run('1')]),
     agent('a', 'Alpha'),
@@ -118,6 +125,7 @@ test('rail: alphabetical by title and stable when states and input order change'
 });
 
 test('rail: shows how many runs each agent has in progress, and the fleet total', () => {
+  stubApi();
   const fleet = [
     agent('d', 'Dinesh', [
       run('1', { state: 'running' }),
@@ -138,11 +146,12 @@ test('rail: shows how many runs each agent has in progress, and the fleet total'
   assert.equal(chips('d'), '3');
   assert.equal(chips('e'), '1');
   assert.equal(chips('g'), undefined, 'idle agent has no running chip');
-  const all = container.querySelector('[role="option"]');
+  const all = container.querySelector('[role="row"]');
   assert.match(all?.textContent ?? '', /4 running/);
 });
 
 test('rail: secondary line shows what a running agent is doing and "Idle" otherwise', () => {
+  stubApi();
   const fleet = [
     agent('d', 'Dinesh', [
       run('1', { state: 'running', currentActivity: 'after get_file_content' }),
@@ -160,20 +169,17 @@ test('rail: secondary line shows what a running agent is doing and "Idle" otherw
   assert.match(text('m'), /No runs yet/);
 });
 
-test('rail: arrow keys move focus, Enter selects, and selection is exposed with aria-selected', () => {
+test('rail: rows select on press and the selection is exposed with aria-selected', () => {
+  stubApi();
   const picked: Array<string | undefined> = [];
   const fleet = [agent('a', 'Alpha'), agent('b', 'Beta')];
   const { container, rerender } = render(
     <AgentRail fleet={fleet} onSelectAgent={id => picked.push(id)} />,
   );
-  const listbox = screen.getByRole('listbox');
-  fireEvent.keyDown(listbox, { key: 'ArrowDown' }); // All agents -> Alpha
-  fireEvent.keyDown(listbox, { key: 'ArrowDown' }); // Alpha -> Beta
-  fireEvent.keyDown(listbox, { key: 'Enter' });
+  const rowFor = (id: string) =>
+    container.querySelector(`[data-telemetry-id="${id}"]`) as HTMLElement;
+  press(rowFor('b'));
   assert.deepEqual(picked, ['b']);
-  fireEvent.keyDown(listbox, { key: 'ArrowUp' });
-  fireEvent.keyDown(listbox, { key: ' ' });
-  assert.deepEqual(picked, ['b', 'a']);
 
   rerender(
     <AgentRail
@@ -183,13 +189,28 @@ test('rail: arrow keys move focus, Enter selects, and selection is exposed with 
     />,
   );
   const selected = [
-    ...container.querySelectorAll('[role="option"][aria-selected="true"]'),
+    ...container.querySelectorAll('[role="row"][aria-selected="true"]'),
   ];
   assert.equal(selected.length, 1);
   assert.equal(selected[0].getAttribute('data-telemetry-id'), 'b');
 });
 
+test('rail: "All agents" clears the selection', () => {
+  stubApi();
+  const picked: Array<string | undefined> = [];
+  render(
+    <AgentRail
+      fleet={[agent('a', 'Alpha'), agent('b', 'Beta')]}
+      selectedTelemetryId="b"
+      onSelectAgent={id => picked.push(id)}
+    />,
+  );
+  press(screen.getByRole('row', { name: /^All agents/ }));
+  assert.deepEqual(picked, [undefined]);
+});
+
 test('rail: search filters agents and an agent with telemetry errors is flagged', () => {
+  stubApi();
   const fleet = [
     agent('a', 'Alpha'),
     agent('b', 'Beta', [], 'telemetry query failed'),
@@ -277,7 +298,7 @@ const mixed = [
 ];
 const rowTargets = (container: HTMLElement) =>
   [...container.querySelectorAll('tbody tr')].map(
-    r => r.querySelector('td:nth-child(2) p')?.textContent,
+    r => r.querySelector('[role="rowheader"] p')?.textContent,
   );
 
 test('recent runs: status chips show counts and filter the table', () => {
@@ -289,7 +310,7 @@ test('recent runs: status chips show counts and filter the table', () => {
   fireEvent.click(chip('failed'));
   assert.equal(container.querySelectorAll('tbody tr').length, 1);
   assert.match(container.textContent ?? '', /!129/);
-  assert.equal(chip('failed').getAttribute('aria-pressed'), 'true');
+  assert.equal(chip('failed').getAttribute('aria-checked'), 'true');
 });
 
 test('recent runs: text filter matches target, project and verdict', () => {
@@ -315,8 +336,8 @@ test('recent runs: rows select on click and Enter, running rows show no fake dur
   const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
   assert.equal(rows[1].getAttribute('aria-selected'), 'true');
   assert.equal(rows[0].getAttribute('aria-selected'), 'false');
-  fireEvent.click(rows[0]);
-  fireEvent.keyDown(rows[2], { key: 'Enter' });
+  press(rows[0], 'Enter');
+  press(rows[2], 'Enter');
   assert.deepEqual(picked, ['1', '3']);
   assert.match(rows[0].textContent ?? '', /running…/);
 });
@@ -452,10 +473,11 @@ test('panel: durations are human readable and "running now" comes from the live 
   await screen.findByText('1m 16s');
   assert.match(container.textContent ?? '', /2m 09s/);
   assert.match(container.textContent ?? '', /90%/);
-  const tile = [...container.querySelectorAll('div')].find(
-    n => n.textContent?.startsWith('Running now') && n.querySelector('h6'),
+  const label = screen.getAllByText('Running now').find(n => n.closest('div'));
+  assert.match(
+    label?.parentElement?.textContent ?? '',
+    /^Running now2concurrent$/,
   );
-  assert.match(tile?.textContent ?? '', /^Running now2concurrent$/);
 });
 
 test('panel: missing statistics (501/404) hide nothing else — runs are still listed', async () => {
@@ -520,9 +542,9 @@ test('workspace: fleet overview lists every running run across agents and clicki
   });
   renderAt(<ActivityWorkspace />);
   const section = await screen.findByTestId('fleet-running');
-  const rows = within(section).getAllByTestId('fleet-running-row');
+  const rows = [...section.querySelectorAll('tbody tr')];
   assert.equal(rows.length, 3);
-  fireEvent.click(rows[0]);
+  press(rows[0], 'Enter');
   await waitFor(() =>
     assert.match(screen.getByTestId('loc').textContent ?? '', /agent=(d|e)/),
   );
@@ -539,7 +561,7 @@ test('workspace: selecting an agent in the rail updates the URL and drops the pr
   });
   renderAt(<ActivityWorkspace />, '/?tab=activity&agent=a&run=1');
   await screen.findAllByText('Alpha');
-  fireEvent.click(screen.getByRole('option', { name: 'Beta' }));
+  press(screen.getByRole('row', { name: /^Beta/ }));
   await waitFor(() =>
     assert.equal(
       screen.getByTestId('loc').textContent,
@@ -559,8 +581,8 @@ test('workspace: a deep link restores agent and run, and keeps unrelated params'
   });
   renderAt(<ActivityWorkspace />, '/?tab=activity&agent=a&run=1&hours=72');
   await screen.findByTestId('run-detail');
-  const selected = screen.getByRole('button', { name: '72h' });
-  assert.equal(selected.getAttribute('aria-pressed'), 'true');
+  const selected = screen.getByRole('radio', { name: '72h' });
+  assert.equal(selected.getAttribute('aria-checked'), 'true');
   assert.equal(
     screen.getByTestId('loc').textContent,
     '?tab=activity&agent=a&run=1&hours=72',
@@ -576,7 +598,7 @@ test('workspace: an invalid hours value falls back to 24h', async () => {
   renderAt(<ActivityWorkspace />, '/?agent=a&hours=5');
   await screen.findByText('Success rate');
   assert.equal(
-    screen.getByRole('button', { name: '24h' }).getAttribute('aria-pressed'),
+    screen.getByRole('radio', { name: '24h' }).getAttribute('aria-checked'),
     'true',
   );
 });
@@ -598,31 +620,36 @@ test('workspace: first-load failure shows an error with retry; empty fleet expla
 });
 
 test('workspace: rail and header show proxied avatars', async () => {
-  const requested: string[] = [];
-  stubApi({
-    getActivity: async () => [
-      {
-        ...agent('a', 'Alpha'),
-        avatarUrl: 'https://git.example.com/g/p/-/raw/main/a/avatar.png',
+  const restoreImage = installImageStub();
+  try {
+    const requested: string[] = [];
+    stubApi({
+      getActivity: async () => [
+        {
+          ...agent('a', 'Alpha'),
+          avatarUrl: 'https://git.example.com/g/p/-/raw/main/a/avatar.png',
+        },
+        agent('b', 'Beta'),
+      ],
+      getRuns: async () => [],
+      getInsights: async () => insights(),
+      getAvatar: async (ref: string) => {
+        requested.push(ref);
+        return new Blob(['png'], { type: 'image/png' });
       },
-      agent('b', 'Beta'),
-    ],
-    getRuns: async () => [],
-    getInsights: async () => insights(),
-    getAvatar: async (ref: string) => {
-      requested.push(ref);
-      return new Blob(['png'], { type: 'image/png' });
-    },
-  });
-  const { container } = renderAt(<ActivityWorkspace />, '/?agent=a');
-  await waitFor(() => {
-    const imgs = [...container.querySelectorAll('img')];
-    assert.equal(imgs.length, 2, 'rail item and workspace header');
-    for (const img of imgs) {
-      assert.match(img.getAttribute('src') ?? '', /^data:image\/png;base64,/);
-    }
-  });
-  // Shared per-agent cache: one proxy request, and none for agents without
-  // an avatar (Beta keeps its initials).
-  assert.deepEqual(requested, ['component:default/a']);
+    });
+    const { container } = renderAt(<ActivityWorkspace />, '/?agent=a');
+    await waitFor(() => {
+      const imgs = [...container.querySelectorAll('img')];
+      assert.equal(imgs.length, 2, 'rail item and workspace header');
+      for (const img of imgs) {
+        assert.match(img.getAttribute('src') ?? '', /^data:image\/png;base64,/);
+      }
+    });
+    // Shared per-agent cache: one proxy request, and none for agents without
+    // an avatar (Beta keeps its initials).
+    assert.deepEqual(requested, ['component:default/a']);
+  } finally {
+    restoreImage();
+  }
 });

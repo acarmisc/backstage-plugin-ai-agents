@@ -37,7 +37,7 @@ export default createApp({ features: [aiAgentsPlugin] });
 
 | Extension                           | What it adds                                                      |
 | ----------------------------------- | ----------------------------------------------------------------- |
-| `page:ai-agents`                    | The `/ai-agents` page: agent cards, filters, drawer, Activity tab |
+| `page:ai-agents`                    | The `/ai-agents` page: Agents and Activity as header tabs         |
 | `api:ai-agents`                     | `aiAgentsApiRef`, the client for the catalog and `/api/ai-agents` |
 | `entity-card:ai-agents/overview`    | Agent overview card on `ai-agent` entity pages                    |
 | `entity-card:ai-agents/invocations` | Recent invocations card on `ai-agent` entity pages                |
@@ -53,10 +53,13 @@ app:
 ```
 
 The page registers the route; add a navigation item if your sidebar is not
-generated from the nav extensions.
+generated from the nav extensions. The UI is built with `@backstage/ui`
+(Backstage's design system), so it follows your theme; the page has two
+sub-pages, `/ai-agents/agents` and `/ai-agents/activity`.
 
 ## Development
 
 ```bash
 npm start   # from this directory: dev app with sample agents, no backend
+npm run start:legacy   # the same in the legacy frontend system
 ```

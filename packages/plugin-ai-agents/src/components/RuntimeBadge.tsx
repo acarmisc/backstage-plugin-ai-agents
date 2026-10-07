@@ -1,31 +1,34 @@
 import React from 'react';
-import Chip from '@mui/material/Chip';
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import MemoryIcon from '@mui/icons-material/Memory';
-import FunctionsIcon from '@mui/icons-material/Functions';
-import ExtensionIcon from '@mui/icons-material/Extension';
+import {
+  Badge,
+  Button,
+  ButtonIcon,
+  Text,
+  Tooltip,
+  TooltipTrigger,
+} from '@backstage/ui';
+import { RiCpuLine, RiFunctionLine, RiPuzzleLine } from '@remixicon/react';
 import type { AgentRuntimeName } from '../types';
+import { Hint } from '../ui';
 import { AwsIcon } from './icons/AwsIcon';
 import { KagentIcon } from './icons/KagentIcon';
 
 export const RUNTIME_META: Record<
   string,
-  { label: string; icon: React.ReactNode }
+  { label: string; icon: React.ReactElement }
 > = {
   'bedrock-agentcore': { label: 'Bedrock AgentCore', icon: <AwsIcon /> },
   kagent: { label: 'kagent', icon: <KagentIcon /> },
-  litellm: { label: 'LiteLLM', icon: <MemoryIcon fontSize="small" /> },
-  lambda: { label: 'AWS Lambda', icon: <FunctionsIcon fontSize="small" /> },
-  custom: { label: 'Custom', icon: <ExtensionIcon fontSize="small" /> },
+  litellm: { label: 'LiteLLM', icon: <RiCpuLine size={16} /> },
+  lambda: { label: 'AWS Lambda', icon: <RiFunctionLine size={16} /> },
+  custom: { label: 'Custom', icon: <RiPuzzleLine size={16} /> },
 };
 
 export function getRuntimeMeta(runtime: AgentRuntimeName) {
   return (
     RUNTIME_META[runtime] ?? {
       label: String(runtime),
-      icon: <ExtensionIcon fontSize="small" />,
+      icon: <RiPuzzleLine size={16} />,
     }
   );
 }
@@ -35,7 +38,7 @@ export interface RuntimeBadgeProps {
   size?: 'small' | 'medium';
   onClick?: (runtime: string) => void;
   /**
-   * 'chip' (default) for a standalone pill; 'text' for a quiet icon+caption,
+   * 'chip' (default) for a standalone badge; 'text' for a quiet icon+caption,
    * matching footer-note styling; 'icon' for a bare icon with a tooltip,
    * for tight spaces like a card header.
    */
@@ -51,68 +54,84 @@ export function RuntimeBadge({
   const meta = getRuntimeMeta(runtime);
 
   if (variant === 'icon') {
+    if (onClick) {
+      return (
+        <TooltipTrigger>
+          <ButtonIcon
+            aria-label={meta.label}
+            variant="tertiary"
+            size="small"
+            icon={meta.icon}
+            onPress={() => onClick(runtime)}
+          />
+          <Tooltip>{meta.label}</Tooltip>
+        </TooltipTrigger>
+      );
+    }
     return (
-      <Tooltip title={meta.label}>
-        <Box
-          onClick={
-            onClick
-              ? e => {
-                  e.stopPropagation();
-                  onClick(runtime);
-                }
-              : undefined
-          }
-          sx={{
+      <Hint label={meta.label}>
+        <span
+          role="img"
+          aria-label={meta.label}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a tooltip trigger must be keyboard focusable
+          tabIndex={0}
+          style={{
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            color: 'text.secondary',
-            cursor: onClick ? 'pointer' : 'default',
-            '& svg': { fontSize: 19 },
-            '&:hover': onClick ? { color: 'text.primary' } : undefined,
+            color: 'var(--bui-fg-secondary)',
           }}
         >
           {meta.icon}
-        </Box>
-      </Tooltip>
+        </span>
+      </Hint>
     );
   }
 
   if (variant === 'text') {
+    if (onClick) {
+      return (
+        <Button
+          variant="tertiary"
+          size="small"
+          iconStart={meta.icon}
+          onPress={() => onClick(runtime)}
+        >
+          {meta.label}
+        </Button>
+      );
+    }
     return (
-      <Box
-        onClick={onClick ? () => onClick(runtime) : undefined}
-        sx={{
+      <span
+        style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 0.5,
-          color: 'text.secondary',
-          cursor: onClick ? 'pointer' : 'default',
-          '& svg': { fontSize: 16 },
-          '&:hover': onClick ? { color: 'text.primary' } : undefined,
+          gap: 'var(--bui-space-1)',
+          color: 'var(--bui-fg-secondary)',
         }}
       >
         {meta.icon}
-        <Typography variant="caption" color="inherit" noWrap>
+        <Text variant="body-small" color="secondary" truncate>
           {meta.label}
-        </Typography>
-      </Box>
+        </Text>
+      </span>
     );
   }
 
+  if (onClick) {
+    return (
+      <Button
+        variant="secondary"
+        size={size}
+        iconStart={meta.icon}
+        onPress={() => onClick(runtime)}
+      >
+        {meta.label}
+      </Button>
+    );
+  }
   return (
-    <Chip
-      size={size}
-      variant="outlined"
-      label={
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          {meta.icon}
-          {meta.label}
-        </Box>
-      }
-      onClick={onClick ? () => onClick(runtime) : undefined}
-      clickable={Boolean(onClick)}
-    />
+    <Badge icon={meta.icon} size={size}>
+      {meta.label}
+    </Badge>
   );
 }

@@ -1,22 +1,24 @@
-import { Theme } from '@mui/material/styles';
-import { RunState } from '../../types';
+import type { RunState } from '../../types';
+import { TONE_FG, Tone } from '../../ui';
 
-/**
- * Get the color for a run state based on the theme.
- * running -> info.main, completed -> success.main, failed -> error.main, unknown -> text.disabled
- */
-export function stateColor(theme: Theme, state: RunState): string {
+/** Semantic tone for a run state (drives dots, pills and text colors). */
+export function stateTone(state: RunState): Tone {
   switch (state) {
     case 'running':
-      return theme.palette.info.main;
+      return 'info';
     case 'completed':
-      return theme.palette.success.main;
+      return 'success';
     case 'failed':
-      return theme.palette.error.main;
+      return 'danger';
     case 'unknown':
     default:
-      return theme.palette.text.disabled;
+      return 'neutral';
   }
+}
+
+/** CSS color (a BUI token) for a run state. */
+export function stateColor(state: RunState): string {
+  return TONE_FG[stateTone(state)];
 }
 
 /**

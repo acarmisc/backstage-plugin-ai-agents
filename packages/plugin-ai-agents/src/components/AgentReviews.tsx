@@ -1,14 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import SendIcon from '@mui/icons-material/Send';
+import { Alert, Button, Flex, Text, TextAreaField } from '@backstage/ui';
+import { RiSendPlaneLine } from '@remixicon/react';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
 import type { AgentReview, ReviewsSummary } from '../types';
+import { TONE_FG } from '../ui';
 import { StarRating } from './StarRating';
 
 function formatWhen(iso?: string): string {
@@ -26,32 +22,34 @@ function formatWhen(iso?: string): string {
 
 function ReviewRow({ review }: { review: AgentReview }) {
   return (
-    <Box
-      sx={{
-        py: 0.75,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        '&:last-child': { borderBottom: 'none' },
+    <li
+      style={{
+        listStyle: 'none',
+        padding: 'var(--bui-space-2) 0',
+        borderBottom: '1px solid var(--bui-border-1)',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Flex align="center" gap="2">
         <StarRating value={review.rating} />
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ ml: 'auto' }}
-          whiteSpace="nowrap"
+        <Text
+          variant="body-small"
+          color="secondary"
+          style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}
         >
           {review.userRef?.split('/').pop() ?? 'anonymous'} ·{' '}
           {formatWhen(review.createdAt)}
-        </Typography>
-      </Box>
+        </Text>
+      </Flex>
       {review.comment && (
-        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+        <Text
+          as="p"
+          variant="body-medium"
+          style={{ margin: 'var(--bui-space-1) 0 0', whiteSpace: 'pre-wrap' }}
+        >
           {review.comment}
-        </Typography>
+        </Text>
       )}
-    </Box>
+    </li>
   );
 }
 
@@ -117,81 +115,67 @@ export function AgentReviews({
   };
 
   return (
-    <Box data-testid="agent-reviews" sx={{ mt: 2 }}>
-      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-        Reviews{' '}
-        <Typography component="span" variant="caption" color="text.secondary">
+    <Flex direction="column" gap="3" data-testid="agent-reviews">
+      <Flex align="baseline" gap="2">
+        <Text as="h3" variant="body-medium" weight="bold">
+          Reviews
+        </Text>
+        <Text variant="body-small" color="secondary">
           ({summary.count}) · avg {summary.average ?? '—'}/5
-        </Typography>
-      </Typography>
+        </Text>
+      </Flex>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-        <StarRating value={summary.average ?? 0} />
-      </Box>
+      <StarRating value={summary.average ?? 0} />
 
-      <Stack>
-        {summary.reviews.map(r => (
-          <ReviewRow key={r.id ?? `${r.userRef}-${r.createdAt}`} review={r} />
-        ))}
-      </Stack>
+      {summary.reviews.length > 0 && (
+        <ul style={{ margin: 0, padding: 0 }}>
+          {summary.reviews.map(r => (
+            <ReviewRow key={r.id ?? `${r.userRef}-${r.createdAt}`} review={r} />
+          ))}
+        </ul>
+      )}
 
       {!submitted ? (
-        <Box
-          sx={{
-            mt: 2,
-            p: 1.5,
-            border: '1px dashed',
-            borderColor: 'divider',
-            borderRadius: 1,
+        <Flex
+          direction="column"
+          gap="3"
+          p="3"
+          style={{
+            border: '1px dashed var(--bui-border-2)',
+            borderRadius: 'var(--bui-radius-3)',
           }}
         >
-          <Typography variant="body2" sx={{ mb: 1 }}>
+          <Text variant="body-medium" weight="bold">
             Rate this agent
-          </Typography>
+          </Text>
           <StarRating variant="fancy" value={rating} onChange={setRating} />
-          <TextField
-            size="small"
-            fullWidth
-            multiline
-            minRows={2}
+          <TextAreaField
+            aria-label="Review"
             placeholder="Write a short review (optional)"
+            rows={3}
+            maxLength={2000}
             value={comment}
-            onChange={e => setComment(e.target.value)}
-            inputProps={{ maxLength: 2000 }}
-            sx={{ mt: 1 }}
+            onChange={setComment}
           />
-          {error && (
-            <Typography
-              variant="caption"
-              color="error"
-              display="block"
-              sx={{ mt: 0.5 }}
+          {error && <Alert status="danger" title={error} />}
+          <div>
+            <Button
+              variant="primary"
+              size="small"
+              iconStart={<RiSendPlaneLine size={16} />}
+              isPending={submitting}
+              isDisabled={rating < 1 || submitting}
+              onPress={submit}
             >
-              {error}
-            </Typography>
-          )}
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={
-              submitting ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : (
-                <SendIcon />
-              )
-            }
-            disabled={rating < 1 || submitting}
-            onClick={submit}
-            sx={{ mt: 1 }}
-          >
-            Submit review
-          </Button>
-        </Box>
+              Submit review
+            </Button>
+          </div>
+        </Flex>
       ) : (
-        <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
+        <Text variant="body-medium" style={{ color: TONE_FG.success }}>
           Thanks! Your review was submitted.
-        </Typography>
+        </Text>
       )}
-    </Box>
+    </Flex>
   );
 }

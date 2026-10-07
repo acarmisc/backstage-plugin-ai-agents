@@ -1,5 +1,7 @@
 export { aiAgentsPlugin } from './plugin';
 export { AgentsPage } from './components/AgentsPage';
+export { AgentsGallery } from './components/AgentsGallery';
+export type { AgentsGalleryProps } from './components/AgentsGallery';
 export { AgentCard } from './components/AgentCard';
 export type { AgentCardProps } from './components/AgentCard';
 export { AgentOverviewCard } from './components/AgentOverviewCard';

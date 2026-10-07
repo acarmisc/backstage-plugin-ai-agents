@@ -1,24 +1,6 @@
-import React, { useState } from 'react';
-import Box from '@mui/material/Box';
+import React from 'react';
+import { Avatar } from '@backstage/ui';
 import { isSafeUrl } from '../types';
-
-const PALETTE = [
-  '#1976d2',
-  '#388e3c',
-  '#f57c00',
-  '#7b1fa2',
-  '#c62828',
-  '#0097a7',
-  '#5d4037',
-  '#455a64',
-];
-
-/**
- * URLs that failed to load, remembered for the lifetime of the page so a
- * dead avatar (e.g. one hosted in a private repo the browser cannot fetch)
- * is not re-requested on every card render.
- */
-const brokenUrls = new Set<string>();
 
 function wordsOf(name: string): string[] {
   return name
@@ -29,85 +11,55 @@ function wordsOf(name: string): string[] {
     .filter(Boolean);
 }
 
-function initialsOf(name: string): string {
+/**
+ * Two-word form of `name` whose initials are what we want to show: first and
+ * last word ("support-triage-agent" -> "SA"), or the first two letters of a
+ * single word. BUI's `Avatar` derives its initials from the words it gets.
+ */
+function initialsName(name: string): string {
   const words = wordsOf(name);
-  if (words.length === 0) return 'AI';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  if (words.length === 0) return 'A I';
+  if (words.length === 1) return `${words[0][0]} ${words[0][1] ?? ''}`.trim();
+  return `${words[0][0]} ${words[words.length - 1][0]}`;
 }
 
-function colorFor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++)
-    hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  return PALETTE[Math.abs(hash) % PALETTE.length];
+type BuiAvatarSize = 'x-small' | 'small' | 'medium' | 'large' | 'x-large';
+
+/** BUI avatar sizes are 20/24/32/40/48px; pick the closest one at or above. */
+function sizeFor(px: number): BuiAvatarSize {
+  if (px <= 20) return 'x-small';
+  if (px <= 24) return 'small';
+  if (px <= 32) return 'medium';
+  if (px <= 40) return 'large';
+  return 'x-large';
 }
 
 export interface AgentAvatarProps {
   name: string;
   avatarUrl?: string;
+  /** Approximate size in px; mapped to the nearest BUI avatar size. */
   size?: number;
 }
 
+/**
+ * Agent avatar: the image when `avatarUrl` is a safe URL and loads, initials
+ * otherwise (BUI's `Avatar` shows them while loading and when the image
+ * fails). The wrapper carries the accessible name.
+ */
 export function AgentAvatar({ name, avatarUrl, size = 44 }: AgentAvatarProps) {
-  // Bumped when an image fails so the (set-backed) broken check re-renders.
-  const [, setLoadEpoch] = useState(0);
-  const showImage = isSafeUrl(avatarUrl) && !brokenUrls.has(avatarUrl);
-
+  const src = isSafeUrl(avatarUrl) ? avatarUrl : '';
   return (
-    <Box
+    <span
       role="img"
       aria-label={name}
-      sx={{
-        position: 'relative',
-        width: size,
-        height: size,
-        flexShrink: 0,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        fontSize: size * 0.36,
-        fontWeight: 700,
-      }}
+      style={{ display: 'inline-flex', flexShrink: 0 }}
     >
-      {/* Initials sit underneath the image at all times: they cover the
-          loading state, the broken-image case, and dark-theme visibility of
-          transparent-background SVG avatars. */}
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: colorFor(name),
-          color: 'common.white',
-        }}
-      >
-        {initialsOf(name)}
-      </Box>
-      {showImage && (
-        <Box
-          component="img"
-          src={avatarUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          onError={() => {
-            if (avatarUrl) brokenUrls.add(avatarUrl);
-            setLoadEpoch(e => e + 1);
-          }}
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            bgcolor: 'background.paper',
-          }}
-        />
-      )}
-    </Box>
+      <Avatar
+        src={src}
+        name={initialsName(name)}
+        size={sizeFor(size)}
+        purpose="decoration"
+      />
+    </span>
   );
 }

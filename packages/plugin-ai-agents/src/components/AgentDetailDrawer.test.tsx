@@ -235,7 +235,7 @@ test('AgentDetailDrawer hides Open activity button when telemetryId is not set',
   assert.equal(queryByTestId('open-activity-button'), null);
 });
 
-test('AgentDetailDrawer Open activity button navigates to activity tab with telemetryId', async () => {
+test('AgentDetailDrawer Open activity button navigates to the Activity sub-page with the telemetryId', async () => {
   const agent = makeAgent();
   let navigatedPath = '';
   const { getByTestId } = renderWithApi(
@@ -252,7 +252,7 @@ test('AgentDetailDrawer Open activity button navigates to activity tab with tele
   const openActivityButton = getByTestId('open-activity-button');
   fireEvent.click(openActivityButton);
 
-  assert.match(navigatedPath, /\/ai-agents\?tab=activity&agent=telemetry-123/);
+  assert.equal(navigatedPath, '/ai-agents/activity?agent=telemetry-123');
 });
 
 test('AgentDetailDrawer Open activity button calls onClose after navigating', async () => {
@@ -466,7 +466,7 @@ test('AgentDetailDrawer Capabilities section shows capability count hint', async
     </MemoryRouter>,
   );
 
-  assert.ok(getByTextCaps('3'), 'Should show capability count as hint');
+  assert.ok(getByTextCaps('(3)'), 'Should show capability count as hint');
 });
 
 test('AgentDetailDrawer Links section shows link count hint', async () => {

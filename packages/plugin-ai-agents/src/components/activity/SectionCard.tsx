@@ -1,6 +1,5 @@
 import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
+import { Card, CardBody, CardHeader, Flex, Text } from '@backstage/ui';
 
 export interface SectionCardProps {
   title: React.ReactNode;
@@ -12,7 +11,7 @@ export interface SectionCardProps {
   'data-testid'?: string;
 }
 
-/** Shared surface for every block of the workspace: header + 1px border + 8px radius. */
+/** Shared surface for every block of the workspace: a BUI card with a header. */
 export function SectionCard({
   title,
   subtitle,
@@ -22,47 +21,23 @@ export function SectionCard({
   ...rest
 }: SectionCardProps) {
   return (
-    <Box
-      component="section"
-      data-testid={rest['data-testid']}
-      sx={{
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 2,
-        backgroundColor: 'background.paper',
-        minWidth: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-          px: 2,
-          py: 1.25,
-          borderBottom: 1,
-          borderColor: 'divider',
-          minHeight: 48,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="subtitle2"
-            sx={{ fontWeight: 600, lineHeight: 1.3 }}
-          >
-            {title}
-          </Typography>
-          {subtitle && (
-            <Typography variant="caption" color="text.secondary">
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-        {action}
-      </Box>
-      <Box sx={flush ? undefined : { p: 2 }}>{children}</Box>
-    </Box>
+    <Card data-testid={rest['data-testid']} style={{ minWidth: 0 }}>
+      <CardHeader>
+        <Flex align="center" justify="between" gap="3">
+          <div style={{ minWidth: 0 }}>
+            <Text as="h3" variant="body-large" weight="bold">
+              {title}
+            </Text>
+            {subtitle && (
+              <Text variant="body-small" color="secondary" as="div">
+                {subtitle}
+              </Text>
+            )}
+          </div>
+          {action}
+        </Flex>
+      </CardHeader>
+      <CardBody style={flush ? { padding: 0 } : undefined}>{children}</CardBody>
+    </Card>
   );
 }

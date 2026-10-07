@@ -1,7 +1,5 @@
 import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { alpha, useTheme } from '@mui/material/styles';
+import { Text } from '@backstage/ui';
 import type { HourBucket } from '../../types';
 
 export interface HourlyBarsProps {
@@ -29,22 +27,20 @@ function labelStep(count: number): number {
  * bucket, so it scales to any width and window size without layout maths.
  */
 export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
-  const theme = useTheme();
-
   if (buckets.length === 0) {
     return (
-      <Box
-        sx={{
+      <div
+        style={{
           height,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Typography variant="body2" color="text.disabled">
+        <Text variant="body-medium" color="secondary">
           No activity in this window
-        </Typography>
-      </Box>
+        </Text>
+      </div>
     );
   }
 
@@ -55,23 +51,22 @@ export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
   const columns = `repeat(${buckets.length}, minmax(0, 1fr))`;
 
   return (
-    <Box
+    <div
       role="img"
       aria-label={`Hourly runs: ${totalRuns} total, ${totalFailed} failed`}
-      sx={{ width: '100%' }}
+      style={{ width: '100%' }}
     >
-      <Box
-        sx={{
+      <div
+        style={{
           position: 'relative',
           height,
-          borderBottom: 1,
-          borderColor: 'divider',
+          borderBottom: '1px solid var(--bui-border-2)',
         }}
       >
-        <Typography
-          variant="caption"
-          color="text.disabled"
-          sx={{
+        <Text
+          variant="body-x-small"
+          color="secondary"
+          style={{
             position: 'absolute',
             top: 0,
             left: 0,
@@ -80,9 +75,9 @@ export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
           }}
         >
           {max}
-        </Typography>
-        <Box
-          sx={{
+        </Text>
+        <div
+          style={{
             position: 'absolute',
             inset: 0,
             display: 'grid',
@@ -95,25 +90,22 @@ export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
             const pct =
               bucket.runs > 0 ? Math.max((bucket.runs / max) * 100, 2) : 0;
             return (
-              <Box
+              <div
                 key={bucket.start}
                 data-testid="hour-bar"
                 data-runs={bucket.runs}
                 data-failed={bucket.failed}
                 data-height-pct={Math.round(pct)}
                 title={`${hourLabel(bucket.start)} · ${bucket.runs} run${bucket.runs === 1 ? '' : 's'} · ${bucket.failed} failed`}
-                sx={{
+                style={{
                   display: 'flex',
                   alignItems: 'flex-end',
                   borderRadius: '3px 3px 0 0',
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.text.primary, 0.06),
-                  },
                 }}
               >
                 {bucket.runs > 0 && (
-                  <Box
-                    sx={{
+                  <div
+                    style={{
                       width: '100%',
                       height: `${pct}%`,
                       display: 'flex',
@@ -123,40 +115,43 @@ export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
                     }}
                   >
                     {bucket.failed > 0 && (
-                      <Box
+                      <div
                         data-segment="failed"
-                        sx={{
+                        style={{
                           flex: bucket.failed,
-                          backgroundColor: theme.palette.error.main,
+                          background: 'var(--bui-fg-danger)',
                         }}
                       />
                     )}
                     {ok > 0 && (
-                      <Box
+                      <div
                         data-segment="success"
-                        sx={{
+                        style={{
                           flex: ok,
-                          backgroundColor: alpha(
-                            theme.palette.success.main,
-                            0.85,
-                          ),
+                          background: 'var(--bui-fg-success)',
                         }}
                       />
                     )}
-                  </Box>
+                  </div>
                 )}
-              </Box>
+              </div>
             );
           })}
-        </Box>
-      </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: columns, mt: 0.5 }}>
+        </div>
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: columns,
+          marginTop: 'var(--bui-space-1)',
+        }}
+      >
         {buckets.map((bucket, i) => (
-          <Typography
+          <Text
             key={bucket.start}
-            variant="caption"
-            color="text.secondary"
-            sx={{
+            variant="body-x-small"
+            color="secondary"
+            style={{
               whiteSpace: 'nowrap',
               overflow: 'visible',
               fontVariantNumeric: 'tabular-nums',
@@ -164,9 +159,9 @@ export function HourlyBars({ buckets, height = 96 }: HourlyBarsProps) {
             }}
           >
             {i % step === 0 ? hourLabel(bucket.start) : ''}
-          </Typography>
+          </Text>
         ))}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

@@ -1,10 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import FlagIcon from '@mui/icons-material/Flag';
-import { alpha, useTheme } from '@mui/material/styles';
-import type { Theme } from '@mui/material/styles';
+import { Badge, Text } from '@backstage/ui';
+import { RiFlagLine } from '@remixicon/react';
 import { RunEvent } from '../../types';
 import { formatMs } from '../../utils/stats';
 
@@ -29,74 +25,45 @@ interface WaterfallRowProps {
   label: string;
   pct: number;
   incomplete?: string;
-  theme: Theme;
 }
 
-function WaterfallRow({
-  isMarker,
-  label,
-  pct,
-  incomplete,
-  theme,
-}: WaterfallRowProps) {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        height: '32px',
-      }}
-    >
-      {/* Label */}
-      <Typography
-        sx={{
-          width: '180px',
-          flexShrink: 0,
-          fontFamily: 'ui-monospace, "Courier New", monospace',
-          fontSize: '12px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          color: theme.palette.text.secondary,
-        }}
-      >
-        {label}
-      </Typography>
+const LABEL: React.CSSProperties = {
+  width: 180,
+  flexShrink: 0,
+  fontFamily: 'var(--bui-font-monospace)',
+  fontSize: 'var(--bui-font-size-2)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  textAlign: 'left',
+};
 
-      {/* Marker or bar */}
-      <Box sx={{ flex: 1, position: 'relative', height: '100%' }}>
-        {isMarker ? (
-          <Box
-            sx={{
-              position: 'absolute',
-              left: `${pct * 100}%`,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <FlagIcon
-              sx={{
-                fontSize: '16px',
-                color: theme.palette.text.secondary,
-              }}
-            />
-            {incomplete && (
-              <Chip
-                label={`incomplete: ${incomplete}`}
-                size="small"
-                color="warning"
-                variant="outlined"
-                sx={{ fontSize: '10px' }}
-              />
-            )}
-          </Box>
-        ) : null}
-      </Box>
-    </Box>
+function WaterfallRow({ label, pct, incomplete }: WaterfallRowProps) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 32 }}>
+      <span style={{ ...LABEL, color: 'var(--bui-fg-secondary)' }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: `${pct * 100}%`,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            color: 'var(--bui-fg-secondary)',
+          }}
+        >
+          <RiFlagLine size={16} aria-hidden />
+          {incomplete && (
+            <Badge size="small">{`incomplete: ${incomplete}`}</Badge>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -105,7 +72,6 @@ interface WaterfallToolRowProps {
   timeline: Timeline;
   isSelected: boolean;
   onSelect?: (seq: number) => void;
-  theme: Theme;
 }
 
 function WaterfallToolRow({
@@ -113,21 +79,10 @@ function WaterfallToolRow({
   timeline,
   isSelected,
   onSelect,
-  theme,
 }: WaterfallToolRowProps) {
   const handleClick = useCallback(() => {
     onSelect?.(event.seq);
   }, [event.seq, onSelect]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelect?.(event.seq);
-      }
-    },
-    [event.seq, onSelect],
-  );
 
   const isFailed = event.outcome && event.outcome !== 'ok';
 
@@ -160,89 +115,61 @@ function WaterfallToolRow({
   if (barLeft + barWidth > 100) barWidth = 100 - barLeft;
 
   const toolName = event.tool || event.label || `event_${event.seq}`;
-
+  const tone = isFailed ? 'var(--bui-fg-danger)' : 'var(--bui-fg-primary)';
   return (
-    <Box
-      component="button"
+    <button
+      type="button"
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
       aria-current={isSelected ? 'true' : undefined}
       data-left={barLeft}
       data-width={barWidth}
       data-failed={isFailed ? 'true' : undefined}
-      sx={{
+      style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        height: '32px',
-        padding: '0',
+        gap: 12,
+        height: 32,
+        padding: 0,
         border: 'none',
-        backgroundColor: 'transparent',
+        background: isSelected ? 'var(--bui-bg-neutral-2)' : 'transparent',
         cursor: 'pointer',
-        borderRadius: '4px',
-        '&:hover': {
-          backgroundColor: theme.palette.action.hover,
-        },
-        '&:focus-visible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: '2px',
-        },
+        borderRadius: 'var(--bui-radius-2)',
+        font: 'inherit',
       }}
     >
-      {/* Label */}
-      <Typography
-        sx={{
-          width: '180px',
-          flexShrink: 0,
-          fontFamily: 'ui-monospace, "Courier New", monospace',
-          fontSize: '12px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          textAlign: 'left',
-          color: isFailed
-            ? theme.palette.error.main
-            : theme.palette.text.primary,
-        }}
-        title={toolName}
-      >
+      <span title={toolName} style={{ ...LABEL, color: tone }}>
         {toolName}
-      </Typography>
-
-      {/* Bar */}
-      <Box sx={{ flex: 1, position: 'relative', height: '100%' }}>
-        <Box
-          sx={{
+      </span>
+      <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+        <div
+          style={{
             position: 'absolute',
             left: `${barLeft}%`,
             width: `${barWidth}%`,
             top: '50%',
-            height: '14px',
+            height: 14,
             transform: 'translateY(-50%)',
-            backgroundColor: isFailed
-              ? theme.palette.error.main
-              : theme.palette.primary.main,
-            borderRadius: '7px',
-            minWidth: '5px',
+            background: isFailed
+              ? 'var(--bui-fg-danger)'
+              : 'var(--bui-bg-solid)',
+            borderRadius: 7,
+            minWidth: 5,
             opacity: isSelected ? 1 : 0.8,
-            boxShadow: isSelected
-              ? `0 0 0 2px ${alpha(theme.palette.primary.main, 0.35)}`
-              : 'none',
+            outline: isSelected ? '2px solid var(--bui-ring)' : 'none',
           }}
         />
-        {/* Duration, placed beside the bar (left of it when the bar is near the right edge) */}
-        <Typography
-          component="span"
-          sx={{
+        {/* Duration beside the bar (left of it when the bar nears the right edge) */}
+        <span
+          style={{
             position: 'absolute',
             top: '50%',
             transform: 'translateY(-50%)',
             whiteSpace: 'nowrap',
-            fontSize: '11px',
+            fontSize: 'var(--bui-font-size-1)',
             fontVariantNumeric: 'tabular-nums',
             color: isFailed
-              ? theme.palette.error.main
-              : theme.palette.text.secondary,
+              ? 'var(--bui-fg-danger)'
+              : 'var(--bui-fg-secondary)',
             ...(barLeft + barWidth < 85
               ? { left: `calc(${barLeft + barWidth}% + 8px)` }
               : { right: `calc(${100 - barLeft}% + 8px)` }),
@@ -250,9 +177,9 @@ function WaterfallToolRow({
         >
           {isFailed ? 'error · ' : ''}
           {formatMs(event.durationMs ?? 0)}
-        </Typography>
-      </Box>
-    </Box>
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -266,8 +193,6 @@ function WaterfallToolRow({
  * Supports selection and displays run markers (start, completed).
  */
 export function Waterfall({ events, selectedSeq, onSelect }: WaterfallProps) {
-  const theme = useTheme();
-
   // Compute timeline metrics
   const timeline = useMemo(() => {
     // Find start event
@@ -354,16 +279,14 @@ export function Waterfall({ events, selectedSeq, onSelect }: WaterfallProps) {
 
   if (events.length === 0) {
     return (
-      <Box
-        sx={{
-          padding: '16px',
-          color: theme.palette.text.disabled,
-          textAlign: 'center',
-          fontSize: '14px',
-        }}
+      <Text
+        as="div"
+        variant="body-medium"
+        color="secondary"
+        style={{ padding: 16, textAlign: 'center' }}
       >
         No events to display
-      </Box>
+      </Text>
     );
   }
 
@@ -372,32 +295,30 @@ export function Waterfall({ events, selectedSeq, onSelect }: WaterfallProps) {
     pct,
     label: formatMs(pct * totalDuration),
   }));
+  const completedEvent = events.find(e => e.event === 'completed');
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Time axis */}
-      <Box sx={{ display: 'flex', paddingLeft: '180px' }}>
+      <div style={{ display: 'flex', paddingLeft: 192 }}>
         {axisLabels.map((item, i) => (
-          <Box
+          <Text
             key={i}
-            sx={{
+            as="div"
+            variant="body-x-small"
+            color="secondary"
+            style={{
               flex: i === axisLabels.length - 1 ? '0 1 auto' : 1,
               textAlign: i === 0 ? 'left' : 'center',
-              fontSize: '11px',
-              color: theme.palette.text.secondary,
             }}
           >
             {item.label}
-          </Box>
+          </Text>
         ))}
-      </Box>
+      </div>
 
-      {/* Waterfall rows */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        {/* Start marker */}
-        <WaterfallRow isMarker label="start" pct={0} theme={theme} />
-
-        {/* Tool events */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <WaterfallRow isMarker label="start" pct={0} />
         {timeline.toolEvents.map(event => (
           <WaterfallToolRow
             key={event.seq}
@@ -405,29 +326,24 @@ export function Waterfall({ events, selectedSeq, onSelect }: WaterfallProps) {
             timeline={timeline}
             isSelected={event.seq === selectedSeq}
             onSelect={onSelect}
-            theme={theme}
           />
         ))}
-
-        {/* Completed marker */}
-        {(() => {
-          const completedEvent = events.find(e => e.event === 'completed');
-          if (!completedEvent?.ts) return null;
-          const completedMs = new Date(completedEvent.ts).getTime();
-          const pct =
-            (completedMs - timeline.startMs) /
-            (timeline.endMs - timeline.startMs);
-          return (
-            <WaterfallRow
-              isMarker
-              label="completed"
-              pct={Math.min(1, Math.max(0, pct))}
-              incomplete={completedEvent.incomplete}
-              theme={theme}
-            />
-          );
-        })()}
-      </Box>
-    </Box>
+        {completedEvent?.ts && (
+          <WaterfallRow
+            isMarker
+            label="completed"
+            pct={Math.min(
+              1,
+              Math.max(
+                0,
+                (new Date(completedEvent.ts).getTime() - timeline.startMs) /
+                  (timeline.endMs - timeline.startMs),
+              ),
+            )}
+            incomplete={completedEvent.incomplete}
+          />
+        )}
+      </div>
+    </div>
   );
 }

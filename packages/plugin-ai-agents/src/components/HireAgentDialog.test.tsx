@@ -23,7 +23,7 @@ const mk = (over: Partial<AiAgent>): AiAgent =>
     ...over,
   }) as AiAgent;
 
-// MUI's Dialog renders into a portal (document.body), not the render
+// The dialog renders into a portal (document.body), not the render
 // container, so assertions query `baseElement` rather than `container`.
 
 test('HireAgentDialog shows the AWS CLI preview for bedrock-agentcore agents', () => {

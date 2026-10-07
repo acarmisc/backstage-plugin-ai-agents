@@ -1,217 +1,60 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
-import Typography from '@mui/material/Typography';
-import { EmptyState } from '@backstage/core-components';
-import { useApi } from '@backstage/core-plugin-api';
+import React from 'react';
+import { Container, Header, Tab, TabList, TabPanel, Tabs } from '@backstage/ui';
 import { useSearchParams } from 'react-router-dom';
-import { aiAgentsApiRef } from '../api';
-import type { AiAgent, AgentStatus } from '../types';
-import { useAgents } from '../hooks/useAgents';
-import { AgentFiltersBar } from './AgentFilters';
-import { AgentsGrid } from './AgentsGrid';
-import { AgentDetailDrawer } from './AgentDetailDrawer';
-import { HireAgentDialog } from './HireAgentDialog';
+import { AgentsGallery } from './AgentsGallery';
 import { ActivityWorkspace } from './activity/ActivityWorkspace';
 
-const POLL_INTERVAL_MS = 30_000;
+type View = 'agents' | 'activity';
 
-/** @public */
+/** Where "Open activity" goes inside this page: the `?tab=` query. */
+const activityHref = (telemetryId: string) =>
+  `/ai-agents?tab=activity&agent=${encodeURIComponent(telemetryId)}`;
+
+/**
+ * The whole AI Agents experience as one self-contained page: a header and
+ * an Agents / Activity switch (kept in the `?tab=` query).
+ *
+ * In a New Frontend System app the plugin does not use this: it registers
+ * the two views as sub-pages, so the app shell draws the title and the tabs.
+ * Use this component to mount the plugin in other hosts.
+ *
+ * @public
+ */
 export function AgentsPage() {
-  const api = useApi(aiAgentsApiRef);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { agents, allAgents, loading, error, retry, filters, update, reset } =
-    useAgents();
+  const view: View =
+    searchParams.get('tab') === 'activity' ? 'activity' : 'agents';
 
-  const tabParam = searchParams.get('tab') || 'agents';
-  const tab = (tabParam === 'activity' ? 'activity' : 'agents') as
-    'agents' | 'activity';
-
-  const [selected, setSelected] = useState<AiAgent | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [hireAgent, setHireAgent] = useState<AiAgent | null>(null);
-  const [hireOpen, setHireOpen] = useState(false);
-  const [invocationNonce, setInvocationNonce] = useState(0);
-  const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({});
-
-  const refs = allAgents.map(a => a.entityRef);
-
-  // Initial + on-ref-change status fetch. Polling runs separately below.
-  useEffect(() => {
-    let cancelled = false;
-    if (!refs.length) return undefined;
-    api.getStatuses(refs).then(result => {
-      if (!cancelled) setStatuses(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, refs.join(',')]);
-
-  // Best-effort polling for live status while the page is mounted.
-  useEffect(() => {
-    if (!refs.length) return undefined;
-    const id = setInterval(async () => {
-      const result = await api.getStatuses(refs);
-      setStatuses(prev => ({ ...prev, ...result }));
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, refs.join(',')]);
-
-  const agentsWithStatus = agents.map(a => ({
-    ...a,
-    status: statuses[a.entityRef] ?? a.status,
-  }));
-
-  const handleCardClick = useCallback((agent: AiAgent) => {
-    setSelected(agent);
-    setDrawerOpen(true);
-  }, []);
-
-  const handleHire = useCallback((agent: AiAgent) => {
-    setHireAgent(agent);
-    setHireOpen(true);
-  }, []);
-
-  const handleRuntimeClick = useCallback(
-    (runtime: string) => {
-      if (!filters.runtime.includes(runtime)) {
-        update({ runtime: [...filters.runtime, runtime] });
-      }
-    },
-    [filters.runtime, update],
-  );
-
-  const handleRefreshStatus = useCallback(
-    async (entityRef: string) => {
-      const result = await api.getStatuses([entityRef]);
-      setStatuses(prev => ({ ...prev, ...result }));
-      setSelected(prev =>
-        prev && prev.entityRef === entityRef
-          ? { ...prev, status: result[entityRef] ?? prev.status }
-          : prev,
-      );
-    },
-    [api],
-  );
-
-  if (loading && !allAgents.length) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="40vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <EmptyState
-        title="Failed to load AI agents"
-        description={error.message}
-        missing="content"
-      />
-    );
-  }
+  const select = (next: View) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'agents') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params);
+  };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h4">AI Agents</Typography>
-        <Typography variant="body2" color="text.secondary">
-          AI agents registered in the catalog as <code>Component</code> entities
-          with <code>spec.type: ai-agent</code>.
-        </Typography>
-      </Box>
-
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+    <>
+      <Header
+        title="AI Agents"
+        description="AI agents registered in the catalog as Component entities with spec.type: ai-agent."
+      />
+      <Container>
         <Tabs
-          value={tab}
-          onChange={(_, newValue) => {
-            const newParams = new URLSearchParams(searchParams);
-            if (newValue === 'agents') {
-              newParams.delete('tab');
-            } else {
-              newParams.set('tab', newValue);
-            }
-            setSearchParams(newParams);
-          }}
-          aria-label="Agents view"
+          selectedKey={view}
+          onSelectionChange={key => select(key === 'activity' ? key : 'agents')}
         >
-          <Tab label="Agents" value="agents" />
-          <Tab label="Activity" value="activity" />
+          <TabList aria-label="Agents view">
+            <Tab id="agents">Agents</Tab>
+            <Tab id="activity">Activity</Tab>
+          </TabList>
+          <TabPanel id="agents">
+            <AgentsGallery activityHref={activityHref} />
+          </TabPanel>
+          <TabPanel id="activity">
+            <ActivityWorkspace />
+          </TabPanel>
         </Tabs>
-      </Box>
-
-      {tab === 'agents' && (
-        <>
-          <AgentFiltersBar
-            agents={allAgents}
-            filters={filters}
-            onChange={update}
-            onReset={reset}
-          />
-
-          {allAgents.length === 0 && (
-            <EmptyState
-              title="No AI agents registered"
-              description="Add a Component with spec.type: ai-agent to the catalog."
-              missing="content"
-              action={<button onClick={() => retry()}>Retry</button>}
-            />
-          )}
-          {allAgents.length > 0 && agentsWithStatus.length === 0 && (
-            <EmptyState
-              title="No agents match these filters"
-              description="Try loosening or clearing your search and filters."
-              missing="data"
-              action={<button onClick={() => reset()}>Clear filters</button>}
-            />
-          )}
-          {agentsWithStatus.length > 0 && (
-            <AgentsGrid
-              agents={agentsWithStatus}
-              onAgentClick={handleCardClick}
-              onRuntimeClick={handleRuntimeClick}
-              onHire={handleHire}
-            />
-          )}
-
-          <AgentDetailDrawer
-            agent={selected}
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            onRefreshStatus={handleRefreshStatus}
-            onHire={handleHire}
-            historyReloadKey={invocationNonce}
-          />
-
-          <HireAgentDialog
-            agent={hireAgent}
-            open={hireOpen}
-            onClose={() => setHireOpen(false)}
-            onInvoke={async (values, opts) => {
-              const result = await api.invokeAgent(
-                hireAgent!.entityRef,
-                values,
-                opts,
-              );
-              setInvocationNonce(n => n + 1);
-              return result;
-            }}
-          />
-        </>
-      )}
-
-      {tab === 'activity' && <ActivityWorkspace />}
-    </Box>
+      </Container>
+    </>
   );
 }

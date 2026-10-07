@@ -1,23 +1,28 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SendIcon from '@mui/icons-material/Send';
-import PublishIcon from '@mui/icons-material/Publish';
+import {
+  Alert,
+  Badge,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  Flex,
+  NumberField,
+  Select,
+  Text,
+  TextAreaField,
+  TextField,
+} from '@backstage/ui';
+import {
+  RiFileCopyLine,
+  RiPlayLine,
+  RiSendPlaneLine,
+  RiUploadCloud2Line,
+} from '@remixicon/react';
 import type { InvocationResult } from '../api';
 import type { AiAgent, HireField } from '../types';
+import { CodeBlock, StatusDot, TONE_BG, TONE_FG } from '../ui';
 
 /** @public */
 export interface HireAgentDialogProps {
@@ -101,71 +106,86 @@ function PreviewBlock({
   title,
   language,
   content,
-  onCopy,
-  missingChip,
+  missingNote,
   collapsible,
 }: {
   title: string;
   language: string;
   content: string;
-  onCopy: () => void;
-  missingChip?: React.ReactNode;
+  missingNote?: React.ReactNode;
   collapsible?: boolean;
 }) {
   const [openPreview, setOpenPreview] = useState(!collapsible);
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-        <Typography variant="caption" color="text.secondary">
+    <Flex direction="column" gap="1">
+      <Flex align="center" gap="2" style={{ flexWrap: 'wrap' }}>
+        <Text variant="body-small" color="secondary">
           {title}
-        </Typography>
+        </Text>
         {collapsible && (
           <Button
+            variant="tertiary"
             size="small"
-            onClick={() => setOpenPreview(o => !o)}
-            sx={{ ml: 1, minWidth: 0 }}
+            onPress={() => setOpenPreview(o => !o)}
           >
             {openPreview ? 'hide' : 'show'}
           </Button>
         )}
-        <Chip
-          size="small"
-          label={language}
-          sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-        />
-        {missingChip}
-        <IconButton
-          size="small"
-          onClick={onCopy}
-          sx={{ ml: 'auto' }}
-          title="Copy"
-        >
-          <ContentCopyIcon fontSize="inherit" />
-        </IconButton>
-      </Box>
-      {openPreview && (
-        <Box
-          component="pre"
-          sx={{
-            m: 0,
-            p: 1.25,
-            bgcolor: 'action.hover',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            fontFamily: 'monospace',
-            fontSize: '0.75rem',
-            lineHeight: 1.4,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            overflowX: 'auto',
-            maxHeight: 260,
-          }}
-        >
-          {content}
-        </Box>
-      )}
-    </Box>
+        <Badge size="small">{language}</Badge>
+        {missingNote}
+      </Flex>
+      {openPreview && <CodeBlock text={content} language={language} />}
+    </Flex>
+  );
+}
+
+function Field({
+  field,
+  value,
+  onChange,
+}: {
+  field: HireField;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const common = {
+    label: field.label,
+    description: field.help,
+    isRequired: field.required,
+  };
+  if (field.type === 'select') {
+    return (
+      <Select
+        {...common}
+        options={(field.options ?? []).map(o => ({ id: o, label: o }))}
+        value={value || null}
+        onChange={key => onChange(key === null ? '' : String(key))}
+      />
+    );
+  }
+  if (field.type === 'textarea') {
+    return (
+      <TextAreaField {...common} rows={4} value={value} onChange={onChange} />
+    );
+  }
+  if (field.type === 'number') {
+    return (
+      <NumberField
+        {...common}
+        value={
+          value === '' || Number.isNaN(Number(value)) ? NaN : Number(value)
+        }
+        onChange={n => onChange(Number.isNaN(n) ? '' : String(n))}
+      />
+    );
+  }
+  return (
+    <TextField
+      {...common}
+      type={field.type === 'url' ? 'url' : 'text'}
+      value={value}
+      onChange={onChange}
+    />
   );
 }
 
@@ -303,284 +323,195 @@ export function HireAgentDialog({
   if (!agent || !fields.length) return null;
 
   const busy = running || publishing;
+  const lastTurnId = turns[turns.length - 1]?.id;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Run {agent.title ?? agent.name}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={3} sx={{ mt: 1 }}>
+    <Dialog
+      isOpen={open}
+      onOpenChange={isOpen => {
+        if (!isOpen) onClose();
+      }}
+      width={760}
+    >
+      <DialogHeader>Run {agent.title ?? agent.name}</DialogHeader>
+      <DialogBody>
+        <Flex direction="column" gap="5">
           {/* Parameters — only relevant for the first (dry) turn. */}
           {!turns.length && (
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            <Flex direction="column" gap="3">
+              <Text as="h3" variant="body-medium" weight="bold">
                 Invocation parameters
-              </Typography>
-              <Stack spacing={2}>
-                {fields.map(f => {
-                  const value = values[f.name] ?? '';
-                  const onChange = (v: string) =>
-                    setValues(prev => ({ ...prev, [f.name]: v }));
-                  const fieldError = f.required && !value.trim();
-                  const common = {
-                    key: f.name,
-                    label: f.label,
-                    required: f.required,
-                    error: fieldError,
-                    helperText:
-                      f.help ??
-                      (fieldError ? 'This field is required' : undefined),
-                    value,
-                    size: 'small' as const,
-                    fullWidth: true,
-                  };
-                  if (f.type === 'select') {
-                    return (
-                      <TextField
-                        {...common}
-                        select
-                        onChange={e => onChange(e.target.value)}
-                      >
-                        {(f.options ?? []).map(opt => (
-                          <MenuItem key={opt} value={opt}>
-                            {opt}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    );
-                  }
-                  if (f.type === 'textarea') {
-                    return (
-                      <TextField
-                        {...common}
-                        multiline
-                        minRows={3}
-                        onChange={e => onChange(e.target.value)}
-                      />
-                    );
-                  }
-                  if (f.type === 'number') {
-                    return (
-                      <TextField
-                        {...common}
-                        type="number"
-                        onChange={e => onChange(e.target.value)}
-                      />
-                    );
-                  }
-                  return (
-                    <TextField
-                      {...common}
-                      type={f.type === 'url' ? 'url' : 'text'}
-                      onChange={e => onChange(e.target.value)}
-                    />
-                  );
-                })}
-              </Stack>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mt: 1 }}
-              >
+              </Text>
+              {fields.map(f => (
+                <Field
+                  key={f.name}
+                  field={f}
+                  value={values[f.name] ?? ''}
+                  onChange={v => setValues(prev => ({ ...prev, [f.name]: v }))}
+                />
+              ))}
+              <Text variant="body-small" color="secondary">
                 Runs in dry-run by default — the agent reports back without
                 posting anything. You confirm afterwards.
-              </Typography>
-            </Box>
+              </Text>
+            </Flex>
           )}
 
           {/* Conversation turns */}
-          <Stack spacing={2}>
-            {turns.map(t => (
-              <Box key={t.id}>
-                <Typography variant="caption" color="text.secondary">
-                  {t.post ? 'You (publish)' : 'You'}
-                </Typography>
-                <Box
-                  sx={{
-                    p: 1.25,
-                    bgcolor: 'action.hover',
-                    borderRadius: 1,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    fontSize: '0.85rem',
-                  }}
+          {turns.map(t => (
+            <Flex key={t.id} direction="column" gap="2">
+              <Text variant="body-small" color="secondary">
+                {t.post ? 'You (publish)' : 'You'}
+              </Text>
+              <div
+                style={{
+                  padding: 'var(--bui-space-3)',
+                  background: 'var(--bui-bg-neutral-2)',
+                  borderRadius: 'var(--bui-radius-2)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                <Text variant="body-medium">{t.prompt}</Text>
+              </div>
+              {t.result && (
+                <Flex direction="column" gap="1">
+                  <Flex align="center" gap="2">
+                    <Text variant="body-small" color="secondary">
+                      {agent.title ?? agent.name}
+                      {t.post ? ' · published' : ' · dry-run'}
+                    </Text>
+                    {t.result.latencyMs !== undefined &&
+                      t.result.latencyMs !== null && (
+                        <Badge size="small">{`${(t.result.latencyMs / 1000).toFixed(1)}s`}</Badge>
+                      )}
+                  </Flex>
+                  <PreviewBlock
+                    title={`session ${t.result.sessionId}`}
+                    language="text"
+                    content={t.result.responseText || '(empty response)'}
+                  />
+                </Flex>
+              )}
+              {t.error && (
+                <Text
+                  variant="body-medium"
+                  color="danger"
+                  style={{ whiteSpace: 'pre-wrap' }}
                 >
-                  {t.prompt}
-                </Box>
-                {t.result && (
-                  <Box sx={{ mt: 1 }}>
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}
-                    >
-                      <Typography variant="caption" color="text.secondary">
-                        {agent.title ?? agent.name}
-                        {t.post ? ' · published' : ' · dry-run'}
-                      </Typography>
-                      {t.result.latencyMs !== undefined &&
-                        t.result.latencyMs !== null && (
-                          <Chip
-                            size="small"
-                            label={`${(t.result.latencyMs / 1000).toFixed(1)}s`}
-                            sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-                          />
-                        )}
-                      <IconButton
-                        size="small"
-                        onClick={() => copy(t.result!.responseText)}
-                        sx={{ ml: 'auto' }}
-                        title="Copy"
-                      >
-                        <ContentCopyIcon fontSize="inherit" />
-                      </IconButton>
-                    </Box>
-                    <PreviewBlock
-                      title={`session ${t.result.sessionId}`}
-                      language="text"
-                      content={t.result.responseText || '(empty response)'}
-                      onCopy={() => copy(t.result!.responseText)}
-                    />
-                  </Box>
-                )}
-                {t.error && (
-                  <Typography
-                    variant="body2"
-                    color="error"
-                    sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}
-                  >
-                    {t.error}
-                  </Typography>
-                )}
-                {running && turns[turns.length - 1]?.id === t.id && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      mt: 1,
-                    }}
-                  >
-                    <CircularProgress size={16} />
-                    <Typography variant="caption" color="text.secondary">
-                      Running — reviews can take a few minutes…
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            ))}
-          </Stack>
+                  {t.error}
+                </Text>
+              )}
+              {running && lastTurnId === t.id && (
+                <Flex align="center" gap="2">
+                  <StatusDot tone="info" pulse />
+                  <Text variant="body-small" color="secondary">
+                    Running — reviews can take a few minutes…
+                  </Text>
+                </Flex>
+              )}
+            </Flex>
+          ))}
 
           {error && !turns.length && (
-            <Typography
-              variant="body2"
-              color="error"
-              sx={{ whiteSpace: 'pre-wrap' }}
-            >
-              {error}
-            </Typography>
+            <Alert status="danger" icon title={error} />
           )}
 
           {/* Confirm and publish — second, explicit step after a dry run. */}
           {canPublish && (
-            <Box
-              sx={{
-                p: 1.5,
-                border: '1px solid',
-                borderColor: 'warning.main',
-                borderRadius: 1,
-              }}
-            >
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                The result above is a dry-run and has not been posted. Publish
-                it to write the feedback to the target system.
-              </Typography>
-              <Button
-                variant="contained"
-                color="warning"
-                startIcon={
-                  publishing ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <PublishIcon />
-                  )
-                }
-                disabled={busy}
-                onClick={confirmAndPublish}
-              >
-                Confirm and publish
-              </Button>
-            </Box>
+            <Alert
+              status="warning"
+              icon
+              title="This is a dry-run"
+              description="The result above has not been posted. Publish it to write the feedback to the target system."
+              customActions={
+                <Button
+                  variant="primary"
+                  size="small"
+                  iconStart={<RiUploadCloud2Line size={16} />}
+                  isPending={publishing}
+                  isDisabled={busy}
+                  onPress={confirmAndPublish}
+                >
+                  Confirm and publish
+                </Button>
+              }
+            />
           )}
 
           {/* Follow-up composer (conversational multi-turn). */}
           {!!turns.length && onInvoke && (
-            <Box>
-              <TextField
-                fullWidth
-                size="small"
-                multiline
-                minRows={2}
-                placeholder="Follow-up message — the agent keeps the conversation context"
-                value={followUp}
-                onChange={e => setFollowUp(e.target.value)}
-                disabled={busy}
-              />
-            </Box>
+            <TextAreaField
+              aria-label="Follow-up message"
+              placeholder="Follow-up message — the agent keeps the conversation context"
+              rows={3}
+              value={followUp}
+              onChange={setFollowUp}
+              isDisabled={busy}
+            />
           )}
 
           {/* Invocation preview (available before the first run). */}
           {!turns.length && (
-            <Box>
-              <Button size="small" onClick={() => setShowPreview(s => !s)}>
+            <Flex direction="column" gap="2" align="start">
+              <Button
+                variant="tertiary"
+                size="small"
+                onPress={() => setShowPreview(s => !s)}
+              >
                 {showPreview
                   ? 'Hide invocation preview'
                   : 'Show invocation preview'}
               </Button>
               {showPreview && (
-                <Stack spacing={1.5} sx={{ mt: 1 }}>
+                <Flex direction="column" gap="3" style={{ width: '100%' }}>
                   <PreviewBlock
                     title="Prompt"
                     language="text"
                     content={filledPrompt}
-                    onCopy={() => copy(filledPrompt)}
                   />
                   <PreviewBlock
                     title="Payload (POST /invocations)"
                     language="json"
                     content={payloadJson}
-                    onCopy={() => copy(payloadJson)}
                   />
                   {isAgentCoreRuntime && (
                     <PreviewBlock
                       title="AWS CLI command (preview — actual session id assigned at run time)"
                       language="bash"
                       content={cliCommand}
-                      onCopy={() => copy(cliCommand)}
-                      missingChip={
+                      missingNote={
                         !agent.runtime.region ||
                         !agent.runtime.runtimeHandle ? (
-                          <Chip
+                          <Badge
                             size="small"
-                            color="warning"
-                            label="missing region/runtime-handle — set the annotations"
-                            sx={{ ml: 1 }}
-                          />
+                            style={{
+                              background: TONE_BG.warning,
+                              color: TONE_FG.warning,
+                            }}
+                          >
+                            missing region/runtime-handle — set the annotations
+                          </Badge>
                         ) : undefined
                       }
                     />
                   )}
-                </Stack>
+                </Flex>
               )}
-            </Box>
+            </Flex>
           )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        </Flex>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="secondary" onPress={onClose}>
+          Close
+        </Button>
         {!onInvoke && isAgentCoreRuntime && (
           <Button
-            variant="contained"
-            disabled={missing}
-            onClick={() => copy(cliCommand)}
-            startIcon={<ContentCopyIcon />}
+            variant="primary"
+            isDisabled={missing}
+            onPress={() => copy(cliCommand)}
+            iconStart={<RiFileCopyLine size={16} />}
           >
             Copy CLI command
           </Button>
@@ -589,47 +520,38 @@ export function HireAgentDialog({
           <>
             {!turns.length && isAgentCoreRuntime && (
               <Button
-                onClick={() => copy(cliCommand)}
-                startIcon={<ContentCopyIcon />}
+                variant="secondary"
+                onPress={() => copy(cliCommand)}
+                iconStart={<RiFileCopyLine size={16} />}
               >
                 Copy CLI
               </Button>
             )}
             {!turns.length && (
               <Button
-                variant="contained"
-                disabled={missing || busy}
-                onClick={() => run()}
-                startIcon={
-                  running ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <PlayArrowIcon />
-                  )
-                }
+                variant="primary"
+                isDisabled={missing || busy}
+                isPending={running}
+                onPress={() => run()}
+                iconStart={<RiPlayLine size={16} />}
               >
                 Run agent
               </Button>
             )}
             {!!turns.length && (
               <Button
-                variant="contained"
-                disabled={busy || !followUp.trim()}
-                onClick={sendFollowUp}
-                startIcon={
-                  running ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <SendIcon />
-                  )
-                }
+                variant="primary"
+                isDisabled={busy || !followUp.trim()}
+                isPending={running}
+                onPress={sendFollowUp}
+                iconStart={<RiSendPlaneLine size={16} />}
               >
                 Send
               </Button>
             )}
           </>
         )}
-      </DialogActions>
+      </DialogFooter>
     </Dialog>
   );
 }

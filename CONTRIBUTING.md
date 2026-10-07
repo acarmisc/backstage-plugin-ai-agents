@@ -30,8 +30,8 @@ Node.js 22 or 24 and npm. The repository uses npm workspaces, not yarn.
 npm install --legacy-peer-deps
 ```
 
-`--legacy-peer-deps` is required: Backstage's MUI v4 theme declares a React 17
-peer dependency.
+`--legacy-peer-deps` is required: Backstage's MUI v4 theme (used by the host
+app and `@backstage/core-components`) declares a React 17 peer dependency.
 
 ## Checks
 
