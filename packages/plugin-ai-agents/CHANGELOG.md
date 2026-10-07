@@ -3,6 +3,29 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.0] - 2026-10-07
+
+### Added
+
+- **Squads.** Agents carry a `squad`: the `ai-agent.io/squad` annotation, else
+  the entity's `spec.system` (refs are shortened, `system:default/devex` →
+  `devex`). The gallery has a Squad filter, and a Group by None / Squad toggle
+  that sections the grid by squad (agents without one go last). Both appear
+  only when at least one agent has a squad.
+
+### Changed
+
+- The agent detail panel is a right-hand drawer again (a full-height panel
+  docked to the right, still built on BUI's dialog: focus trap, Escape, scrim).
+- Agent cards show the state Activity shows (running, completed, failed) with
+  "last seen …" / "running now", from the same telemetry; agents without
+  telemetry keep the health-probe dot.
+- Icons are larger (avatars, runtime, billing, capability and link icons,
+  status dots).
+- The Activity agent list is a plain list without the white surface: the
+  selection is a tint plus an inset bar, with no check mark, so rows no longer
+  move when you click one.
+
 ## [0.17.0] - 2026-10-07
 
 ### Changed

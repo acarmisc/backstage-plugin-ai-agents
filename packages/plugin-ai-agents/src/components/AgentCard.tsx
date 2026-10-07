@@ -14,7 +14,8 @@ import type { AiAgent } from '../types';
 import { isSafeUrl } from '../types';
 import { AgentAvatar } from './AgentAvatar';
 import { useAvatarSrc } from '../hooks/useAvatarBlob';
-import { AgentStatusBadge } from './AgentStatusBadge';
+import { AgentLiveStatus } from './AgentLiveStatus';
+import type { AgentLive } from '../utils/live';
 import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
@@ -24,6 +25,8 @@ import { getLinkIcon } from './linkIcon';
 /** @public */
 export interface AgentCardProps {
   agent: AiAgent;
+  /** Activity state and last seen, when the agent has telemetry. */
+  live?: AgentLive;
   onClick?: (agent: AiAgent) => void;
   onRuntimeClick?: (runtime: string) => void;
   onHire?: (agent: AiAgent) => void;
@@ -40,6 +43,7 @@ const PURPOSE_CLAMP = {
 /** @public */
 export function AgentCard({
   agent,
+  live,
   onClick,
   onRuntimeClick,
   onHire,
@@ -69,9 +73,9 @@ export function AgentCard({
     <Card style={{ height: '100%' }} {...interaction}>
       <CardHeader>
         <Flex align="center" gap="3">
-          <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={40} />
+          <AgentAvatar name={agent.name} avatarUrl={avatarSrc} size={48} />
           <Flex direction="column" gap="0.5" style={{ flex: 1, minWidth: 0 }}>
-            <Text as="h3" variant="body-large" weight="bold" truncate>
+            <Text as="h3" variant="body-large" weight="bold">
               {title}
             </Text>
             {meta && (
@@ -85,7 +89,7 @@ export function AgentCard({
             onClick={onRuntimeClick}
             variant="icon"
           />
-          <AgentStatusBadge status={agent.status} />
+          <AgentLiveStatus live={live} status={agent.status} />
         </Flex>
       </CardHeader>
 
@@ -130,7 +134,7 @@ export function AgentCard({
               <Button
                 variant="primary"
                 size="small"
-                iconStart={<RiBriefcaseLine size={16} />}
+                iconStart={<RiBriefcaseLine size={18} />}
                 onPress={() => onHire?.(agent)}
               >
                 Hire Agent

@@ -10,15 +10,15 @@ import {
 } from '@remixicon/react';
 
 const LINK_ICON: Record<string, React.ReactElement> = {
-  dashboard: <RiDashboardLine size={16} />,
-  docs: <RiFileTextLine size={16} />,
-  playbook: <RiArticleLine size={16} />,
-  issues: <RiBugLine size={16} />,
-  code: <RiCodeLine size={16} />,
-  web: <RiGlobalLine size={16} />,
+  dashboard: <RiDashboardLine size={20} />,
+  docs: <RiFileTextLine size={20} />,
+  playbook: <RiArticleLine size={20} />,
+  issues: <RiBugLine size={20} />,
+  code: <RiCodeLine size={20} />,
+  web: <RiGlobalLine size={20} />,
 };
 
 /** Icon for a catalog entity link, keyed by its `icon` field. */
 export function getLinkIcon(icon?: string): React.ReactElement {
-  return LINK_ICON[icon ?? ''] ?? <RiLinkM size={16} />;
+  return LINK_ICON[icon ?? ''] ?? <RiLinkM size={20} />;
 }

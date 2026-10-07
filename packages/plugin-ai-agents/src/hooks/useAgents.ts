@@ -10,7 +10,11 @@ export interface AgentFilters {
   capability: string[];
   lifecycle: string[];
   owner: string[];
+  squad: string[];
 }
+
+/** How the gallery sections agents. */
+export type GroupBy = 'none' | 'squad';
 
 export const initialFilters: AgentFilters = {
   search: '',
@@ -18,6 +22,7 @@ export const initialFilters: AgentFilters = {
   capability: [],
   lifecycle: [],
   owner: [],
+  squad: [],
 };
 
 export function applyFilters(
@@ -52,6 +57,9 @@ export function applyFilters(
     if (filters.owner.length && !filters.owner.includes(a.owner ?? '')) {
       return false;
     }
+    if (filters.squad.length && !filters.squad.includes(a.squad ?? '')) {
+      return false;
+    }
     return true;
   });
 }
@@ -66,6 +74,7 @@ export function useAgents() {
   } = useAsyncRetry(() => api.listAgents(), [api]);
 
   const [filters, setFilters] = useState<AgentFilters>(initialFilters);
+  const [groupBy, setGroupBy] = useState<GroupBy>('none');
 
   const filtered = useMemo(
     () => applyFilters(agents ?? [], filters),
@@ -89,5 +98,7 @@ export function useAgents() {
     filters,
     update,
     reset,
+    groupBy,
+    setGroupBy,
   };
 }

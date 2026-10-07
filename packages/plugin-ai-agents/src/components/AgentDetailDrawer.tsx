@@ -7,7 +7,6 @@ import {
   Badge,
   Button,
   ButtonIcon,
-  Dialog,
   DialogBody,
   DialogHeader,
   Flex,
@@ -30,6 +29,7 @@ import { AgentCapabilities } from './AgentCapabilities';
 import { RuntimeBadge } from './RuntimeBadge';
 import { BillingBadge } from './BillingBadge';
 import { getLinkIcon } from './linkIcon';
+import { SidePanel } from '../ui';
 import { useAvatarSrc } from '../hooks/useAvatarBlob';
 
 import { InvocationHistory } from './InvocationHistory';
@@ -136,13 +136,12 @@ export function AgentDetailDrawer({
   );
 
   return (
-    <Dialog
+    <SidePanel
       isOpen={open}
       onOpenChange={isOpen => {
         if (!isOpen) onClose();
       }}
-      width={600}
-      height="85vh"
+      width={560}
     >
       <DialogHeader>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
@@ -391,6 +390,6 @@ export function AgentDetailDrawer({
           </AccordionGroup>
         </Flex>
       </DialogBody>
-    </Dialog>
+    </SidePanel>
   );
 }

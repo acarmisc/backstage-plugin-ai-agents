@@ -146,7 +146,7 @@ test('rail: shows how many runs each agent has in progress, and the fleet total'
   assert.equal(chips('d'), '3');
   assert.equal(chips('e'), '1');
   assert.equal(chips('g'), undefined, 'idle agent has no running chip');
-  const all = container.querySelector('[role="row"]');
+  const all = container.querySelector('[data-telemetry-id="__all__"]');
   assert.match(all?.textContent ?? '', /4 running/);
 });
 
@@ -169,7 +169,7 @@ test('rail: secondary line shows what a running agent is doing and "Idle" otherw
   assert.match(text('m'), /No runs yet/);
 });
 
-test('rail: rows select on press and the selection is exposed with aria-selected', () => {
+test('rail: rows select on click and the selection is exposed with aria-current', () => {
   stubApi();
   const picked: Array<string | undefined> = [];
   const fleet = [agent('a', 'Alpha'), agent('b', 'Beta')];
@@ -178,7 +178,7 @@ test('rail: rows select on press and the selection is exposed with aria-selected
   );
   const rowFor = (id: string) =>
     container.querySelector(`[data-telemetry-id="${id}"]`) as HTMLElement;
-  press(rowFor('b'));
+  fireEvent.click(rowFor('b'));
   assert.deepEqual(picked, ['b']);
 
   rerender(
@@ -189,10 +189,28 @@ test('rail: rows select on press and the selection is exposed with aria-selected
     />,
   );
   const selected = [
-    ...container.querySelectorAll('[role="row"][aria-selected="true"]'),
+    ...container.querySelectorAll('button[aria-current="true"]'),
   ];
   assert.equal(selected.length, 1);
   assert.equal(selected[0].getAttribute('data-telemetry-id'), 'b');
+});
+
+test('rail: arrow keys move focus between rows without selecting', () => {
+  stubApi();
+  const picked: Array<string | undefined> = [];
+  render(
+    <AgentRail
+      fleet={[agent('a', 'Alpha'), agent('b', 'Beta')]}
+      onSelectAgent={id => picked.push(id)}
+    />,
+  );
+  const all = screen.getByRole('button', { name: /^All agents/ });
+  all.focus();
+  fireEvent.keyDown(all, { key: 'ArrowDown' });
+  assert.equal(document.activeElement?.getAttribute('data-telemetry-id'), 'a');
+  fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowUp' });
+  assert.equal(document.activeElement, all);
+  assert.deepEqual(picked, []);
 });
 
 test('rail: "All agents" clears the selection', () => {
@@ -205,7 +223,7 @@ test('rail: "All agents" clears the selection', () => {
       onSelectAgent={id => picked.push(id)}
     />,
   );
-  press(screen.getByRole('row', { name: /^All agents/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^All agents/ }));
   assert.deepEqual(picked, [undefined]);
 });
 
@@ -561,7 +579,7 @@ test('workspace: selecting an agent in the rail updates the URL and drops the pr
   });
   renderAt(<ActivityWorkspace />, '/?tab=activity&agent=a&run=1');
   await screen.findAllByText('Alpha');
-  press(screen.getByRole('row', { name: /^Beta/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Beta/ }));
   await waitFor(() =>
     assert.equal(
       screen.getByTestId('loc').textContent,

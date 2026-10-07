@@ -5,6 +5,8 @@ import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
 import type { AiAgent, AgentStatus } from '../types';
 import { useAgents } from '../hooks/useAgents';
+import { useFleetActivity } from '../hooks/useFleetActivity';
+import { liveByEntityRef } from '../utils/live';
 import { AgentFiltersBar } from './AgentFilters';
 import { AgentsGrid } from './AgentsGrid';
 import { AgentDetailDrawer } from './AgentDetailDrawer';
@@ -30,8 +32,22 @@ export interface AgentsGalleryProps {
  */
 export function AgentsGallery({ activityHref }: AgentsGalleryProps) {
   const api = useApi(aiAgentsApiRef);
-  const { agents, allAgents, loading, error, retry, filters, update, reset } =
-    useAgents();
+  const {
+    agents,
+    allAgents,
+    loading,
+    error,
+    retry,
+    filters,
+    update,
+    reset,
+    groupBy,
+    setGroupBy,
+  } = useAgents();
+  // Same source as the Activity tab; absent (501) means "no telemetry" and
+  // the cards show the health probe instead.
+  const { data: fleet } = useFleetActivity(15_000, 5);
+  const live = liveByEntityRef(fleet);
 
   const [selected, setSelected] = useState<AiAgent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -143,6 +159,8 @@ export function AgentsGallery({ activityHref }: AgentsGalleryProps) {
         filters={filters}
         onChange={update}
         onReset={reset}
+        groupBy={groupBy}
+        onGroupByChange={setGroupBy}
       />
 
       {allAgents.length === 0 && (
@@ -172,6 +190,8 @@ export function AgentsGallery({ activityHref }: AgentsGalleryProps) {
       {agentsWithStatus.length > 0 && (
         <AgentsGrid
           agents={agentsWithStatus}
+          live={live}
+          groupBy={groupBy}
           onAgentClick={handleCardClick}
           onRuntimeClick={handleRuntimeClick}
           onHire={handleHire}

@@ -16,13 +16,13 @@ import type { AgentCapability, AgentCapabilityCategory } from '../types';
  * design, and one hue per category would clash with the host theme.
  */
 const CATEGORY_ICON: Record<AgentCapabilityCategory, React.ReactElement> = {
-  reasoning: <RiBrainLine size={14} />,
-  retrieval: <RiSearchEyeLine size={14} />,
-  tools: <RiToolsLine size={14} />,
-  vision: <RiEyeLine size={14} />,
-  voice: <RiMicLine size={14} />,
-  data: <RiDatabase2Line size={14} />,
-  safety: <RiShieldCheckLine size={14} />,
+  reasoning: <RiBrainLine size={18} />,
+  retrieval: <RiSearchEyeLine size={18} />,
+  tools: <RiToolsLine size={18} />,
+  vision: <RiEyeLine size={18} />,
+  voice: <RiMicLine size={18} />,
+  data: <RiDatabase2Line size={18} />,
+  safety: <RiShieldCheckLine size={18} />,
 };
 
 const MAX_VISIBLE = 5;

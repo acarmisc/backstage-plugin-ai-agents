@@ -249,6 +249,11 @@ export interface AiAgent {
   description?: string;
   avatarUrl?: string;
   owner?: string;
+  /**
+   * Team the agent belongs to: `ai-agent.io/squad`, else the entity's
+   * `spec.system`. Drives the Squad filter and grouping.
+   */
+  squad?: string;
   system?: string;
   lifecycle?: string;
   version?: string;
@@ -397,6 +402,13 @@ function purpose(entity: Entity): string {
   return (explicit ?? entity.metadata.description ?? '').trim();
 }
 
+/** `system:default/payments` -> `payments`; plain names are kept. */
+function shortRef(value?: string): string | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+  return v.replace(/^[a-z-]+:([^/]+\/)?/i, '') || undefined;
+}
+
 /**
  * Map a Backstage catalog Component entity to the plugin's AiAgent shape.
  *
@@ -422,6 +434,11 @@ export function entityToAgent(
     avatarUrl: annotation(entity, 'avatar'),
     owner: (entity.spec as Record<string, unknown> | undefined)?.owner as
       string | undefined,
+    squad: shortRef(
+      annotation(entity, 'squad') ??
+        ((entity.spec as Record<string, unknown> | undefined)?.system as
+          string | undefined),
+    ),
     system: (entity.spec as Record<string, unknown> | undefined)?.system as
       string | undefined,
     lifecycle: (entity.spec as Record<string, unknown> | undefined)

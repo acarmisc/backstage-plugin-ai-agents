@@ -132,6 +132,7 @@ All annotations are optional. Entities that still use the old
 | `ai-agent.io/telemetry-id`    | The agent's name in the telemetry store. Enables the Activity view.                                                                      |
 | `ai-agent.io/purpose`         | Card text; defaults to `metadata.description`.                                                                                           |
 | `ai-agent.io/avatar`          | Image: `http(s)` URL, `data:image/*` URI or app-relative path. Private-repo images load through the backend. Initials otherwise.         |
+| `ai-agent.io/squad`           | Team the agent belongs to. Falls back to `spec.system`. Drives the Squad filter and the Group by Squad view.                             |
 | `ai-agent.io/version`         | Shown in the card footer.                                                                                                                |
 | `ai-agent.io/capabilities`    | Comma- or newline-separated chips, `label` or `label:category` (`reasoning`, `retrieval`, `tools`, `vision`, `voice`, `data`, `safety`). |
 | `ai-agent.io/billing-model`   | `per-invocation`, `per-token`, `subscription` or `free` (default).                                                                       |
