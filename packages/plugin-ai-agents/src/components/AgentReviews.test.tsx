@@ -6,7 +6,9 @@ import { StarRating } from './StarRating';
 
 test('StarRating simple variant renders read-only stars', () => {
   const html = renderToString(<StarRating value={4} />);
-  assert.match(html, /aria-label="4 Stars"/);
+  assert.match(html, /role="img"/);
+  assert.match(html, /aria-label="Rated 4 out of 5"/);
+  assert.ok(!html.includes('type="radio"'), 'read-only stars are not inputs');
   assert.ok(!html.includes('Excellent'));
 });
 

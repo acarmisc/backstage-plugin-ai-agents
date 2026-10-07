@@ -11,6 +11,28 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 // DocumentFragment` when mounting into a container.
 (globalThis as any).DocumentFragment = dom.window.DocumentFragment;
 
+// react-aria (behind @backstage/ui) reaches for many DOM globals (`Image`,
+// `SVGElement`, `Element`, `getComputedStyle`, the `*Event` classes, ...).
+// Expose the jsdom ones that Node does not define itself, like
+// jest-environment-jsdom does; Node's own globals (fetch, URL, timers,
+// console, ...) stay untouched.
+for (const key of Object.getOwnPropertyNames(dom.window)) {
+  if (key in globalThis) continue;
+  const descriptor = Object.getOwnPropertyDescriptor(dom.window, key);
+  if (descriptor) {
+    Object.defineProperty(globalThis, key, {
+      ...descriptor,
+      configurable: true,
+    });
+  }
+}
+// Node defines these natively, but jsdom's `dispatchEvent` only accepts its
+// own event classes, so code that does `el.dispatchEvent(new CustomEvent())`
+// needs the jsdom ones.
+for (const key of ['Event', 'CustomEvent'] as const) {
+  (globalThis as any)[key] = (dom.window as any)[key];
+}
+
 // navigator is read-only in Node, so use Object.defineProperty
 try {
   Object.defineProperty(globalThis, 'navigator', {

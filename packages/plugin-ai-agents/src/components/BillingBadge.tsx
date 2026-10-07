@@ -1,33 +1,23 @@
 import React from 'react';
-import Chip from '@mui/material/Chip';
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import PaidIcon from '@mui/icons-material/Paid';
-import TokenIcon from '@mui/icons-material/Token';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
-import MoneyOffIcon from '@mui/icons-material/MoneyOff';
+import { Badge, Flex, Text } from '@backstage/ui';
+import {
+  RiCoinLine,
+  RiForbid2Line,
+  RiLoopRightLine,
+  RiMoneyDollarCircleLine,
+} from '@remixicon/react';
 import type { AgentBilling } from '../types';
-
-const BILLING_COLOR: Record<
-  string,
-  'primary' | 'secondary' | 'success' | 'default'
-> = {
-  'per-invocation': 'primary',
-  'per-token': 'secondary',
-  subscription: 'success',
-  free: 'default',
-};
+import { Hint } from '../ui';
 
 const BILLING_ICON: Record<string, React.ReactElement> = {
-  'per-invocation': <PaidIcon fontSize="small" />,
-  'per-token': <TokenIcon fontSize="small" />,
-  subscription: <AutorenewIcon fontSize="small" />,
-  free: <MoneyOffIcon fontSize="small" />,
+  'per-invocation': <RiMoneyDollarCircleLine size={16} />,
+  'per-token': <RiCoinLine size={16} />,
+  subscription: <RiLoopRightLine size={16} />,
+  free: <RiForbid2Line size={16} />,
 };
 
 function billingIcon(model: string): React.ReactElement {
-  return BILLING_ICON[model] ?? <PaidIcon fontSize="small" />;
+  return BILLING_ICON[model] ?? <RiMoneyDollarCircleLine size={16} />;
 }
 
 function unitLabel(billing: AgentBilling): string | null {
@@ -50,9 +40,9 @@ function costSummary(billing: AgentBilling): string[] {
 
 export interface BillingBadgeProps {
   billing: AgentBilling;
-  /** Chip only, with cost details in a tooltip. For tight layouts like cards. */
+  /** Badge only, with cost details in a tooltip. For tight layouts like cards. */
   compact?: boolean;
-  /** 'chip' (default) for a standalone pill; 'text' for a quiet icon+caption, matching footer-note styling. */
+  /** 'chip' (default) for a standalone badge; 'text' for a quiet icon+caption, matching footer-note styling. */
   variant?: 'chip' | 'text';
 }
 
@@ -61,66 +51,65 @@ export function BillingBadge({
   compact = false,
   variant = 'chip',
 }: BillingBadgeProps) {
-  const color = BILLING_COLOR[billing.model] ?? 'default';
   const lines = costSummary(billing);
+  const summary = lines.join(' · ');
 
   if (variant === 'text') {
     const content = (
-      <Box
-        sx={{
+      <span
+        // With cost details the badge becomes a tooltip trigger, which needs
+        // an accessible name that includes them.
+        {...(lines.length
+          ? {
+              role: 'img',
+              tabIndex: 0,
+              'aria-label': `${billing.model} (${summary})`,
+            }
+          : {})}
+        style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 0.5,
-          color: 'text.secondary',
-          '& svg': { fontSize: 16 },
+          gap: 'var(--bui-space-1)',
+          color: 'var(--bui-fg-secondary)',
         }}
       >
         {billingIcon(billing.model)}
-        <Typography variant="caption" color="inherit" noWrap>
+        <Text variant="body-small" color="secondary" truncate>
           {billing.model}
-        </Typography>
-      </Box>
+        </Text>
+      </span>
     );
-    return lines.length ? (
-      <Tooltip title={lines.join(' · ')}>{content}</Tooltip>
-    ) : (
-      content
-    );
+    return lines.length ? <Hint label={summary}>{content}</Hint> : content;
   }
 
-  const chip = (
-    <Chip
-      size="small"
-      color={color}
-      icon={billingIcon(billing.model)}
-      label={billing.model}
-      variant="outlined"
-    />
+  const badge = (
+    <Badge icon={billingIcon(billing.model)}>{billing.model}</Badge>
   );
 
   if (compact) {
     return lines.length ? (
-      <Tooltip title={lines.join(' · ')}>{chip}</Tooltip>
+      <Hint label={summary}>
+        <span
+          role="img"
+          tabIndex={0}
+          aria-label={`${billing.model} (${summary})`}
+        >
+          {badge}
+        </span>
+      </Hint>
     ) : (
-      chip
+      badge
     );
   }
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: 0.25,
-      }}
-    >
-      {chip}
+    <Flex direction="column" align="start" gap="0.5">
+      {badge}
       {lines.map(line => (
-        <Typography key={line} variant="caption" color="text.secondary">
+        <Text key={line} variant="body-small" color="secondary">
           {line}
-        </Typography>
+        </Text>
       ))}
-    </Box>
+    </Flex>
   );
 }

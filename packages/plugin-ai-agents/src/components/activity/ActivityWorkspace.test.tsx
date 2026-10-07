@@ -18,6 +18,7 @@ import { RecentRuns } from './RecentRuns';
 import { RunDetail } from './RunDetail';
 import { AgentWorkspacePanel } from './AgentWorkspacePanel';
 import { installApi, resetApi } from '../../__fixtures__/testApi';
+import { installImageStub } from '../../__fixtures__/imageStub';
 import type {
   AgentActivity,
   AgentInsights,
@@ -598,31 +599,36 @@ test('workspace: first-load failure shows an error with retry; empty fleet expla
 });
 
 test('workspace: rail and header show proxied avatars', async () => {
-  const requested: string[] = [];
-  stubApi({
-    getActivity: async () => [
-      {
-        ...agent('a', 'Alpha'),
-        avatarUrl: 'https://git.example.com/g/p/-/raw/main/a/avatar.png',
+  const restoreImage = installImageStub();
+  try {
+    const requested: string[] = [];
+    stubApi({
+      getActivity: async () => [
+        {
+          ...agent('a', 'Alpha'),
+          avatarUrl: 'https://git.example.com/g/p/-/raw/main/a/avatar.png',
+        },
+        agent('b', 'Beta'),
+      ],
+      getRuns: async () => [],
+      getInsights: async () => insights(),
+      getAvatar: async (ref: string) => {
+        requested.push(ref);
+        return new Blob(['png'], { type: 'image/png' });
       },
-      agent('b', 'Beta'),
-    ],
-    getRuns: async () => [],
-    getInsights: async () => insights(),
-    getAvatar: async (ref: string) => {
-      requested.push(ref);
-      return new Blob(['png'], { type: 'image/png' });
-    },
-  });
-  const { container } = renderAt(<ActivityWorkspace />, '/?agent=a');
-  await waitFor(() => {
-    const imgs = [...container.querySelectorAll('img')];
-    assert.equal(imgs.length, 2, 'rail item and workspace header');
-    for (const img of imgs) {
-      assert.match(img.getAttribute('src') ?? '', /^data:image\/png;base64,/);
-    }
-  });
-  // Shared per-agent cache: one proxy request, and none for agents without
-  // an avatar (Beta keeps its initials).
-  assert.deepEqual(requested, ['component:default/a']);
+    });
+    const { container } = renderAt(<ActivityWorkspace />, '/?agent=a');
+    await waitFor(() => {
+      const imgs = [...container.querySelectorAll('img')];
+      assert.equal(imgs.length, 2, 'rail item and workspace header');
+      for (const img of imgs) {
+        assert.match(img.getAttribute('src') ?? '', /^data:image\/png;base64,/);
+      }
+    });
+    // Shared per-agent cache: one proxy request, and none for agents without
+    // an avatar (Beta keeps its initials).
+    assert.deepEqual(requested, ['component:default/a']);
+  } finally {
+    restoreImage();
+  }
 });

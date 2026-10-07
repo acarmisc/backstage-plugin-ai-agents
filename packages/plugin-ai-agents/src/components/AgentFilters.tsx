@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import Badge from '@mui/material/Badge';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
-import Paper from '@mui/material/Paper';
-import Popover from '@mui/material/Popover';
-import TextField from '@mui/material/TextField';
-import Tooltip from '@mui/material/Tooltip';
-import SearchIcon from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import React from 'react';
+import {
+  Button,
+  ButtonIcon,
+  DialogTrigger,
+  Flex,
+  Popover,
+  SearchField,
+  Select,
+  Tag,
+  TagGroup,
+  Text,
+  Tooltip,
+  TooltipTrigger,
+} from '@backstage/ui';
+import { RiCloseLine, RiFilter3Line } from '@remixicon/react';
 import type { AiAgent } from '../types';
 import type { AgentFilters } from '../hooks/useAgents';
 import { getRuntimeMeta } from './RuntimeBadge';
@@ -24,16 +25,47 @@ export interface AgentFiltersBarProps {
   onReset: () => void;
 }
 
-const SELECT_PROPS = {
-  SelectProps: {
-    multiple: true,
-    renderValue: (v: unknown) => (v as string[]).join(', ') || 'All',
-  },
-} as const;
+type FilterKey = keyof AgentFilters;
 
 function without<T>(arr: T[], value: T): T[] {
   return arr.filter(v => v !== value);
 }
+
+/** react-aria hands back an array (multiple mode) or a single key. */
+function toStrings(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (value instanceof Set) return Array.from(value, String);
+  return value === null || value === undefined ? [] : [String(value)];
+}
+
+function MultiSelect({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { id: string; label: string; leadingIcon?: React.ReactNode }[];
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <div style={{ width: 200 }}>
+      <Select
+        aria-label={label}
+        placeholder={label}
+        size="small"
+        selectionMode="multiple"
+        options={options}
+        value={value}
+        onChange={next => onChange(toStrings(next))}
+      />
+    </div>
+  );
+}
+
+const unique = (values: (string | undefined)[]): string[] =>
+  Array.from(new Set(values.filter(Boolean) as string[])).sort();
 
 export function AgentFiltersBar({
   agents,
@@ -41,20 +73,12 @@ export function AgentFiltersBar({
   onChange,
   onReset,
 }: AgentFiltersBarProps) {
-  const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
-
-  const runtimes = Array.from(
-    new Set(agents.map(a => a.runtime.runtime)),
-  ).sort();
-  const capabilities = Array.from(
-    new Set(agents.flatMap(a => a.capabilities.map(c => c.label))),
-  ).sort();
-  const lifecycles = Array.from(
-    new Set(agents.map(a => a.lifecycle).filter(Boolean)),
-  ) as string[];
-  const owners = Array.from(
-    new Set(agents.map(a => a.owner).filter(Boolean)),
-  ) as string[];
+  const runtimes = unique(agents.map(a => a.runtime.runtime));
+  const capabilities = unique(
+    agents.flatMap(a => a.capabilities.map(c => c.label)),
+  );
+  const lifecycles = unique(agents.map(a => a.lifecycle));
+  const owners = unique(agents.map(a => a.owner));
 
   const moreCount = filters.lifecycle.length + filters.owner.length;
   const hasFilters = Boolean(
@@ -64,212 +88,123 @@ export function AgentFiltersBar({
     moreCount,
   );
 
+  // One removable tag per active filter value; ids encode "<kind>:<value>".
+  const activeTags: { id: string; label: string; icon?: React.ReactNode }[] = [
+    ...(filters.search
+      ? [{ id: `search:${filters.search}`, label: `"${filters.search}"` }]
+      : []),
+    ...filters.runtime.map(r => ({
+      id: `runtime:${r}`,
+      label: getRuntimeMeta(r).label,
+      icon: getRuntimeMeta(r).icon,
+    })),
+    ...filters.capability.map(c => ({ id: `capability:${c}`, label: c })),
+    ...filters.lifecycle.map(l => ({ id: `lifecycle:${l}`, label: l })),
+    ...filters.owner.map(o => ({ id: `owner:${o}`, label: o })),
+  ];
+
+  const removeTag = (id: string) => {
+    const at = id.indexOf(':');
+    const kind = id.slice(0, at) as FilterKey;
+    const value = id.slice(at + 1);
+    if (kind === 'search') onChange({ search: '' });
+    else onChange({ [kind]: without(filters[kind] as string[], value) });
+  };
+
   return (
-    <Paper sx={{ p: 1.5, mb: 2 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1.5,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-        }}
-      >
-        <TextField
-          size="small"
-          placeholder="Search agents…"
-          value={filters.search}
-          onChange={e => onChange({ search: e.target.value })}
-          sx={{ minWidth: 220, flexGrow: 1 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-            endAdornment: filters.search ? (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  onClick={() => onChange({ search: '' })}
-                >
-                  <ClearIcon fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            ) : undefined,
-          }}
+    <Flex direction="column" gap="3" mb="4">
+      <Flex align="center" gap="3" style={{ flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 220px', maxWidth: 360 }}>
+          <SearchField
+            aria-label="Search agents"
+            placeholder="Search agents…"
+            size="small"
+            value={filters.search}
+            onChange={search => onChange({ search })}
+          />
+        </div>
+
+        <MultiSelect
+          label="Runtime"
+          options={runtimes.map(r => ({
+            id: r,
+            label: getRuntimeMeta(r).label,
+            leadingIcon: getRuntimeMeta(r).icon,
+          }))}
+          value={filters.runtime}
+          onChange={runtime => onChange({ runtime })}
         />
 
-        <TextField
-          select
-          size="small"
-          label="Runtime"
-          value={filters.runtime}
-          onChange={e =>
-            onChange({ runtime: e.target.value as unknown as string[] })
-          }
-          sx={{ minWidth: 160 }}
-          SelectProps={{
-            multiple: true,
-            renderValue: v =>
-              (v as string[]).map(r => getRuntimeMeta(r).label).join(', ') ||
-              'All',
-          }}
-        >
-          {runtimes.map(r => (
-            <MenuItem key={r} value={r}>
-              <Box
-                sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
-              >
-                {getRuntimeMeta(r).icon}
-                {getRuntimeMeta(r).label}
-              </Box>
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          select
-          size="small"
+        <MultiSelect
           label="Capability"
+          options={capabilities.map(c => ({ id: c, label: c }))}
           value={filters.capability}
-          onChange={e =>
-            onChange({ capability: e.target.value as unknown as string[] })
-          }
-          sx={{ minWidth: 150 }}
-          {...SELECT_PROPS}
-        >
-          {capabilities.map(c => (
-            <MenuItem key={c} value={c}>
-              {c}
-            </MenuItem>
-          ))}
-        </TextField>
+          onChange={capability => onChange({ capability })}
+        />
 
-        <Badge badgeContent={moreCount} color="primary" overlap="rectangular">
+        <DialogTrigger>
           <Button
+            variant="secondary"
             size="small"
-            variant="outlined"
-            color="inherit"
-            startIcon={<FilterListIcon fontSize="small" />}
-            onClick={e => setMoreAnchor(e.currentTarget)}
+            iconStart={<RiFilter3Line size={16} />}
           >
-            More filters
+            {moreCount ? `More filters · ${moreCount}` : 'More filters'}
           </Button>
-        </Badge>
-
-        <Popover
-          open={Boolean(moreAnchor)}
-          anchorEl={moreAnchor}
-          onClose={() => setMoreAnchor(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        >
-          <Box
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              minWidth: 220,
-            }}
-          >
-            <TextField
-              select
-              size="small"
-              label="Lifecycle"
-              value={filters.lifecycle}
-              onChange={e =>
-                onChange({ lifecycle: e.target.value as unknown as string[] })
-              }
-              {...SELECT_PROPS}
-            >
-              {lifecycles.map(l => (
-                <MenuItem key={l} value={l}>
-                  {l}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              select
-              size="small"
-              label="Owner"
-              value={filters.owner}
-              onChange={e =>
-                onChange({ owner: e.target.value as unknown as string[] })
-              }
-              {...SELECT_PROPS}
-            >
-              {owners.map(o => (
-                <MenuItem key={o} value={o}>
-                  {o}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-        </Popover>
+          <Popover>
+            <Flex direction="column" gap="3" style={{ minWidth: 220 }}>
+              <MultiSelect
+                label="Lifecycle"
+                options={lifecycles.map(l => ({ id: l, label: l }))}
+                value={filters.lifecycle}
+                onChange={lifecycle => onChange({ lifecycle })}
+              />
+              <MultiSelect
+                label="Owner"
+                options={owners.map(o => ({ id: o, label: o }))}
+                value={filters.owner}
+                onChange={owner => onChange({ owner })}
+              />
+            </Flex>
+          </Popover>
+        </DialogTrigger>
 
         {hasFilters && (
-          <Tooltip title="Clear filters">
-            <IconButton size="small" onClick={onReset}>
-              <ClearIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <TooltipTrigger>
+            <ButtonIcon
+              aria-label="Clear filters"
+              variant="tertiary"
+              size="small"
+              icon={<RiCloseLine size={16} />}
+              onPress={onReset}
+            />
+            <Tooltip>Clear filters</Tooltip>
+          </TooltipTrigger>
         )}
-        <Box sx={{ ml: 'auto', alignSelf: 'center' }}>
-          <strong>{agents.length}</strong> agent{agents.length !== 1 ? 's' : ''}
-        </Box>
-      </Box>
 
-      {hasFilters && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.25 }}>
-          {filters.search && (
-            <Chip
-              size="small"
-              label={`"${filters.search}"`}
-              onDelete={() => onChange({ search: '' })}
-            />
-          )}
-          {filters.runtime.map(r => (
-            <Chip
-              key={`runtime-${r}`}
-              size="small"
-              icon={getRuntimeMeta(r).icon as React.ReactElement}
-              label={getRuntimeMeta(r).label}
-              onDelete={() =>
-                onChange({ runtime: without(filters.runtime, r) })
-              }
-            />
+        <Text
+          variant="body-small"
+          color="secondary"
+          style={{ marginLeft: 'auto' }}
+        >
+          <Text as="strong" variant="body-small" weight="bold">
+            {agents.length}
+          </Text>{' '}
+          agent{agents.length !== 1 ? 's' : ''}
+        </Text>
+      </Flex>
+
+      {activeTags.length > 0 && (
+        <TagGroup
+          aria-label="Active filters"
+          onRemove={keys => keys.forEach(k => removeTag(String(k)))}
+        >
+          {activeTags.map(t => (
+            <Tag key={t.id} id={t.id} icon={t.icon} size="small">
+              {t.label}
+            </Tag>
           ))}
-          {filters.capability.map(c => (
-            <Chip
-              key={`capability-${c}`}
-              size="small"
-              label={c}
-              onDelete={() =>
-                onChange({ capability: without(filters.capability, c) })
-              }
-            />
-          ))}
-          {filters.lifecycle.map(l => (
-            <Chip
-              key={`lifecycle-${l}`}
-              size="small"
-              label={l}
-              onDelete={() =>
-                onChange({ lifecycle: without(filters.lifecycle, l) })
-              }
-            />
-          ))}
-          {filters.owner.map(o => (
-            <Chip
-              key={`owner-${o}`}
-              size="small"
-              label={o}
-              onDelete={() => onChange({ owner: without(filters.owner, o) })}
-            />
-          ))}
-        </Box>
+        </TagGroup>
       )}
-    </Paper>
+    </Flex>
   );
 }

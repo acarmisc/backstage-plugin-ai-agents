@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
+import { Flex, Text } from '@backstage/ui';
 import { useApi } from '@backstage/core-plugin-api';
 import { aiAgentsApiRef } from '../api';
+import { Hint, TONE_FG } from '../ui';
 
 const LIMIT = 100;
 
@@ -40,36 +39,36 @@ export function AgentJobStats({ entityRef }: { entityRef: string }) {
   if (!stats || !stats.total) return null;
 
   const okPct = (stats.ok / stats.total) * 100;
+  const summary = `${stats.ok} succeeded · ${stats.failed} failed`;
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        whiteSpace="nowrap"
-        title={`${stats.ok} succeeded · ${stats.failed} failed`}
+    <Flex align="center" gap="2">
+      <Text
+        variant="body-small"
+        color="secondary"
+        style={{ whiteSpace: 'nowrap' }}
       >
         {stats.total}
         {stats.total >= LIMIT ? '+' : ''} runs
-      </Typography>
-      <Tooltip title={`${stats.ok} succeeded · ${stats.failed} failed`} arrow>
-        <Box
-          sx={{
+      </Text>
+      <Hint label={summary}>
+        <span
+          role="img"
+          aria-label={summary}
+          tabIndex={0}
+          style={{
             flexGrow: 1,
             height: 4,
-            borderRadius: 2,
             overflow: 'hidden',
             display: 'flex',
-            bgcolor: 'success.main',
+            borderRadius: 'var(--bui-radius-full)',
+            background: stats.failed > 0 ? TONE_FG.danger : TONE_FG.success,
           }}
         >
           {stats.failed > 0 && (
-            <Box sx={{ width: `${okPct}%`, bgcolor: 'success.main' }} />
+            <span style={{ width: `${okPct}%`, background: TONE_FG.success }} />
           )}
-          {stats.failed > 0 && (
-            <Box sx={{ flexGrow: 1, bgcolor: 'error.main' }} />
-          )}
-        </Box>
-      </Tooltip>
-    </Box>
+        </span>
+      </Hint>
+    </Flex>
   );
 }

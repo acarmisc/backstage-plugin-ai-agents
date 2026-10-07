@@ -1,9 +1,11 @@
 import React from 'react';
-import { SmartToy as AgentIcon } from '@mui/icons-material';
+import { Container } from '@backstage/ui';
+import { RiRobot2Line } from '@remixicon/react';
 import {
   ApiBlueprint,
   FrontendPlugin,
   PageBlueprint,
+  SubPageBlueprint,
   createFrontendPlugin,
   fetchApiRef,
 } from '@backstage/frontend-plugin-api';
@@ -24,14 +26,46 @@ const aiAgentsApi = ApiBlueprint.make({
     }),
 });
 
+// The /ai-agents page has no loader of its own: its two views are sub-pages,
+// so the app shell draws the plugin header (title, icon) with an "Agents" and
+// an "Activity" tab, like other Backstage plugins.
 const aiAgentsPage = PageBlueprint.make({
   params: {
     path: '/ai-agents',
     title: 'AI Agents',
-    icon: <AgentIcon />,
+    icon: <RiRobot2Line />,
+  },
+});
+
+const aiAgentsGalleryPage = SubPageBlueprint.make({
+  name: 'agents',
+  params: {
+    path: 'agents',
+    title: 'Agents',
     loader: async () => {
-      const { AgentsPage } = await import('./components/AgentsPage');
-      return <AgentsPage />;
+      const { AgentsGallery } = await import('./components/AgentsGallery');
+      return (
+        <Container>
+          <AgentsGallery />
+        </Container>
+      );
+    },
+  },
+});
+
+const aiAgentsActivityPage = SubPageBlueprint.make({
+  name: 'activity',
+  params: {
+    path: 'activity',
+    title: 'Activity',
+    loader: async () => {
+      const { ActivityWorkspace } =
+        await import('./components/activity/ActivityWorkspace');
+      return (
+        <Container>
+          <ActivityWorkspace />
+        </Container>
+      );
     },
   },
 });
@@ -94,6 +128,8 @@ export const aiAgentsPlugin: FrontendPlugin = createFrontendPlugin({
   extensions: [
     aiAgentsApi,
     aiAgentsPage,
+    aiAgentsGalleryPage,
+    aiAgentsActivityPage,
     aiAgentOverviewCard,
     aiAgentInvocationsCard,
     aiAgentActivityTab,

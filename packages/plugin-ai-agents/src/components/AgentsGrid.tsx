@@ -1,5 +1,5 @@
 import React from 'react';
-import Box from '@mui/material/Box';
+import { Grid } from '@backstage/ui';
 import type { AiAgent } from '../types';
 import { AgentCard } from './AgentCard';
 
@@ -17,12 +17,11 @@ export function AgentsGrid({
   onHire,
 }: AgentsGridProps) {
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-        gap: 2,
-      }}
+    <Grid.Root
+      gap="4"
+      // As many columns as fit, regardless of the viewport (the page can sit
+      // beside a sidebar of any width).
+      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}
     >
       {agents.map(a => (
         <AgentCard
@@ -33,6 +32,6 @@ export function AgentsGrid({
           onHire={onHire}
         />
       ))}
-    </Box>
+    </Grid.Root>
   );
 }

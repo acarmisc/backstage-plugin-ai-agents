@@ -44,7 +44,15 @@ export interface AgentDetailDrawerProps {
   onHire?: (agent: AiAgent) => void;
   /** Bump to refetch the invocation history (e.g. after a new run). */
   historyReloadKey?: number;
+  /**
+   * Where "Open activity" goes for an agent's telemetry id. Defaults to the
+   * Activity sub-page of the `/ai-agents` page.
+   */
+  activityHref?: (telemetryId: string) => string;
 }
+
+const defaultActivityHref = (telemetryId: string) =>
+  `/ai-agents/activity?agent=${encodeURIComponent(telemetryId)}`;
 
 function Row({
   label,
@@ -85,6 +93,7 @@ export function AgentDetailDrawer({
   onRefreshStatus,
   onHire,
   historyReloadKey = 0,
+  activityHref = defaultActivityHref,
 }: AgentDetailDrawerProps) {
   const navigate = useNavigate();
   const avatarSrc = useAvatarSrc(agent?.entityRef, agent?.avatarUrl);
@@ -103,9 +112,7 @@ export function AgentDetailDrawer({
   const handleActivityClick = () => {
     const telemetryId = agent.runtime.telemetryId;
     if (telemetryId) {
-      navigate(
-        `/ai-agents?tab=activity&agent=${encodeURIComponent(telemetryId)}`,
-      );
+      navigate(activityHref(telemetryId));
       onClose();
     }
   };

@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
-import Chip from '@mui/material/Chip';
-import Box from '@mui/material/Box';
-import Popover from '@mui/material/Popover';
+import React from 'react';
+import { Badge, Button, DialogTrigger, Flex, Popover } from '@backstage/ui';
+import {
+  RiBrainLine,
+  RiDatabase2Line,
+  RiEyeLine,
+  RiMicLine,
+  RiSearchEyeLine,
+  RiShieldCheckLine,
+  RiToolsLine,
+} from '@remixicon/react';
 import type { AgentCapability, AgentCapabilityCategory } from '../types';
 
-const CATEGORY_COLOR: Record<
-  AgentCapabilityCategory,
-  'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default'
-> = {
-  reasoning: 'primary',
-  retrieval: 'info',
-  tools: 'secondary',
-  vision: 'success',
-  voice: 'warning',
-  data: 'default',
-  safety: 'error',
+/**
+ * Categories are told apart by icon, not by color: BUI badges are neutral by
+ * design, and one hue per category would clash with the host theme.
+ */
+const CATEGORY_ICON: Record<AgentCapabilityCategory, React.ReactElement> = {
+  reasoning: <RiBrainLine size={14} />,
+  retrieval: <RiSearchEyeLine size={14} />,
+  tools: <RiToolsLine size={14} />,
+  vision: <RiEyeLine size={14} />,
+  voice: <RiMicLine size={14} />,
+  data: <RiDatabase2Line size={14} />,
+  safety: <RiShieldCheckLine size={14} />,
 };
 
 const MAX_VISIBLE = 5;
@@ -25,67 +33,61 @@ export interface AgentCapabilitiesProps {
   size?: 'small' | 'medium';
 }
 
+function CapabilityBadge({
+  capability,
+  size,
+}: {
+  capability: AgentCapability;
+  size: 'small' | 'medium';
+}) {
+  return (
+    <Badge
+      size={size}
+      icon={
+        capability.category ? CATEGORY_ICON[capability.category] : undefined
+      }
+    >
+      {capability.label}
+    </Badge>
+  );
+}
+
 export function AgentCapabilities({
   capabilities,
   max = MAX_VISIBLE,
   size = 'small',
 }: AgentCapabilitiesProps) {
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-
   if (!capabilities.length) return null;
   const visible = capabilities.slice(0, max);
   const overflow = capabilities.length - visible.length;
 
   return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+    <Flex gap="1" style={{ flexWrap: 'wrap' }}>
       {visible.map((c, i) => (
-        <Chip
-          key={`${c.label}-${i}`}
-          label={c.label}
-          size={size}
-          color={c.category ? CATEGORY_COLOR[c.category] : 'default'}
-          variant={c.category ? 'filled' : 'outlined'}
-        />
+        <CapabilityBadge key={`${c.label}-${i}`} capability={c} size={size} />
       ))}
       {overflow > 0 && (
-        <>
-          <Chip
-            label={`+${overflow}`}
-            size={size}
-            clickable
-            onClick={e => {
-              e.stopPropagation();
-              setAnchor(e.currentTarget);
-            }}
-          />
-          <Popover
-            open={Boolean(anchor)}
-            anchorEl={anchor}
-            onClose={() => setAnchor(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        <DialogTrigger>
+          <Button
+            size="small"
+            variant="tertiary"
+            aria-label={`Show all ${capabilities.length} capabilities`}
           >
-            <Box
-              sx={{
-                p: 1,
-                maxWidth: 280,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 0.5,
-              }}
-            >
+            {`+${overflow}`}
+          </Button>
+          <Popover>
+            <Flex gap="1" style={{ flexWrap: 'wrap', maxWidth: 280 }}>
               {capabilities.map((c, i) => (
-                <Chip
+                <CapabilityBadge
                   key={`${c.label}-${i}`}
-                  label={c.label}
+                  capability={c}
                   size="small"
-                  color={c.category ? CATEGORY_COLOR[c.category] : 'default'}
-                  variant={c.category ? 'filled' : 'outlined'}
                 />
               ))}
-            </Box>
+            </Flex>
           </Popover>
-        </>
+        </DialogTrigger>
       )}
-    </Box>
+    </Flex>
   );
 }

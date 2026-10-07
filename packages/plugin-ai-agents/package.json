@@ -69,10 +69,12 @@
     "@backstage/core-plugin-api": "^1.12.6",
     "@backstage/frontend-plugin-api": "^0.17.0",
     "@backstage/plugin-catalog-react": "^3.0.0",
+    "@backstage/ui": "^0.17.0",
     "@emotion/react": "^11.11.0",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.18.0",
     "@mui/material": "^5.16.0",
+    "@remixicon/react": "^4.6.0",
     "react-use": "^17.2.4"
   },
   "peerDependencies": {
@@ -89,6 +91,11 @@
   "devDependencies": {
     "@backstage/cli": "^0.36.2",
     "@backstage/dev-utils": "^1.1.23",
+    "@backstage/frontend-app-api": "0.16.6",
+    "@backstage/frontend-defaults": "0.5.4",
+    "@backstage/frontend-dev-utils": "0.1.4",
+    "@backstage/plugin-app": "0.5.1",
+    "@backstage/plugin-app-react": "0.2.5",
     "@backstage/test-utils": "^1.7.0",
     "@backstage/version-bridge": "^1.0.12",
     "@testing-library/dom": "^10.0.0",

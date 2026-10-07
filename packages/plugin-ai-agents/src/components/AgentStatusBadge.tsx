@@ -1,14 +1,13 @@
 import React from 'react';
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
+import { Text } from '@backstage/ui';
 import type { AgentStatus, AgentStatusState } from '../types';
+import { Hint, StatusDot, Tone } from '../ui';
 
-const STATE_COLOR: Record<AgentStatusState, string> = {
-  healthy: 'success.main',
-  degraded: 'warning.main',
-  down: 'error.main',
-  unknown: 'text.disabled',
+const STATE_TONE: Record<AgentStatusState, Tone> = {
+  healthy: 'success',
+  degraded: 'warning',
+  down: 'danger',
+  unknown: 'neutral',
 };
 
 export interface AgentStatusBadgeProps {
@@ -17,8 +16,6 @@ export interface AgentStatusBadgeProps {
 
 export function AgentStatusBadge({ status }: AgentStatusBadgeProps) {
   const state = status?.state ?? 'unknown';
-  const color = STATE_COLOR[state];
-  const ring = state === 'unknown' ? `1px dashed ${color}` : 'none';
 
   const title = status
     ? [
@@ -36,34 +33,31 @@ export function AgentStatusBadge({ status }: AgentStatusBadgeProps) {
     : 'Status: unknown';
 
   return (
-    <Tooltip title={title} arrow>
-      <Box
-        sx={{
+    <Hint label={title}>
+      <span
+        role="img"
+        aria-label={title}
+        tabIndex={0}
+        style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 0.75,
+          gap: 'var(--bui-space-1)',
           cursor: 'help',
         }}
       >
-        <Box
-          component="span"
-          sx={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            bgcolor: color,
-            border: ring,
-            flexShrink: 0,
-          }}
+        <StatusDot
+          tone={STATE_TONE[state]}
+          size={10}
+          hollow={state === 'unknown'}
         />
         {status &&
           status.latencyMs !== undefined &&
           status.latencyMs !== null && (
-            <Typography variant="caption" color="text.secondary">
+            <Text variant="body-small" color="secondary">
               {status.latencyMs}ms
-            </Typography>
+            </Text>
           )}
-      </Box>
-    </Tooltip>
+      </span>
+    </Hint>
   );
 }
