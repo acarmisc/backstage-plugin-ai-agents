@@ -58,7 +58,7 @@ test('Meter fill is proportional', () => {
 test('Hint keeps its child and makes it a tooltip trigger', () => {
   render(
     <Hint label="More info">
-      <span tabIndex={0}>trigger</span>
+      <button type="button">trigger</button>
     </Hint>,
   );
   assert.ok(screen.getByText('trigger'));

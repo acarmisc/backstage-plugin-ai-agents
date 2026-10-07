@@ -91,6 +91,7 @@ export function BillingBadge({
       <Hint label={summary}>
         <span
           role="img"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a tooltip trigger must be keyboard focusable
           tabIndex={0}
           aria-label={`${billing.model} (${summary})`}
         >

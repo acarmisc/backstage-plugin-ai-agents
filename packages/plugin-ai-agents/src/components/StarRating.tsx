@@ -25,12 +25,9 @@ function fillOf(star: number, value: number): Fill {
 }
 
 function Star({ fill, size }: { fill: Fill; size: number }) {
-  const Icon =
-    fill === 'full'
-      ? RiStarFill
-      : fill === 'half'
-        ? RiStarHalfFill
-        : RiStarLine;
+  const Icon = { full: RiStarFill, half: RiStarHalfFill, empty: RiStarLine }[
+    fill
+  ];
   return (
     <Icon
       size={size}
@@ -90,6 +87,7 @@ export function StarRating({
       <span
         role="radiogroup"
         aria-label="Rating"
+        tabIndex={-1}
         style={{ display: 'inline-flex', gap: 2 }}
         onMouseLeave={() => setHover(0)}
       >

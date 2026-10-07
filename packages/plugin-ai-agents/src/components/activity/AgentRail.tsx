@@ -61,6 +61,7 @@ function RailStatus({
       <Hint label="Telemetry unavailable">
         <span
           role="img"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a tooltip trigger must be keyboard focusable
           tabIndex={0}
           aria-label="Telemetry unavailable"
           style={{ display: 'inline-flex', color: 'var(--bui-fg-disabled)' }}

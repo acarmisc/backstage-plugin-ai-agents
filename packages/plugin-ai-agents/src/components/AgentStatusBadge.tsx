@@ -37,6 +37,7 @@ export function AgentStatusBadge({ status }: AgentStatusBadgeProps) {
       <span
         role="img"
         aria-label={title}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a tooltip trigger must be keyboard focusable
         tabIndex={0}
         style={{
           display: 'inline-flex',

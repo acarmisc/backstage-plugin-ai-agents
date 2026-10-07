@@ -54,6 +54,7 @@ export function AgentJobStats({ entityRef }: { entityRef: string }) {
         <span
           role="img"
           aria-label={summary}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a tooltip trigger must be keyboard focusable
           tabIndex={0}
           style={{
             flexGrow: 1,
