@@ -10,12 +10,14 @@ import {
   Tag,
   TagGroup,
   Text,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   TooltipTrigger,
 } from '@backstage/ui';
 import { RiCloseLine, RiFilter3Line } from '@remixicon/react';
 import type { AiAgent } from '../types';
-import type { AgentFilters } from '../hooks/useAgents';
+import type { AgentFilters, GroupBy } from '../hooks/useAgents';
 import { getRuntimeMeta } from './RuntimeBadge';
 
 export interface AgentFiltersBarProps {
@@ -23,6 +25,8 @@ export interface AgentFiltersBarProps {
   filters: AgentFilters;
   onChange: (patch: Partial<AgentFilters>) => void;
   onReset: () => void;
+  groupBy?: GroupBy;
+  onGroupByChange?: (groupBy: GroupBy) => void;
 }
 
 type FilterKey = keyof AgentFilters;
@@ -72,6 +76,8 @@ export function AgentFiltersBar({
   filters,
   onChange,
   onReset,
+  groupBy = 'none',
+  onGroupByChange,
 }: AgentFiltersBarProps) {
   const runtimes = unique(agents.map(a => a.runtime.runtime));
   const capabilities = unique(
@@ -79,12 +85,14 @@ export function AgentFiltersBar({
   );
   const lifecycles = unique(agents.map(a => a.lifecycle));
   const owners = unique(agents.map(a => a.owner));
+  const squads = unique(agents.map(a => a.squad));
 
   const moreCount = filters.lifecycle.length + filters.owner.length;
   const hasFilters = Boolean(
     filters.search ||
     filters.runtime.length ||
     filters.capability.length ||
+    filters.squad.length ||
     moreCount,
   );
 
@@ -93,6 +101,7 @@ export function AgentFiltersBar({
     ...(filters.search
       ? [{ id: `search:${filters.search}`, label: `"${filters.search}"` }]
       : []),
+    ...filters.squad.map(q => ({ id: `squad:${q}`, label: `Squad: ${q}` })),
     ...filters.runtime.map(r => ({
       id: `runtime:${r}`,
       label: getRuntimeMeta(r).label,
@@ -123,6 +132,15 @@ export function AgentFiltersBar({
             onChange={search => onChange({ search })}
           />
         </div>
+
+        {squads.length > 0 && (
+          <MultiSelect
+            label="Squad"
+            options={squads.map(q => ({ id: q, label: q }))}
+            value={filters.squad}
+            onChange={squad => onChange({ squad })}
+          />
+        )}
 
         <MultiSelect
           label="Runtime"
@@ -181,10 +199,37 @@ export function AgentFiltersBar({
           </TooltipTrigger>
         )}
 
+        {squads.length > 0 && onGroupByChange && (
+          <Flex align="center" gap="2" style={{ marginLeft: 'auto' }}>
+            <Text variant="body-small" color="secondary">
+              Group by
+            </Text>
+            <ToggleButtonGroup
+              aria-label="Group by"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={[groupBy]}
+              onSelectionChange={keys => {
+                const [key] = Array.from(keys);
+                if (key !== undefined) onGroupByChange(key as GroupBy);
+              }}
+            >
+              <ToggleButton id="none" size="small">
+                None
+              </ToggleButton>
+              <ToggleButton id="squad" size="small">
+                Squad
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Flex>
+        )}
+
         <Text
           variant="body-small"
           color="secondary"
-          style={{ marginLeft: 'auto' }}
+          style={{
+            marginLeft: squads.length > 0 && onGroupByChange ? 0 : 'auto',
+          }}
         >
           <Text as="strong" variant="body-small" weight="bold">
             {agents.length}

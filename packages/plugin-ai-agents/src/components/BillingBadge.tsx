@@ -10,14 +10,14 @@ import type { AgentBilling } from '../types';
 import { Hint } from '../ui';
 
 const BILLING_ICON: Record<string, React.ReactElement> = {
-  'per-invocation': <RiMoneyDollarCircleLine size={16} />,
-  'per-token': <RiCoinLine size={16} />,
-  subscription: <RiLoopRightLine size={16} />,
-  free: <RiForbid2Line size={16} />,
+  'per-invocation': <RiMoneyDollarCircleLine size={20} />,
+  'per-token': <RiCoinLine size={20} />,
+  subscription: <RiLoopRightLine size={20} />,
+  free: <RiForbid2Line size={20} />,
 };
 
 function billingIcon(model: string): React.ReactElement {
-  return BILLING_ICON[model] ?? <RiMoneyDollarCircleLine size={16} />;
+  return BILLING_ICON[model] ?? <RiMoneyDollarCircleLine size={20} />;
 }
 
 function unitLabel(billing: AgentBilling): string | null {

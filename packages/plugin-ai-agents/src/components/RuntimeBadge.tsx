@@ -19,16 +19,16 @@ export const RUNTIME_META: Record<
 > = {
   'bedrock-agentcore': { label: 'Bedrock AgentCore', icon: <AwsIcon /> },
   kagent: { label: 'kagent', icon: <KagentIcon /> },
-  litellm: { label: 'LiteLLM', icon: <RiCpuLine size={16} /> },
-  lambda: { label: 'AWS Lambda', icon: <RiFunctionLine size={16} /> },
-  custom: { label: 'Custom', icon: <RiPuzzleLine size={16} /> },
+  litellm: { label: 'LiteLLM', icon: <RiCpuLine size={20} /> },
+  lambda: { label: 'AWS Lambda', icon: <RiFunctionLine size={20} /> },
+  custom: { label: 'Custom', icon: <RiPuzzleLine size={20} /> },
 };
 
 export function getRuntimeMeta(runtime: AgentRuntimeName) {
   return (
     RUNTIME_META[runtime] ?? {
       label: String(runtime),
-      icon: <RiPuzzleLine size={16} />,
+      icon: <RiPuzzleLine size={20} />,
     }
   );
 }

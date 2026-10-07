@@ -176,8 +176,6 @@ export function ActivityWorkspace() {
                 top: 0,
                 maxHeight: 'calc(100vh - 160px)',
                 minHeight: 320,
-                border: '1px solid var(--bui-border-2)',
-                borderRadius: 'var(--bui-radius-3)',
                 overflow: 'hidden',
               }}
             >

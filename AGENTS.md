@@ -152,15 +152,20 @@ cd packages/plugin-ai-agents && npm start   # standalone dev server, 6 sample ag
   load (use `installImageStub`); `Select` options need `id` to keep
   `leadingIcon`; `Tag href` is not an anchor (use `Link`); `Table` requires
   `pagination` (`{ type: 'none' }`); react-aria presses in jsdom: Space on
-  list rows, Enter on table rows (`press` helper in the activity tests); the
+  list rows, Enter on table rows (the Activity rail is plain buttons: click) (`press` helper in the activity tests); the
   toggle groups expose `role="radio"` + `aria-checked`.
 - **Page structure.** `page:ai-agents` has no loader; `SubPageBlueprint`s
   `agents` and `activity` give header tabs (`/ai-agents/agents`,
   `/ai-agents/activity`). The standalone `AgentsPage` (legacy apps) keeps
   `?tab=` instead. `npm start` in the package is the NFS dev app,
   `start:legacy` the old one.
-- **The detail panel is a BUI `Dialog`** with an `AccordionGroup`; lazy
+- **The detail panel is a right-hand drawer**: `ui/SidePanel` (BUI `Dialog`
+  laid out full-height at the right edge) with an `AccordionGroup`; lazy
   sections mount only when expanded.
+- **Card status comes from Activity.** `AgentsGallery` reads the same
+  `getActivity` fleet as the Activity tab (`utils/live.ts`) and passes `live`
+  to cards; no telemetry → the health-probe dot. `squad` =
+  `ai-agent.io/squad` ?? `spec.system` (mapped in `entityToAgent`).
 
 ## Catalog model (don't change without coordination)
 

@@ -10,3 +10,5 @@ export { StatusDot } from './StatusDot';
 export type { StatusDotProps } from './StatusDot';
 export { TONE_BG, TONE_BORDER, TONE_FG } from './tone';
 export type { Tone } from './tone';
+export { SidePanel } from './SidePanel';
+export type { SidePanelProps } from './SidePanel';

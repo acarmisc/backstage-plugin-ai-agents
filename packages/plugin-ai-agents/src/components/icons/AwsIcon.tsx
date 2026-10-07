@@ -9,8 +9,8 @@ export function AwsIcon() {
   return (
     <svg
       viewBox="0 0 128 78"
-      width="1.6em"
-      height="1em"
+      width="2em"
+      height="1.25em"
       role="img"
       aria-label="AWS"
       focusable="false"
