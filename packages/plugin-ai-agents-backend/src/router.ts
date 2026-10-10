@@ -287,7 +287,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.json(activities);
     } catch (err: any) {
       logger.error('Failed to fetch fleet activity', err);
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      res.status(500).json({ error: 'failed to fetch activity' });
     }
   });
 
@@ -394,7 +394,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.json(out);
     } catch (err: any) {
       logger.error('Failed to fetch agent statuses', err);
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      res.status(500).json({ error: 'failed to fetch agent statuses' });
     }
   });
 
@@ -414,7 +414,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.json(status ?? { state: 'unknown' });
     } catch (err: any) {
       logger.error('Failed to probe agent', err);
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      res.status(500).json({ error: 'failed to probe agent' });
     }
   });
 
@@ -638,7 +638,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       }
     } catch (err: any) {
       logger.error('Failed to resolve agent for invocation', err);
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      res.status(500).json({ error: 'failed to resolve agent for invocation' });
     }
   });
 
@@ -658,7 +658,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     try {
       res.json(await store.listForEntity(ref, limit));
     } catch (err: any) {
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      logger.error('Failed to read invocation history', err);
+      res.status(500).json({ error: 'failed to read invocation history' });
     }
   });
 
@@ -691,7 +692,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       );
     } catch (err: any) {
       logger.warn(`Failed to read LiteLLM spend: ${err?.message ?? err}`);
-      res.status(502).json({ error: err?.message ?? 'failed to read spend' });
+      res.status(502).json({ error: 'failed to read spend' });
     }
   });
 
@@ -734,7 +735,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.status(201).json({ id });
     } catch (err: any) {
       logger.error('Failed to save agent review', err);
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      res.status(500).json({ error: 'failed to save agent review' });
     }
   });
 
@@ -754,7 +755,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     try {
       res.json(await reviews.summaryFor(ref, limit));
     } catch (err: any) {
-      res.status(500).json({ error: err?.message ?? 'unknown error' });
+      logger.error('Failed to read agent reviews', err);
+      res.status(500).json({ error: 'failed to read agent reviews' });
     }
   });
 
