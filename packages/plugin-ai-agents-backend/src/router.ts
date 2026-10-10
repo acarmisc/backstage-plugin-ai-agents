@@ -61,6 +61,9 @@ import {
 
 const MAX_STATUS_REFS = 200;
 const MAX_CACHE_ENTRIES = 2000;
+const MAX_PROMPT_CHARS = 20000;
+const MAX_VALUES_KEYS = 50;
+const THREAD_ID_RE = /^[A-Za-z0-9_.:/+=-]{1,128}$/;
 
 /** @public */
 export interface RouterOptions {
@@ -535,10 +538,33 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     const postOverride =
       typeof req.body?.post === 'boolean' ? req.body.post : undefined;
 
+    if (Object.keys(values).length > MAX_VALUES_KEYS) {
+      res
+        .status(400)
+        .json({ error: `too many values (max ${MAX_VALUES_KEYS})` });
+      return;
+    }
+    // `..` is rejected on top of the charset so path-like ids can't
+    // traverse (e.g. `../evil`) while entity-ish `a/b:c.d` ids still pass.
+    if (!THREAD_ID_RE.test(threadId) || threadId.includes('..')) {
+      res.status(400).json({ error: 'invalid threadId' });
+      return;
+    }
+    if (explicitPrompt && explicitPrompt.length > MAX_PROMPT_CHARS) {
+      res.status(400).json({ error: 'prompt too large' });
+      return;
+    }
+
     try {
       const entity = await resolveAgent(req, ref);
       if (!entity) {
         res.status(404).json({ error: 'not an ai-agent entity' });
+        return;
+      }
+
+      const prompt = explicitPrompt ?? buildPrompt(entity, values);
+      if (prompt.length > MAX_PROMPT_CHARS) {
+        res.status(400).json({ error: 'prompt too large' });
         return;
       }
 
@@ -558,7 +584,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         entityRef: ref,
         threadId,
         sessionId: normalizeSessionId(threadId),
-        prompt: explicitPrompt ?? buildPrompt(entity, values),
+        prompt,
         fields: values,
         args,
         tags: buildInvocationTags({ threadId, userRef: who, entityRef: ref }),

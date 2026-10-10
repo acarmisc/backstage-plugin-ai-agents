@@ -1668,6 +1668,60 @@ test('POST /invocations drops non-string form values', async () => {
   }
 });
 
+test('POST /invocations rejects oversized prompts, bad threadIds, and too many values', async () => {
+  const entity = makeEntity('triage', { 'ai-agent.io/runtime': 'kagent' });
+  let calls = 0;
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([
+      [
+        'kagent',
+        {
+          invoke: async () => {
+            calls += 1;
+            return { responseText: 'ok', latencyMs: 1 };
+          },
+        },
+      ],
+    ]),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const post = (body: unknown) =>
+      fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    // Oversized explicit prompt.
+    const big = await post({ values: {}, prompt: 'x'.repeat(20001) });
+    assert.equal(big.status, 400);
+    assert.match((await big.json()).error, /prompt too large/);
+    // Oversized rendered prompt (no template: JSON dump of values).
+    const rendered = await post({ values: { blob: 'y'.repeat(20001) } });
+    assert.equal(rendered.status, 400);
+    // Bad threadIds: too long and outside the allowed charset.
+    for (const threadId of ['t'.repeat(200), '../evil']) {
+      const res = await post({ values: {}, threadId });
+      assert.equal(res.status, 400);
+      assert.match((await res.json()).error, /invalid threadId/);
+    }
+    // Too many values keys.
+    const values: Record<string, string> = {};
+    for (let i = 0; i < 51; i += 1) values[`k${i}`] = 'v';
+    const many = await post({ values });
+    assert.equal(many.status, 400);
+    assert.match((await many.json()).error, /too many values/);
+    assert.equal(calls, 0);
+  } finally {
+    await close();
+  }
+});
+
 test('GET /avatar proxies GitLab avatars with no avatarProxy config', async () => {
   const { ConfigReader } = await import('@backstage/config');
   const entity = makeEntity('dinesh', {
