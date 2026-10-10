@@ -654,7 +654,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
-    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
     try {
       res.json(await store.listForEntity(ref, limit));
     } catch (err: any) {
@@ -750,7 +750,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);
-    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
     try {
       res.json(await reviews.summaryFor(ref, limit));
     } catch (err: any) {

@@ -919,6 +919,72 @@ test('GET /reviews returns 501 without database', async () => {
   }
 });
 
+test('GET /invocations clamps negative limit to 1', async () => {
+  const seen: number[] = [];
+  const fakeKnex: any = (table: string) => {
+    assert.equal(table, 'invocations');
+    return {
+      where: () => ({
+        orderBy: () => ({
+          limit: async (limit: number) => {
+            seen.push(limit);
+            return [];
+          },
+        }),
+      }),
+    };
+  };
+  fakeKnex.migrate = { latest: async () => [] };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+    database: { getClient: async () => fakeKnex } as any,
+    reviews: stubReviews(),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(
+      `${url}/invocations/component%3Adefault%2Ftriage?limit=-1`,
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), []);
+    assert.deepEqual(seen, [1]);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /reviews clamps negative limit to 1', async () => {
+  const seen: number[] = [];
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+    reviews: {
+      insert: async () => 1,
+      summaryFor: async (_ref: string, limit = 50) => {
+        seen.push(limit);
+        return { reviews: [], count: 0, average: null };
+      },
+    },
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(
+      `${url}/reviews/component%3Adefault%2Ftriage?limit=-1`,
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(seen, [1]);
+  } finally {
+    await close();
+  }
+});
+
 test('GET /statuses returns 400 when more than 200 refs provided', async () => {
   const refs = Array.from(
     { length: 201 },
