@@ -125,7 +125,44 @@ test('KagentInvoker throws when no runtime-handle annotation is set', async () =
   );
 });
 
-test('KagentInvoker does not forward authHeader to an endpoint override on another origin', async () => {
+test('KagentInvoker rejects an endpoint override on another origin without fetching', async () => {
+  const config = new ConfigReader({
+    'ai-agents': {
+      invocations: {
+        kagent: {
+          baseUrl: 'http://kagent-controller:8083',
+          authHeader: 'Bearer secret',
+        },
+      },
+    },
+  });
+  const calls: any[] = [];
+  const fetchImpl = (async (url: string, init: any) => {
+    calls.push({ url, init });
+    return {
+      ok: true,
+      text: async () =>
+        JSON.stringify({ result: { parts: [{ kind: 'text', text: 'ok' }] } }),
+    } as Response;
+  }) as typeof fetch;
+  const invoker = new KagentInvoker(config, fetchImpl);
+  await assert.rejects(
+    invoker.invoke({
+      entityRef: 'component:default/a',
+      sessionId: 's',
+      threadId: 't',
+      prompt: 'p',
+      fields: {},
+      args: { post: false },
+      tags: [],
+      target: { runtimeHandle: 'a', endpoint: 'https://evil.example' },
+    }),
+    /not on the configured kagent controller origin/,
+  );
+  assert.equal(calls.length, 0);
+});
+
+test('KagentInvoker sends authHeader to a same-origin endpoint override', async () => {
   const config = new ConfigReader({
     'ai-agents': {
       invocations: {
@@ -157,9 +194,16 @@ test('KagentInvoker does not forward authHeader to an endpoint override on anoth
   };
   await invoker.invoke({
     ...req,
-    target: { runtimeHandle: 'a', endpoint: 'https://elsewhere.example' },
+    target: {
+      runtimeHandle: 'a',
+      endpoint: 'http://kagent-controller:8083/other-path',
+    },
   });
   await invoker.invoke({ ...req, target: { runtimeHandle: 'a' } });
-  assert.equal(calls[0].init.headers.Authorization, undefined);
+  assert.equal(
+    calls[0].url,
+    'http://kagent-controller:8083/other-path/api/a2a/kagent/a/',
+  );
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer secret');
   assert.equal(calls[1].init.headers.Authorization, 'Bearer secret');
 });

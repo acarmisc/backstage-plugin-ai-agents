@@ -51,8 +51,9 @@ metadata:
     # ai-agent.io/endpoint: https://kagent.other-cluster.example.com  # optional, other controller
 ```
 
-An `endpoint` annotation sends the request to another controller. `authHeader`
-is not sent there unless it has the same origin as `baseUrl`.
+An `endpoint` annotation sends the request to another controller. It must share
+the controller origin with `baseUrl`. `authHeader` is not sent there unless it
+has the same origin as `baseUrl`.
 
 ## Request
 

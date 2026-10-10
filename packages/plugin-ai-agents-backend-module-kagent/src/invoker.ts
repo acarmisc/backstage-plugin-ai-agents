@@ -113,6 +113,11 @@ export class KagentInvoker {
       );
     }
     const base = req.target?.endpoint ?? this.config.baseUrl;
+    if (!sameOrigin(base, this.config.baseUrl)) {
+      throw new Error(
+        'agent endpoint is not on the configured kagent controller origin',
+      );
+    }
     const url = `${base.replace(/\/$/, '')}/api/a2a/${encodeURIComponent(namespace)}/${encodeURIComponent(agentName)}/`;
 
     const headers: Record<string, string> = {
