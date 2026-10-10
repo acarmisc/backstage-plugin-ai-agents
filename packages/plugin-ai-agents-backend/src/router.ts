@@ -73,9 +73,15 @@ export interface RouterOptions {
   discovery: DiscoveryService;
   /** Optional database service; required for invocation history. */
   database?: DatabaseService;
-  /** Authenticated user resolution for invocation audit records. */
+  /**
+   * Authenticated user resolution for invocation audit records. Without it
+   * (and `permissions`) guarded routes deny all requests.
+   */
   httpAuth?: HttpAuthService;
-  /** Optional permissions service for authorization checks. */
+  /**
+   * Optional permissions service for authorization checks. Without it
+   * guarded routes deny all requests.
+   */
   permissions?: PermissionsService;
   /** Invokers registered by provider modules (e.g. agentcore, kagent), keyed by runtime. */
   invokers?: Map<string, AgentInvoker>;
@@ -160,6 +166,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   const invocationsEnabled =
     config.getOptionalBoolean('ai-agents.invocations.enabled') ?? true;
   const maxCacheEntries = options.maxCacheEntries ?? MAX_CACHE_ENTRIES;
+
+  if (!permissions || !httpAuth) {
+    logger.warn(
+      'permissions service not wired — guarded ai-agents routes (invocations, history, reviews) deny all requests',
+    );
+  }
 
   const store = options.database
     ? await InvocationStore.create(await options.database.getClient())
@@ -490,7 +502,9 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     req: Request,
     permission: Exclude<Permission, ResourcePermission>,
   ): Promise<boolean> {
-    if (!permissions || !httpAuth) return true;
+    // Fail closed: without the permissions service there is no way to
+    // authorize, so guarded routes deny. (Absence is warned at startup.)
+    if (!permissions || !httpAuth) return false;
     try {
       const credentials = await httpAuth.credentials(req);
       const [decision] = await permissions.authorize([{ permission }], {

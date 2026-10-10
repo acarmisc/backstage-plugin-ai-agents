@@ -426,6 +426,8 @@ test('POST /invocations returns 501 without an invoker module', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
   });
   const { url, close } = await startServer(router);
@@ -461,6 +463,8 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([['bedrock-agentcore', invoker]]),
   });
@@ -517,6 +521,8 @@ test('POST /invocations maps action=post to post=true and reuses a thread', asyn
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([['bedrock-agentcore', invoker]]),
   });
@@ -557,6 +563,8 @@ test('POST /invocations defaults action to dry-run (post=false)', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([
       [
@@ -654,6 +662,42 @@ test('POST /invocations returns 200 when permissions allow', async () => {
   }
 });
 
+test('guarded routes deny all when the permissions service is not wired', async () => {
+  const entity = makeEntity('triage', {
+    'ai-agent.acarmisc.org/runtime-handle':
+      'arn:aws:bedrock-agentcore:eu-west-1:123456789012:runtime/support-triage-runtime-Xq7AsdA8od',
+  });
+  const warnings: string[] = [];
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: { ...noopLogger, warn: (m: string) => warnings.push(m) },
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([
+      [
+        'bedrock-agentcore',
+        { invoke: async () => ({ responseText: 'ok', latencyMs: 1 }) },
+      ],
+    ]),
+  });
+  assert.ok(
+    warnings.some(m => /permissions service not wired/.test(m)),
+    `expected startup warn, got: ${JSON.stringify(warnings)}`,
+  );
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    assert.equal(res.status, 403);
+  } finally {
+    await close();
+  }
+});
+
 test('POST /invocations dispatches to the invoker matching the runtime annotation', async () => {
   const entity = makeEntity('cluster-bot', {
     'ai-agent.io/runtime': 'kagent',
@@ -674,6 +718,8 @@ test('POST /invocations dispatches to the invoker matching the runtime annotatio
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([
       ['bedrock-agentcore', agentcore],
@@ -708,6 +754,8 @@ test('POST /invocations returns 501 when the runtime annotation matches no regis
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([['kagent', kagent]]),
   });
@@ -762,6 +810,8 @@ test('POST /reviews validates rating and stores review', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     reviews,
   });
@@ -805,6 +855,8 @@ test('POST /reviews rejects refs that are not an ai-agent entity', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([undefined]),
     reviews,
   });
@@ -908,6 +960,8 @@ test('GET /reviews returns 501 without database', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([]),
   });
   const { url, close } = await startServer(router);
@@ -940,6 +994,8 @@ test('GET /invocations clamps negative limit to 1', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([]),
     database: { getClient: async () => fakeKnex } as any,
     reviews: stubReviews(),
@@ -964,6 +1020,8 @@ test('GET /reviews clamps negative limit to 1', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([]),
     reviews: {
       insert: async () => 1,
@@ -1695,6 +1753,8 @@ test('POST /invocations drops non-string form values', async () => {
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([
       [
@@ -1742,6 +1802,8 @@ test('POST /invocations rejects oversized prompts, bad threadIds, and too many v
     logger: noopLogger,
     auth: stubAuth(),
     discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
     catalogClient: stubCatalog([entity]),
     invokers: new Map([
       [
