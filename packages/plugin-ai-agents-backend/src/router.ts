@@ -674,6 +674,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       res.status(501).json({ error: 'no database configured' });
       return;
     }
+    if (!(await checkPermission(req, aiAgentHistoryReadPermission))) {
+      res
+        .status(403)
+        .json({ error: 'not authorized to read this agent history' });
+      return;
+    }
     const ref = decodeURIComponent(req.params.entityRef);
     const rating = Number(req.body?.rating);
     const comment =
@@ -709,6 +715,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   router.get('/reviews/:entityRef', async (req, res) => {
     if (!reviews) {
       res.status(501).json({ error: 'no database configured' });
+      return;
+    }
+    if (!(await checkPermission(req, aiAgentHistoryReadPermission))) {
+      res
+        .status(403)
+        .json({ error: 'not authorized to read this agent history' });
       return;
     }
     const ref = decodeURIComponent(req.params.entityRef);

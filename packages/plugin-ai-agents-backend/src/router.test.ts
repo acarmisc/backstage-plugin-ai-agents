@@ -822,6 +822,86 @@ test('POST /reviews rejects refs that are not an ai-agent entity', async () => {
   }
 });
 
+test('POST /reviews returns 403 when permissions deny', async () => {
+  const reviews = stubReviews();
+  const entity = makeEntity('triage');
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    reviews,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.DENY),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: 5 }),
+    });
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.match(body.error, /not authorized/);
+    assert.equal(reviews.inserted.length, 0);
+  } finally {
+    await close();
+  }
+});
+
+test('GET /reviews returns 403 when permissions deny', async () => {
+  const reviews = stubReviews();
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([]),
+    reviews,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.DENY),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`);
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.match(body.error, /not authorized/);
+  } finally {
+    await close();
+  }
+});
+
+test('reviews routes allow when permissions allow', async () => {
+  const reviews = stubReviews();
+  const entity = makeEntity('triage');
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    reviews,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const post = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: 5 }),
+    });
+    assert.equal(post.status, 201);
+    const get = await fetch(`${url}/reviews/component%3Adefault%2Ftriage`);
+    assert.equal(get.status, 200);
+  } finally {
+    await close();
+  }
+});
+
 test('GET /reviews returns 501 without database', async () => {
   const router = await createRouter({
     config: makeConfig(),
