@@ -396,13 +396,18 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     try {
       const { items } = await resolveEntities(req, refs);
       const out: Record<string, AgentStatus> = {};
-      await Promise.all(
-        items.map(async (entity, i) => {
-          const ref = refs[i];
-          const status = await probeAndCache(ref, entity);
-          if (status) out[ref] = status;
-        }),
-      );
+      // Bounded fan-out so a large ref list doesn't fire all probes at once.
+      const CONCURRENCY = 8;
+      for (let i = 0; i < items.length; i += CONCURRENCY) {
+        const chunk = items.slice(i, i + CONCURRENCY);
+        await Promise.all(
+          chunk.map(async (entity, j) => {
+            const ref = refs[i + j];
+            const status = await probeAndCache(ref, entity);
+            if (status) out[ref] = status;
+          }),
+        );
+      }
       res.json(out);
     } catch (err: any) {
       logger.error('Failed to fetch agent statuses', err);

@@ -1066,6 +1066,52 @@ test('GET /statuses returns 400 when more than 200 refs provided', async () => {
   }
 });
 
+test('GET /statuses resolves all refs with bounded probing concurrency', async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const probe: ProbeFn = async () => {
+    inFlight += 1;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise(r => setTimeout(r, 5));
+    inFlight -= 1;
+    return { ok: true, status: 200, latencyMs: 5 } as ProbeResult;
+  };
+  const catalogClient = {
+    getEntitiesByRefs: async (r: { entityRefs: string[] }) => ({
+      items: r.entityRefs.map(ref => {
+        const name = ref.split('/').pop()!;
+        return makeEntity(name, {
+          'ai-agent.io/health': `https://api.example.com/${name}/health`,
+        });
+      }),
+    }),
+  };
+  const router = await createRouter({
+    config: makeConfig({ probeAllowlist: ['https://api.example.com*'] }),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient,
+    probe,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const refs = Array.from(
+      { length: 20 },
+      (_, i) => `component:default/agent-${i}`,
+    );
+    const res = await fetch(`${url}/statuses?refs=${refs.join(',')}`);
+    const body = await res.json();
+    assert.equal(Object.keys(body).length, 20);
+    for (const ref of refs) {
+      assert.equal(body[ref].state, 'healthy');
+    }
+    assert.ok(maxInFlight <= 8, `max in-flight ${maxInFlight} exceeds 8`);
+  } finally {
+    await close();
+  }
+});
+
 test('cache eviction: oldest entries are evicted when cache exceeds max size', async () => {
   let probeCalls = 0;
   const countingProbe: ProbeFn = async () => {
