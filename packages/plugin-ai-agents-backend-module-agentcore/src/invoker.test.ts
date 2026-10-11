@@ -136,3 +136,88 @@ test('AgentCoreInvoker refuses a region that would redirect the bearer token', a
   );
   assert.deepEqual(urls, []);
 });
+
+test('AgentCoreInvoker rejects a malformed verbatim runtime ARN before fetch', async () => {
+  const config = new ConfigReader({
+    'ai-agents': {
+      invocations: {
+        agentCore: {
+          tokenUrl: 'https://auth/token',
+          clientId: 'c',
+          clientSecret: 's',
+          region: 'eu-west-1',
+        },
+      },
+    },
+  });
+  const urls: string[] = [];
+  const fetchImpl = (async (url: string) => {
+    urls.push(url);
+    return {
+      ok: true,
+      json: async () => ({ access_token: 't' }),
+      text: async () => '{}',
+    } as Response;
+  }) as typeof fetch;
+  const invoker = new AgentCoreInvoker(config, fetchImpl);
+  const base = {
+    entityRef: 'component:default/a',
+    sessionId: 's'.repeat(33),
+    threadId: 't',
+    prompt: 'p',
+    fields: {},
+    args: { post: false },
+    tags: [] as string[],
+  };
+  for (const runtimeHandle of [
+    'arn:foo/../bar',
+    'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/a<script>',
+    'arn:aws:bedrock-agentcore:eu-west-1:1:runtime/a?x=1',
+  ]) {
+    await assert.rejects(
+      invoker.invoke({ ...base, target: { runtimeHandle } }),
+      /invalid AgentCore runtime ARN/,
+    );
+  }
+  assert.deepEqual(urls, []);
+});
+
+test('AgentCoreInvoker accepts a valid verbatim runtime ARN', async () => {
+  const config = new ConfigReader({
+    'ai-agents': {
+      invocations: {
+        agentCore: {
+          tokenUrl: 'https://auth/token',
+          clientId: 'c',
+          clientSecret: 's',
+          region: 'eu-west-1',
+        },
+      },
+    },
+  });
+  const urls: string[] = [];
+  const fetchImpl = (async (url: string) => {
+    urls.push(url);
+    return {
+      ok: true,
+      json: async () => ({ access_token: 't' }),
+      text: async () => '{"result":"ok"}',
+    } as Response;
+  }) as typeof fetch;
+  const invoker = new AgentCoreInvoker(config, fetchImpl);
+  const arn =
+    'arn:aws:bedrock-agentcore:eu-west-1:123456789012:runtime/support_triage-AbCd123';
+  const res = await invoker.invoke({
+    entityRef: 'component:default/a',
+    sessionId: 's'.repeat(33),
+    threadId: 't',
+    prompt: 'p',
+    fields: {},
+    args: { post: false },
+    tags: [],
+    target: { runtimeHandle: arn },
+  });
+  assert.equal(res.responseText, 'ok');
+  assert.equal(urls.length, 2);
+  assert.ok(urls[1].includes(encodeURIComponent(arn)));
+});

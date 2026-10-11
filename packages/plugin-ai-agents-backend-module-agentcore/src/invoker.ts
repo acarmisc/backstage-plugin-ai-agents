@@ -33,6 +33,12 @@ export function readAgentCoreConfig(
 
 const AWS_REGION_RE = /^[a-z]{2}(-[a-z]+)+-\d+$/;
 
+// Verbatim runtime ARNs come from an untrusted catalog annotation and are
+// interpolated into the request URL path, so allowlist the full shape.
+// (Account id is `\d+` rather than `\d{12}` to match existing fixtures.)
+const AGENTCORE_RUNTIME_ARN_RE =
+  /^arn:aws:bedrock-agentcore:[a-z]{2}(-[a-z]+)+-\d+:\d+:runtime\/[A-Za-z0-9._-]+$/;
+
 interface CachedToken {
   token: string;
   expiresAtMs: number;
@@ -197,6 +203,9 @@ export class AgentCoreInvoker {
     // runtime id needs the configured account id to build one.
     let arn: string | undefined;
     if (runtimeHandle.startsWith('arn:')) {
+      if (!AGENTCORE_RUNTIME_ARN_RE.test(runtimeHandle)) {
+        throw new Error('invalid AgentCore runtime ARN');
+      }
       arn = runtimeHandle;
     } else if (this.config.accountId) {
       arn = `arn:aws:bedrock-agentcore:${region}:${this.config.accountId}:runtime/${runtimeHandle}`;
