@@ -554,6 +554,55 @@ test('POST /invocations truncates a long invoker error before storing', async ()
   }
 });
 
+test('POST /invocations truncates a long success response before storing', async () => {
+  const entity = makeEntity('triage');
+  const longResponse = 'y'.repeat(25000);
+  const invoker = {
+    invoke: async () => ({ responseText: longResponse, latencyMs: 1 }),
+  };
+  const inserted: any[] = [];
+  const fakeKnex: any = (table: string) => {
+    assert.equal(table, 'invocations');
+    return {
+      insert: (row: any) => {
+        inserted.push(row);
+        return { returning: async () => [1] };
+      },
+      where: () => ({ orderBy: () => ({ limit: async () => [] }) }),
+    };
+  };
+  fakeKnex.migrate = { latest: async () => [] };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([['bedrock-agentcore', invoker]]),
+    database: { getClient: async () => fakeKnex } as any,
+    reviews: stubReviews(),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.responseText, longResponse);
+    assert.equal(inserted.length, 1);
+    assert.equal(inserted[0].status, 'ok');
+    assert.equal(inserted[0].response_text.length, 20000);
+    assert.equal(inserted[0].response_text, longResponse.slice(0, 20000));
+  } finally {
+    await close();
+  }
+});
+
 test('POST /invocations maps action=post to post=true and reuses a thread', async () => {
   const entity = makeEntity('dinesh', {
     'ai-agent.io/prompt-template': 'Review MR !{target} in project {project}',

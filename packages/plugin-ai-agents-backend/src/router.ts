@@ -62,6 +62,7 @@ import {
 const MAX_STATUS_REFS = 200;
 const MAX_CACHE_ENTRIES = 2000;
 const MAX_PROMPT_CHARS = 20000;
+const MAX_RESPONSE_CHARS = 20000;
 const MAX_ERROR_CHARS = 2000;
 const MAX_VALUES_KEYS = 50;
 const THREAD_ID_RE = /^[A-Za-z0-9_.:/+=-]{1,128}$/;
@@ -623,6 +624,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
       try {
         const result = await invoker.invoke(request);
         responseText = result.responseText;
+        // Cap what is stored; the full text is still served below.
         await store?.insert({
           entityRef: ref,
           userRef: who,
@@ -631,7 +633,7 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           prompt: request.prompt,
           status: 'ok',
           post: args.post,
-          responseText,
+          responseText: responseText.slice(0, MAX_RESPONSE_CHARS),
           latencyMs: result.latencyMs || null,
         });
         res.json({
