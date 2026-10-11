@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.1] - 2026-10-11
+
+### Fixed
+
+- `isSafeUrl` rejects `blob:` URLs (no producer in the codebase; the avatar
+  proxy mints `data:` URLs). Catalog `blob:` avatars fall back to initials.
+
 ## [0.18.0] - 2026-10-07
 
 ### Added

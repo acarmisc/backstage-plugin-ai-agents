@@ -3,6 +3,25 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.9] - 2026-10-11
+
+### Fixed
+
+- Review routes (`POST`/`GET /reviews/:ref`) now require the
+  `ai-agent.history.read` permission; they were open to any catalog reader.
+- Permission checks fail closed when the permissions service is not wired
+  (previously allow-all), with a startup warning.
+- Invocation input is capped: prompt at 20000 chars, `values` at 50 keys,
+  `threadId` to a 128-char allowlist charset, JSON bodies at 100kb.
+- Stored invocation history is capped: error text at 2000 chars, success
+  responses at 20000 chars (the full response is still served).
+- History/review `limit` values clamp to a minimum of 1; internal
+  DB/LiteLLM error details are redacted from client responses.
+- `/statuses` probes at most 8 agents concurrently; `/activity` fans out at
+  12; spend aggregates are cached for 60s.
+- Off-allowlist avatars answer 404 instead of redirecting (open redirect);
+  the fallback avatar cache is capped at 500 entries.
+
 ## [0.9.8] - 2026-10-04
 
 ### Fixed

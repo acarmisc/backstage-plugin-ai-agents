@@ -3,6 +3,14 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.4] - 2026-10-11
+
+### Fixed
+
+- A per-agent `endpoint` annotation must share the configured controller
+  origin; cross-origin overrides are rejected before any fetch (prompt
+  exfiltration).
+
 ## [0.3.3] - 2026-10-04
 
 ### Fixed

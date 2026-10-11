@@ -3,6 +3,13 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-agentcore`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.4] - 2026-10-11
+
+### Fixed
+
+- Verbatim `arn:` runtime handles are validated against the AgentCore
+  runtime ARN shape before use; anything else is rejected before any fetch.
+
 ## [0.5.3] - 2026-10-04
 
 ### Fixed
