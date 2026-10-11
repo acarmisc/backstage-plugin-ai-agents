@@ -1997,6 +1997,51 @@ test('POST /invocations rejects oversized prompts, bad threadIds, and too many v
   }
 });
 
+test('GET /invocations/:ref/spend caches identical requests', async () => {
+  const entity = makeEntity('triage');
+  const calls: unknown[] = [];
+  const spendReader = {
+    getSpendLogs: async (params: unknown) => {
+      calls.push(params);
+      return [
+        {
+          spend: 0.1,
+          total_tokens: 10,
+          model: 'm',
+          request_tags: ['backstage-entity:component:default/triage'],
+        },
+      ];
+    },
+  };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    catalogClient: stubCatalog([entity]),
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
+    spendReader,
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const path = `${url}/invocations/${encodeURIComponent('component:default/triage')}/spend`;
+    const first = await fetch(path);
+    assert.equal(first.status, 200);
+    assert.equal((await first.json()).requests, 1);
+    const second = await fetch(path);
+    assert.equal(second.status, 200);
+    assert.equal((await second.json()).requests, 1);
+    assert.equal(calls.length, 1);
+    // A different thread param misses the cache.
+    const third = await fetch(`${path}?thread=t1`);
+    assert.equal(third.status, 200);
+    assert.equal(calls.length, 2);
+  } finally {
+    await close();
+  }
+});
+
 test('GET /avatar proxies GitLab avatars with no avatarProxy config', async () => {
   const { ConfigReader } = await import('@backstage/config');
   const entity = makeEntity('dinesh', {

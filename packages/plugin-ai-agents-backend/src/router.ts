@@ -61,6 +61,8 @@ import {
 
 const MAX_STATUS_REFS = 200;
 const MAX_CACHE_ENTRIES = 2000;
+const MAX_SPEND_CACHE_ENTRIES = 200;
+const SPEND_CACHE_TTL_MS = 60_000;
 const MAX_PROMPT_CHARS = 20000;
 const MAX_RESPONSE_CHARS = 20000;
 const MAX_ERROR_CHARS = 2000;
@@ -208,6 +210,17 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
   };
 
   const cache = new Map<string, CachedStatus>();
+  // LiteLLM spend is ~realtime; 60s staleness is acceptable to avoid pulling
+  // 1000 rows on every click. Caches the aggregated JSON, not the raw rows.
+  const spendCache = new Map<string, { body: unknown; expiresAt: number }>();
+
+  function spendCacheSet(key: string, body: unknown, expiresAt: number): void {
+    if (spendCache.size >= MAX_SPEND_CACHE_ENTRIES) {
+      const oldestKey = spendCache.keys().next().value;
+      if (oldestKey) spendCache.delete(oldestKey);
+    }
+    spendCache.set(key, { body, expiresAt });
+  }
 
   function localCacheSet(
     ref: string,
@@ -710,14 +723,24 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         ? req.query.thread
         : undefined;
     const window = spendWindow(Number(req.query.days) || undefined);
+    const key = `${ref}\n${threadId ?? ''}\n${window.start_date}\n${window.end_date}`;
+    const now = Date.now();
+    const cached = spendCache.get(key);
+    if (cached && cached.expiresAt > now) {
+      res.json(cached.body);
+      return;
+    }
     try {
       const rows = await spendReader.getSpendLogs({
         ...window,
         page_size: 1000,
       });
-      res.json(
-        aggregateSpend(rows, spendTagMatcher({ threadId, entityRef: ref })),
+      const body = aggregateSpend(
+        rows,
+        spendTagMatcher({ threadId, entityRef: ref }),
       );
+      spendCacheSet(key, body, now + SPEND_CACHE_TTL_MS);
+      res.json(body);
     } catch (err: any) {
       logger.warn(`Failed to read LiteLLM spend: ${err?.message ?? err}`);
       res.status(502).json({ error: 'failed to read spend' });
