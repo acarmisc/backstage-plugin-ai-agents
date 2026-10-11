@@ -505,6 +505,55 @@ test('POST /invocations fills prompt template and records ok/error', async () =>
   }
 });
 
+test('POST /invocations truncates a long invoker error before storing', async () => {
+  const entity = makeEntity('triage');
+  const longMessage = 'x'.repeat(5000);
+  const invoker = {
+    invoke: async () => {
+      throw new Error(longMessage);
+    },
+  };
+  const inserted: any[] = [];
+  const fakeKnex: any = (table: string) => {
+    assert.equal(table, 'invocations');
+    return {
+      insert: (row: any) => {
+        inserted.push(row);
+        return { returning: async () => [1] };
+      },
+      where: () => ({ orderBy: () => ({ limit: async () => [] }) }),
+    };
+  };
+  fakeKnex.migrate = { latest: async () => [] };
+  const router = await createRouter({
+    config: makeConfig(),
+    logger: noopLogger,
+    auth: stubAuth(),
+    discovery: { getBaseUrl: async () => 'http://x' } as any,
+    httpAuth: stubHttpAuth(),
+    permissions: stubPermissions(AuthorizeResult.ALLOW),
+    catalogClient: stubCatalog([entity]),
+    invokers: new Map([['bedrock-agentcore', invoker]]),
+    database: { getClient: async () => fakeKnex } as any,
+    reviews: stubReviews(),
+  });
+  const { url, close } = await startServer(router);
+  try {
+    const res = await fetch(`${url}/invocations/component%3Adefault%2Ftriage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: {} }),
+    });
+    assert.equal(res.status, 502);
+    assert.equal(inserted.length, 1);
+    assert.equal(inserted[0].status, 'error');
+    assert.equal(inserted[0].error_message.length, 2000);
+    assert.equal(inserted[0].error_message, longMessage.slice(0, 2000));
+  } finally {
+    await close();
+  }
+});
+
 test('POST /invocations maps action=post to post=true and reuses a thread', async () => {
   const entity = makeEntity('dinesh', {
     'ai-agent.io/prompt-template': 'Review MR !{target} in project {project}',

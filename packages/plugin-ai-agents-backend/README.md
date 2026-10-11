@@ -20,7 +20,8 @@ backend.add(import('@acarmisc/backstage-plugin-ai-agents-backend'));
 ```
 
 The plugin uses the backend's `database` service; its migrations create the
-`invocations` and `agent_reviews` tables. To run agents or show activity, also
+`invocations` and `agent_reviews` tables. There is no automatic retention:
+operators should purge old rows from `invocations`. To run agents or show activity, also
 install a runtime module (`-module-agentcore`, `-module-kagent`) and a
 telemetry module (`-module-langfuse`).
 

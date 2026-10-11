@@ -62,6 +62,7 @@ import {
 const MAX_STATUS_REFS = 200;
 const MAX_CACHE_ENTRIES = 2000;
 const MAX_PROMPT_CHARS = 20000;
+const MAX_ERROR_CHARS = 2000;
 const MAX_VALUES_KEYS = 50;
 const THREAD_ID_RE = /^[A-Za-z0-9_.:/+=-]{1,128}$/;
 
@@ -641,7 +642,11 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           latencyMs: result.latencyMs,
         });
       } catch (err: any) {
-        const message = err?.message ?? 'invocation failed';
+        // Raw invoker errors are unbounded, so cap what is stored.
+        const message = String(err?.message ?? 'invocation failed').slice(
+          0,
+          MAX_ERROR_CHARS,
+        );
         logger.warn(`Invocation of ${ref} failed: ${message}`);
         await store?.insert({
           entityRef: ref,
