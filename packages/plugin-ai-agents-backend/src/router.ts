@@ -225,7 +225,8 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
     options.catalogClient ?? new CatalogClient({ discoveryApi: discovery });
 
   const router = Router();
-  router.use(express.json());
+  // Cap JSON body size; complements per-field caps from #51.
+  router.use(express.json({ limit: '100kb' }));
 
   router.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', enabled: cfg.enabled });
