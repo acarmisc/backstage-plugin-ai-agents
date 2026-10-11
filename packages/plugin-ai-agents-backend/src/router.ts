@@ -270,8 +270,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
           : [];
       });
 
-      // Bounded fan-out so a large fleet doesn't flood the telemetry backend.
-      const CONCURRENCY = 8;
+      // Bounded fan-out so a large fleet doesn't flood the telemetry backend:
+      // 12 concurrent observation queries is easily handled by Langfuse
+      // (getRuns is 1-2 pages each), while still capping load. Larger fleets
+      // still take serial round trips per chunk; a semaphore would remove
+      // those but adds complexity for little gain at current fleet sizes.
+      const CONCURRENCY = 12;
       const activities: AgentActivity[] = [];
       for (let i = 0; i < agents.length; i += CONCURRENCY) {
         const chunk = agents.slice(i, i + CONCURRENCY);
