@@ -252,6 +252,21 @@ test('entityToAgent falls back to legacy ai-agent.acarmisc.org prefix when new p
   assert.equal(a.version, '1.0.0');
 });
 
+// Parity with the backend annotation() (invocation.ts): the new prefix wins
+// when both namespaces declare the same key.
+test('entityToAgent prefers the new prefix when both prefixes are present', () => {
+  const e = baseEntity({
+    metadata: {
+      name: 'both-prefixes',
+      annotations: {
+        'ai-agent.io/runtime': 'kagent',
+        'ai-agent.acarmisc.org/runtime': 'bedrock-agentcore',
+      },
+    },
+  });
+  assert.equal(entityToAgent(e)!.runtime.runtime, 'kagent');
+});
+
 test('isSafeUrl accepts https:// URLs', () => {
   assert.equal(isSafeUrl('https://example.com'), true);
 });

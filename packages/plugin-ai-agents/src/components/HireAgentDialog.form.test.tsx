@@ -171,6 +171,36 @@ test('the prompt template is filled into the preview', () => {
   assert.ok(screen.getByText('Review MR !42'));
 });
 
+// Parity with the backend fillTemplate (invocation.ts): known placeholders
+// are substituted, unknown ones are left as-is.
+test('the preview leaves unknown placeholders as-is', () => {
+  open(
+    [
+      { name: 'target', label: 'Target', type: 'text', default: '42' },
+      { name: 'project', label: 'Project', type: 'text', default: 'x' },
+    ],
+    {},
+    { promptTemplate: 'Review {target} in {project} ({missing})' },
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Show invocation preview' }),
+  );
+  assert.ok(screen.getByText('Review 42 in x ({missing})'));
+});
+
+// Parity with the backend fillTemplate: only \w+ keys are placeholders.
+test('the preview only substitutes word-char placeholder keys', () => {
+  open(
+    [{ name: 'user_name', label: 'User', type: 'text', default: 'ada' }],
+    {},
+    { promptTemplate: 'Hi {user_name} vs {user-name} and {a.b}' },
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Show invocation preview' }),
+  );
+  assert.ok(screen.getByText('Hi ada vs {user-name} and {a.b}'));
+});
+
 test('both the header X and the footer button close the dialog', () => {
   let closed = 0;
   open([{ name: 'repo', label: 'Repo', type: 'text' }], {

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Entity } from '@backstage/catalog-model';
 import {
+  annotation,
   buildInvocationArgs,
   buildInvocationTags,
   buildPrompt,
@@ -30,6 +31,42 @@ test('fillTemplate substitutes known placeholders and leaves unknown ones', () =
     }),
     'Review 42 in x ({missing})',
   );
+});
+
+// Parity with the frontend fillTemplate (HireAgentDialog.tsx): only \w+
+// keys are placeholders.
+test('fillTemplate only substitutes word-char placeholder keys', () => {
+  assert.equal(
+    fillTemplate('Hi {user_name} vs {user-name} and {a.b}', {
+      user_name: 'ada',
+    }),
+    'Hi ada vs {user-name} and {a.b}',
+  );
+});
+
+// Parity with the frontend annotation() (types.ts): the new prefix wins,
+// falling back to the legacy namespace.
+test('annotation reads the new prefix, then the legacy one', () => {
+  const both: Entity = {
+    ...entity,
+    metadata: {
+      ...entity.metadata,
+      annotations: {
+        'ai-agent.io/runtime': 'kagent',
+        'ai-agent.acarmisc.org/runtime': 'bedrock-agentcore',
+      },
+    },
+  };
+  assert.equal(annotation(both, 'runtime'), 'kagent');
+  const legacyOnly: Entity = {
+    ...entity,
+    metadata: {
+      ...entity.metadata,
+      annotations: { 'ai-agent.acarmisc.org/runtime': 'bedrock-agentcore' },
+    },
+  };
+  assert.equal(annotation(legacyOnly, 'runtime'), 'bedrock-agentcore');
+  assert.equal(annotation(entity, 'runtime'), undefined);
 });
 
 test('buildPrompt renders the template, falling back to a JSON dump', () => {
