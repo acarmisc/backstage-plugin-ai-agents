@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
-import { integrationOrigins, readAvatarProxyConfig } from './avatar';
+import {
+  integrationOrigins,
+  readAvatarProxyConfig,
+  createLocalStore,
+} from './avatar';
 import { isAllowed } from './client';
 
 const integrations = {
@@ -59,4 +63,27 @@ test('an explicit avatarProxy config overrides the defaults', () => {
   assert.equal(cfg.enabled, false);
   assert.deepEqual(cfg.allowlist, ['https://cdn.example.com']);
   assert.equal(cfg.maxBytes, 1000);
+});
+
+test('local avatar store caps entries and evicts the oldest', async () => {
+  const store = createLocalStore();
+  const expiresAt = Date.now() + 86_400_000;
+  for (let i = 0; i < 501; i++) {
+    await store.set(
+      `k${i}`,
+      {
+        contentType: 'image/png',
+        data: '',
+        expiresAt,
+      },
+      86_400_000,
+    );
+  }
+  assert.equal(await store.get('k0'), undefined);
+  assert.ok(await store.get('k500'));
+  let present = 0;
+  for (let i = 0; i < 501; i++) {
+    if (await store.get(`k${i}`)) present++;
+  }
+  assert.equal(present, 500);
 });

@@ -104,7 +104,7 @@ export function createCacheStore(cache: CacheService): AvatarStore {
 }
 
 /** In-process fallback (per pod) used when no CacheService is wired. */
-export function createLocalStore(): AvatarStore {
+export function createLocalStore(maxEntries = 500): AvatarStore {
   const map = new Map<string, CachedAvatar>();
   return {
     async get(key) {
@@ -116,6 +116,12 @@ export function createLocalStore(): AvatarStore {
       return v;
     },
     async set(key, value) {
+      if (!map.has(key) && map.size >= maxEntries) {
+        const oldestKey = map.keys().next().value;
+        if (oldestKey) {
+          map.delete(oldestKey);
+        }
+      }
       map.set(key, value);
     },
   };
