@@ -3,6 +3,15 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents-backend-module-kagent`
 are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.5] - 2026-10-11
+
+### Added
+
+- The A2A message carries a `metadata` object with the same structured
+  contract as the AgentCore payload: always-explicit `post`, `target`,
+  `project`, `model`, `mode`, `knowledge_base_ids`, `litellm_tags` and
+  `trace_user_id`. Kagent agents can now tell dry-run from publish.
+
 ## [0.3.4] - 2026-10-11
 
 ### Fixed
