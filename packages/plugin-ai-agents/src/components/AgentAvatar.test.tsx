@@ -46,11 +46,10 @@ test('shows initials while loading, then the image', async () => {
   assert.equal(img?.getAttribute('alt'), '');
 });
 
-test('supports relative paths, image data: URIs and blob: URLs', async () => {
+test('supports relative paths and image data: URIs', async () => {
   for (const url of [
     '/img/agents/triage.png',
     'data:image/png;base64,iVBORw0KGgo=',
-    'blob:http://localhost/1234-abcd',
   ]) {
     const { container, unmount } = render(
       <AgentAvatar name="triage" avatarUrl={url} />,

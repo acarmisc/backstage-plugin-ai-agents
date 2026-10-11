@@ -275,8 +275,9 @@ test('isSafeUrl rejects protocol-relative URLs', () => {
   assert.equal(isSafeUrl('//evil.com/a.png'), false);
 });
 
-test('isSafeUrl accepts blob: URLs minted for proxied avatars', () => {
-  assert.equal(isSafeUrl('blob:http://localhost/1234-abcd'), true);
+test('isSafeUrl rejects blob: URLs (only annotatable, never resolvable)', () => {
+  assert.equal(isSafeUrl('blob:http://localhost/1234-abcd'), false);
+  assert.equal(isSafeUrl('blob:https://evil.example/1234'), false);
 });
 
 test('isSafeUrl accepts image data: URIs', () => {
