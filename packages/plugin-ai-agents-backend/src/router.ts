@@ -452,11 +452,12 @@ export async function createRouter(options: RouterOptions): Promise<Router> {
         res.status(404).json({ error: 'no proxyable avatar' });
         return;
       }
-      // Not on the allowlist: redirect so public URLs keep working exactly
-      // as before the proxy existed (browser fetches directly).
+      // Not on the allowlist: 404, never a redirect — the URL is
+      // catalog-authored, so a 302 would turn this trusted endpoint into an
+      // open redirect (phishing). The frontend falls back to the direct URL.
       if (!isAllowed(url, avatarCfg.allowlist)) {
         res.setHeader('Cache-Control', 'private, max-age=300');
-        res.redirect(302, url);
+        res.status(404).json({ error: 'avatar not allowlisted' });
         return;
       }
       const result = await resolveAvatar(url, avatarProxy);

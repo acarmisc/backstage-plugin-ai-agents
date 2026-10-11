@@ -1250,7 +1250,7 @@ test('GET /avatar 404s for missing, data:, and relative avatars', async () => {
   }
 });
 
-test('GET /avatar 302s to URLs outside the allowlist', async () => {
+test('GET /avatar 404s for URLs outside the allowlist', async () => {
   const entity = makeEntity('triage', {
     'ai-agent.io/avatar': 'https://public.example.com/a.png',
   });
@@ -1271,11 +1271,14 @@ test('GET /avatar 302s to URLs outside the allowlist', async () => {
       `${url}/avatar/${encodeURIComponent('component:default/triage')}`,
       { redirect: 'manual' },
     );
-    assert.equal(res.status, 302);
-    assert.equal(
-      res.headers.get('location'),
-      'https://public.example.com/a.png',
+    assert.equal(res.status, 404);
+    // Frontend-compatible: useAvatarSrc treats any proxy failure as a miss
+    // and falls back to the direct avatarUrl, so public URLs keep working.
+    assert.match(
+      res.headers.get('cache-control') ?? '',
+      /private, max-age=300/,
     );
+    assert.deepEqual(await res.json(), { error: 'avatar not allowlisted' });
   } finally {
     await close();
   }
