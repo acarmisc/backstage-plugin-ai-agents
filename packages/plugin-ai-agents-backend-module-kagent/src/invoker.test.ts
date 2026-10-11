@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ConfigReader } from '@backstage/config';
 import {
   KagentInvoker,
+  buildMessageMetadata,
   extractResponseText,
   readKagentConfig,
 } from './invoker';
@@ -100,6 +101,74 @@ test('KagentInvoker posts a message/send JSON-RPC request to the namespaced A2A 
   assert.equal(body.method, 'message/send');
   assert.equal(body.params.message.parts[0].text, 'list pods');
   assert.equal(body.params.message.contextId, 'helm-bot-thread');
+  assert.equal(body.params.message.metadata.post, false);
+  assert.deepEqual(body.params.message.metadata.litellm_tags, [
+    'agent:helm-bot',
+  ]);
+});
+
+test('buildMessageMetadata sends post:false and cost tags by default', () => {
+  const metadata = buildMessageMetadata({
+    entityRef: 'component:default/helm-bot',
+    sessionId: 's',
+    threadId: 't1',
+    prompt: 'list pods',
+    fields: {},
+    args: { post: false },
+    tags: ['session:t1', 'backstage-entity:component:default/helm-bot'],
+    target: {},
+  });
+  assert.equal(metadata.post, false);
+  assert.deepEqual(metadata.litellm_tags, [
+    'agent:helm-bot',
+    'session:t1',
+    'backstage-entity:component:default/helm-bot',
+  ]);
+  assert.ok(!('knowledge_base_ids' in metadata));
+  assert.ok(!('trace_user_id' in metadata));
+});
+
+test('buildMessageMetadata passes through post:true, target/project and trace_user_id', () => {
+  const metadata = buildMessageMetadata({
+    entityRef: 'component:default/helm-bot',
+    sessionId: 's',
+    threadId: 't1',
+    prompt: 'list pods',
+    fields: {},
+    args: { post: true, target: '42', project: 'innovation/x' },
+    tags: [],
+    traceUserId: 'user:default/jane',
+    target: {},
+  });
+  assert.equal(metadata.post, true);
+  assert.equal(metadata.target, '42');
+  assert.equal(metadata.project, 'innovation/x');
+  assert.equal(metadata.trace_user_id, 'user:default/jane');
+});
+
+test('buildMessageMetadata sends knowledge_base_ids only when set', () => {
+  const withKb = buildMessageMetadata({
+    entityRef: 'component:default/helm-bot',
+    sessionId: 's',
+    threadId: 't1',
+    prompt: 'p',
+    fields: {},
+    args: { post: false, knowledgeBaseIds: ['kb-1', 'kb-2'] },
+    tags: [],
+    target: {},
+  });
+  assert.deepEqual(withKb.knowledge_base_ids, ['kb-1', 'kb-2']);
+  const withoutKb = buildMessageMetadata({
+    entityRef: 'component:default/helm-bot',
+    sessionId: 's',
+    threadId: 't1',
+    prompt: 'p',
+    fields: {},
+    args: { post: false },
+    tags: [],
+    target: {},
+  });
+  assert.ok(!('knowledge_base_ids' in withoutKb));
 });
 
 test('KagentInvoker throws when no runtime-handle annotation is set', async () => {

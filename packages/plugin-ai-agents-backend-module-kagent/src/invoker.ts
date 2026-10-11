@@ -83,6 +83,38 @@ export function extractResponseText(body: string): string {
 }
 
 /**
+ * Maps the invocation request onto the A2A message `metadata` sent alongside
+ * the prompt: `post` (always explicit, so a missing value can't default
+ * agent-side into a write), plus the structured `target`, `project`, `model`,
+ * `knowledge_base_ids`, `mode`, `litellm_tags` and `trace_user_id` fields.
+ *
+ * @public
+ */
+export function buildMessageMetadata(
+  req: AgentInvocationRequest,
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {
+    post: req.args.post,
+  };
+  if (req.args.target) metadata.target = req.args.target;
+  if (req.args.project) metadata.project = req.args.project;
+  if (req.args.model) metadata.model = req.args.model;
+  if (req.args.mode) metadata.mode = req.args.mode;
+  if (req.args.knowledgeBaseIds?.length) {
+    metadata.knowledge_base_ids = req.args.knowledgeBaseIds;
+  }
+  metadata.litellm_tags = [`agent:${runtimeName(req.entityRef)}`, ...req.tags];
+  if (req.traceUserId) metadata.trace_user_id = req.traceUserId;
+  return metadata;
+}
+
+/** The agent name (last ref segment) used as the per-agent cost tag. */
+function runtimeName(entityRef: string): string {
+  const name = entityRef.split('/').pop();
+  return name || entityRef;
+}
+
+/**
  * Invokes an agent hosted on kagent (https://kagent.dev) via the A2A
  * protocol endpoint the kagent controller exposes at
  * `/api/a2a/{namespace}/{agent-name}/`.
@@ -141,6 +173,7 @@ export class KagentInvoker {
           messageId: randomUUID(),
           contextId: req.threadId,
           parts: [{ kind: 'text', text: req.prompt }],
+          metadata: buildMessageMetadata(req),
         },
       },
     });

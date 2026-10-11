@@ -60,5 +60,9 @@ has the same origin as `baseUrl`.
 `POST <baseUrl>/api/a2a/<namespace>/<runtime-handle>/` with a JSON-RPC
 `message/send` call. The message carries the prompt as one text part and the
 conversation's thread id as `contextId`, so follow-up turns keep the agent's
-context. The answer is the text of the task's artifacts, or of the returned
+context. Structured fields travel in the message `metadata`: `post` (always
+explicit, so a dry run can't default agent-side into a write), `target`,
+`project`, `model`, `mode`, `knowledge_base_ids` (only when set),
+`litellm_tags` (`agent:<name>` plus the invocation tags) and `trace_user_id`
+(only when set). The answer is the text of the task's artifacts, or of the returned
 message.
