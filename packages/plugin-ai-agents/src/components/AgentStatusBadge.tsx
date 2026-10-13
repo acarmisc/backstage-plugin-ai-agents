@@ -19,7 +19,7 @@ export function AgentStatusBadge({ status }: AgentStatusBadgeProps) {
 
   const title = status
     ? [
-        `Status: ${state}`,
+        `Status: ${state} (health probe)`,
         status.lastChecked
           ? `Last checked: ${new Date(status.lastChecked).toLocaleString()}`
           : null,
@@ -30,7 +30,7 @@ export function AgentStatusBadge({ status }: AgentStatusBadgeProps) {
       ]
         .filter(Boolean)
         .join(' · ')
-    : 'Status: unknown';
+    : 'Status: unknown (health probe)';
 
   return (
     <Hint label={title}>

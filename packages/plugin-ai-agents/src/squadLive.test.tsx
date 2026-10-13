@@ -185,3 +185,37 @@ test('card: running shows "running now"; no telemetry falls back to the probe', 
   rerender(<AgentCard agent={makeAgent()} />);
   assert.equal(screen.queryByTestId('live-status'), null);
 });
+
+test('live: an orphan unknown trace does not hide the last real outcome', () => {
+  const live = liveFromActivity(
+    activity([
+      run({ runId: 'orphan', state: 'unknown', startedAt: ago(10) }),
+      run({ state: 'failed' }),
+    ]),
+  );
+  assert.equal(live.state, 'failed');
+});
+
+test('card: run stats come from telemetry insights, Backstage history is the fallback', async () => {
+  installApi({
+    getInsights: async () => ({
+      totals: { runs: 12, completed: 9, failed: 2, running: 1, unknown: 0 },
+    }),
+    getInvocations: async () => [{ status: 'ok' }],
+    getAvatar: async () => undefined,
+  });
+  render(<AgentCard agent={makeAgent()} />);
+  assert.ok(await screen.findByText('12 runs · 24h'));
+  assert.ok(
+    screen.getByRole('img', { name: 'Last 24h: 9 completed · 2 failed' }),
+  );
+
+  cleanup();
+  installApi({
+    getInsights: async () => null,
+    getInvocations: async () => [{ status: 'ok' }, { status: 'error' }],
+    getAvatar: async () => undefined,
+  });
+  render(<AgentCard agent={makeAgent()} />);
+  assert.ok(await screen.findByText('2 runs from Backstage'));
+});

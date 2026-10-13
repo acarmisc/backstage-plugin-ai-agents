@@ -5,17 +5,21 @@ import { aiAgentsApiRef } from '../api';
 import { Hint, TONE_FG } from '../ui';
 
 const LIMIT = 100;
+const WINDOW_HOURS = 24;
 
 interface JobStats {
   total: number;
   ok: number;
   failed: number;
+  /** Where the numbers come from, shown so the card says what it counts. */
+  source: 'telemetry' | 'backstage';
 }
 
 /**
- * Smallest possible jobs summary for a card: total run count plus a tiny
- * succeeded/failed balance bar. Renders nothing when the backend has no
- * invocation history (or is disabled), so static setups stay clean.
+ * Smallest possible jobs summary for a card: run count plus a tiny
+ * succeeded/failed balance bar. Prefers the telemetry insights (every run,
+ * same numbers as the Activity tab); without telemetry it falls back to the
+ * runs launched from Backstage. Renders nothing when neither has runs.
  */
 export function AgentJobStats({ entityRef }: { entityRef: string }) {
   const api = useApi(aiAgentsApiRef);
@@ -23,13 +27,27 @@ export function AgentJobStats({ entityRef }: { entityRef: string }) {
 
   useEffect(() => {
     let alive = true;
-    api
-      .getInvocations(entityRef, LIMIT)
-      .then(records => {
-        if (!alive) return;
-        const ok = records.filter(r => r.status === 'ok').length;
-        setStats({ total: records.length, ok, failed: records.length - ok });
-      })
+    (async (): Promise<JobStats> => {
+      let insights = null;
+      try {
+        insights = await api.getInsights(entityRef, WINDOW_HOURS);
+      } catch {
+        // Telemetry down: fall back to the Backstage history below.
+      }
+      if (insights) {
+        const { runs, completed, failed } = insights.totals;
+        return { total: runs, ok: completed, failed, source: 'telemetry' };
+      }
+      const records = await api.getInvocations(entityRef, LIMIT);
+      const ok = records.filter(r => r.status === 'ok').length;
+      return {
+        total: records.length,
+        ok,
+        failed: records.length - ok,
+        source: 'backstage',
+      };
+    })()
+      .then(result => alive && setStats(result))
       .catch(() => {});
     return () => {
       alive = false;
@@ -38,8 +56,13 @@ export function AgentJobStats({ entityRef }: { entityRef: string }) {
 
   if (!stats || !stats.total) return null;
 
-  const okPct = (stats.ok / stats.total) * 100;
-  const summary = `${stats.ok} succeeded · ${stats.failed} failed`;
+  // Telemetry runs still in flight count in the total but in neither side.
+  const done = stats.ok + stats.failed;
+  const okPct = done ? (stats.ok / done) * 100 : 100;
+  const summary =
+    stats.source === 'telemetry'
+      ? `Last ${WINDOW_HOURS}h: ${stats.ok} completed · ${stats.failed} failed`
+      : `Launched from Backstage: ${stats.ok} succeeded · ${stats.failed} failed`;
   return (
     <Flex align="center" gap="2">
       <Text
@@ -47,8 +70,9 @@ export function AgentJobStats({ entityRef }: { entityRef: string }) {
         color="secondary"
         style={{ whiteSpace: 'nowrap' }}
       >
-        {stats.total}
-        {stats.total >= LIMIT ? '+' : ''} runs
+        {stats.source === 'telemetry'
+          ? `${stats.total} runs · ${WINDOW_HOURS}h`
+          : `${stats.total}${stats.total >= LIMIT ? '+' : ''} runs from Backstage`}
       </Text>
       <Hint label={summary}>
         <span

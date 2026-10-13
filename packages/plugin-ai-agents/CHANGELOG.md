@@ -3,6 +3,18 @@
 All notable changes to `@acarmisc/backstage-plugin-ai-agents` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.2] - 2026-10-13
+
+### Fixed
+
+- Card run stats now come from the telemetry insights (last 24h, the same
+  numbers as the Activity tab) instead of the Backstage invocation history,
+  which only counted runs launched from Backstage. Without telemetry the card
+  falls back to that history and says so ("N runs from Backstage").
+- Card/rail state skips orphan `unknown` traces and shows the newest run with
+  a real outcome. "No runs yet" reads "No recent runs" (it only covers the
+  telemetry lookback window), and the probe dot's tooltip says "health probe".
+
 ## [0.18.1] - 2026-10-11
 
 ### Fixed

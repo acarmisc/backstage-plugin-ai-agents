@@ -11,10 +11,14 @@ export interface AgentLive {
   hasRuns: boolean;
 }
 
-/** Aggregate state of an agent's runs (shared by the rail and the cards). */
+/**
+ * Aggregate state of an agent's runs (shared by the rail and the cards):
+ * running if any run is, else the newest run with a known outcome. Orphan
+ * traces (`unknown`) don't hide the last real completion or failure.
+ */
 export function aggregateState(activity: AgentActivity): RunState {
   if (activity.runs.some(r => r.state === 'running')) return 'running';
-  return activity.runs[0]?.state ?? 'unknown';
+  return activity.runs.find(r => r.state !== 'unknown')?.state ?? 'unknown';
 }
 
 export function liveFromActivity(activity: AgentActivity): AgentLive {

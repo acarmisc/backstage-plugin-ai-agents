@@ -27,7 +27,9 @@ test('status badge names its state and latency for assistive tech', () => {
 
 test('status badge falls back to "unknown" without a status', () => {
   render(<AgentStatusBadge />);
-  assert.ok(screen.getByRole('img', { name: 'Status: unknown' }));
+  assert.ok(
+    screen.getByRole('img', { name: 'Status: unknown (health probe)' }),
+  );
 });
 
 test('status dot tone follows the state', () => {

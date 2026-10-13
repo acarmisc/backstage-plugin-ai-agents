@@ -35,7 +35,7 @@ export function AgentLiveStatus({ live, status }: AgentLiveStatusProps) {
         <StatusPill state={live.state} size="small" />
       ) : (
         <Text variant="body-small" color="secondary">
-          No runs yet
+          No recent runs
         </Text>
       )}
       {live.hasRuns && (
