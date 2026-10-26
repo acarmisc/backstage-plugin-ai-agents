@@ -61,7 +61,7 @@
     "postpack": ""
   },
   "dependencies": {
-    "@acarmisc/backstage-plugin-litellm-backend": "^0.14.0",
+    "@acarmisc/backstage-plugin-litellm-backend": "^0.26.1",
     "@backstage/backend-plugin-api": "^1.10.1",
     "@backstage/catalog-client": "^1.16.2",
     "@backstage/catalog-model": "^1.7.0",
