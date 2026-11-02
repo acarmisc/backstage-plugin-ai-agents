@@ -65,7 +65,7 @@
   },
   "dependencies": {
     "@backstage/catalog-client": "^1.16.2",
-    "@backstage/catalog-model": "^1.7.0",
+    "@backstage/catalog-model": "^1.10.2",
     "@backstage/core-components": "^0.18.14",
     "@backstage/core-plugin-api": "^1.12.6",
     "@backstage/frontend-plugin-api": "^0.18.1",
