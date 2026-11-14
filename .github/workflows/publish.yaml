@@ -138,9 +138,18 @@ jobs:
       contents: read
       pull-requests: write
 
+  snyk:
+    name: Snyk
+    needs: resolve
+    uses: ./.github/workflows/snyk.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      security-events: write
+
   publish:
     name: Publish ${{ needs.resolve.outputs.tag }}
-    needs: [resolve, checks]
+    needs: [resolve, checks, snyk]
     runs-on: ubuntu-latest
     permissions:
       contents: write # GitHub Release + tag
