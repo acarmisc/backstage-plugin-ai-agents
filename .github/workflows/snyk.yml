@@ -8,6 +8,7 @@ on:
   schedule:
     - cron: '0 6 * * 1'
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   snyk:
@@ -55,7 +56,7 @@ jobs:
         run: snyk test --all-projects --fail-fast --severity-threshold=high --sarif-file-output=snyk-oss.sarif || [ "$?" -eq 1 ]
 
       - name: Monitor dependencies in Snyk
-        if: ${{ steps.has_token.outputs.set == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') }}
+        if: ${{ steps.has_token.outputs.set == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
@@ -66,6 +67,15 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk code test --sarif-file-output=snyk-code.sarif || [ "$?" -eq 1 ]
+
+      # Publishes Snyk Code results to the Snyk Projects page (the SARIF scan
+      # above only reaches GitHub code scanning).
+      - name: Snyk code report
+        if: ${{ steps.has_token.outputs.set == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: snyk code test --report --project-name="${{ github.event.repository.name }}" --target-reference=main --remote-repo-url="$REPO_URL" || [ "$?" -eq 1 ]
 
       - name: Upload Snyk results to code scanning
         if: ${{ always() && steps.has_token.outputs.set == 'true' && github.ref_type != 'tag' && hashFiles('snyk-*.sarif') != '' }}
